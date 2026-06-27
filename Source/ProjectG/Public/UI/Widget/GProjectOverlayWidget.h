@@ -17,10 +17,10 @@ class PROJECTG_API UGProjectOverlayWidget : public UGProjectUserWidget
 protected:
 	virtual void NativeWidgetControllerSet() override;
 
-	UPROPERTY(meta = (BindWidgetOptional))
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectPlayerBoxWidget> LocalPlayerBox;
 
-	UPROPERTY(meta = (BindWidgetOptional))
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectPlayerBoxWidget> OpponentPlayerBox;
 
 private:
