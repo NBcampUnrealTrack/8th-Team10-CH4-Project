@@ -50,6 +50,10 @@ private:
 	void AbilityInputTagPressed(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
+	void SendAttackInputEvent(FGameplayTag InputTag);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSendAttackInputEvent(FGameplayTag InputTag);
 
 	UPROPERTY()
 	TObjectPtr<UGProjectAbilitySystemComponent> GProjectAbilitySystemComponent;
