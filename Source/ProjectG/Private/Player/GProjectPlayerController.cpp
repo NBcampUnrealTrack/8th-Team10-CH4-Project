@@ -140,7 +140,7 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 		return;
 	}
 
-	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Dead))
 	{
 		return;
 	}
@@ -155,7 +155,7 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AGProjectPlayerController::JumpPressed()
 {
-	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Dead))
 	{
 		return;
 	}
@@ -176,13 +176,6 @@ void AGProjectPlayerController::JumpReleased()
 
 void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) ||
-		InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
-	{
-		SendAttackInputEvent(InputTag);
-		return;
-	}
-
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		ASC->AbilityInputTagPressed(InputTag);
@@ -203,43 +196,4 @@ void AGProjectPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 	{
 		ASC->AbilityInputTagHeld(InputTag);
 	}
-}
-
-void AGProjectPlayerController::SendAttackInputEvent(FGameplayTag InputTag)
-{
-	APawn* ControlledPawn = GetPawn();
-	if (!ControlledPawn)
-	{
-		return;
-	}
-
-	FGameplayTag EventTag;
-	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack))
-	{
-		EventTag = GProjectGameplayTags::Event_Input_Combat_BasicAttack;
-	}
-	else if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
-	{
-		EventTag = GProjectGameplayTags::Event_Input_Combat_StrongAttack;
-	}
-	else
-	{
-		return;
-	}
-
-	FGameplayEventData EventData;
-	EventData.EventTag = EventTag;
-	EventData.Instigator = ControlledPawn;
-	EventData.Target = ControlledPawn;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(ControlledPawn, EventTag, EventData);
-
-	if (!HasAuthority())
-	{
-		ServerSendAttackInputEvent(InputTag);
-	}
-}
-
-void AGProjectPlayerController::ServerSendAttackInputEvent_Implementation(FGameplayTag InputTag)
-{
-	SendAttackInputEvent(InputTag);
 }

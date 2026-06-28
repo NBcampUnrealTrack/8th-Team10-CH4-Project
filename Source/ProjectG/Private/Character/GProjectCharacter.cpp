@@ -62,7 +62,7 @@ void AGProjectCharacter::HandleDeath()
 
 	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
 	{
-		ASC->AddLooseGameplayTag(GProjectGameplayTags::State_Character_Dead);
+		ASC->AddLooseGameplayTag(GProjectGameplayTags::State_Dead);
 		ASC->CancelAllAbilities();
 	}
 
