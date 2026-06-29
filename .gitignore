@@ -1,24 +1,49 @@
+# Unreal Engine generated files
 Binaries/
 Build/
 DerivedDataCache/
 Intermediate/
 Saved/
 
+# Visual Studio / Rider / JetBrains generated files
+.vs/
+.idea/
 *.sln
 *.suo
+*.user
+*.userosscache
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# Unreal generated project/user files
 *.xcodeproj
 *.xcworkspace
-*.VC.db
-*.VC.VC.opendb
+*.code-workspace
+*.sln.DotSettings.user
+*.uprojectdirs
 
+# Build artifacts
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.dll
+*.exe
+*.app
+*.dSYM
+
+# Logs and crash dumps
 *.log
+*.dmp
 *.tmp
 
+# OS files
 .DS_Store
+Thumbs.db
+Desktop.ini
 
-.vscode/
-.idea/
-
-# Visual Studio cache
-.vs/
-*.ipch
+# Optional local config
+.vsconfig
+Content/Imported_Asset/Sword_Animations/
