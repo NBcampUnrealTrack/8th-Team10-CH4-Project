@@ -8,6 +8,8 @@
 
 class UGProjectOverlayWidgetController;
 class UGProjectPlayerBoxWidget;
+class UGProjectPlayerBoxWidgetController;
+class UPanelWidget;
 
 UCLASS()
 class PROJECTG_API UGProjectOverlayWidget : public UGProjectUserWidget
@@ -18,21 +20,15 @@ protected:
 	virtual void NativeWidgetControllerSet() override;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UGProjectPlayerBoxWidget> LocalPlayerBox;
+	TObjectPtr<UPanelWidget> PlayerBoxContainer;
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UGProjectPlayerBoxWidget> OpponentPlayerBox;
+	UPROPERTY(EditDefaultsOnly, Category = "Player List")
+	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;
 
 private:
 	UFUNCTION()
-	void OnHealthChanged(float NewValue);
+	void RefreshPlayerBoxes();
 
-	UFUNCTION()
-	void OnMaxHealthChanged(float NewValue);
-
-	UFUNCTION()
-	void OnSPChanged(float NewValue);
-
-	UFUNCTION()
-	void OnMaxSPChanged(float NewValue);
+	UPROPERTY()
+	TArray<TObjectPtr<UGProjectPlayerBoxWidgetController>> PlayerBoxControllers;
 };

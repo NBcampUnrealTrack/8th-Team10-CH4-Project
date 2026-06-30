@@ -6,7 +6,9 @@
 #include "UI/WidgetController/GProjectWidgetController.h"
 #include "GProjectOverlayWidgetController.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnAttributeChangedSignature, float, NewValue);
+class AGProjectPlayerState;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
@@ -14,18 +16,13 @@ class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetCont
 	GENERATED_BODY()
 
 public:
-	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FGProjectOnAttributeChangedSignature OnHealthChanged;
+	TArray<AGProjectPlayerState*> GetOrderedPlayerStates() const;
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FGProjectOnAttributeChangedSignature OnMaxHealthChanged;
+	UPROPERTY(BlueprintAssignable, Category = "Player List")
+	FGProjectOnPlayerListChangedSignature OnPlayerListChanged;
 
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FGProjectOnAttributeChangedSignature OnSPChanged;
-
-	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FGProjectOnAttributeChangedSignature OnMaxSPChanged;
+private:
+	void HandlePlayerListChanged();
 };

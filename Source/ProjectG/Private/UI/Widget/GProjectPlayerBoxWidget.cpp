@@ -5,6 +5,7 @@
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "UI/WidgetController/GProjectPlayerBoxWidgetController.h"
 
 void UGProjectPlayerBoxWidget::NativePreConstruct()
 {
@@ -12,6 +13,28 @@ void UGProjectPlayerBoxWidget::NativePreConstruct()
 
 	RefreshHealth();
 	RefreshSP();
+}
+
+void UGProjectPlayerBoxWidget::NativeWidgetControllerSet()
+{
+	Super::NativeWidgetControllerSet();
+
+	UGProjectPlayerBoxWidgetController* BoxController = Cast<UGProjectPlayerBoxWidgetController>(WidgetController);
+	if (!BoxController)
+	{
+		return;
+	}
+
+	BoxController->OnHealthChanged.RemoveDynamic(this, &ThisClass::SetHealth);
+	BoxController->OnHealthChanged.AddDynamic(this, &ThisClass::SetHealth);
+	BoxController->OnMaxHealthChanged.RemoveDynamic(this, &ThisClass::SetMaxHealth);
+	BoxController->OnMaxHealthChanged.AddDynamic(this, &ThisClass::SetMaxHealth);
+	BoxController->OnSPChanged.RemoveDynamic(this, &ThisClass::SetSP);
+	BoxController->OnSPChanged.AddDynamic(this, &ThisClass::SetSP);
+	BoxController->OnMaxSPChanged.RemoveDynamic(this, &ThisClass::SetMaxSP);
+	BoxController->OnMaxSPChanged.AddDynamic(this, &ThisClass::SetMaxSP);
+
+	SetPlayerName(BoxController->GetPlayerName());
 }
 
 void UGProjectPlayerBoxWidget::SetPlayerName(const FText& NewName)
