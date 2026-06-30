@@ -2,8 +2,14 @@
 
 #include "UI/Widget/GProjectOverlayWidget.h"
 
+#include "AbilitySystem/GProjectAbilitySystemComponent.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
+#include "Components/PanelWidget.h"
+#include "Player/GProjectPlayerState.h"
 #include "UI/Widget/GProjectPlayerBoxWidget.h"
 #include "UI/WidgetController/GProjectOverlayWidgetController.h"
+#include "UI/WidgetController/GProjectPlayerBoxWidgetController.h"
+#include "UI/WidgetController/GProjectWidgetController.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -15,45 +21,48 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 		return;
 	}
 
-	if (LocalPlayerBox)
-	{
-		LocalPlayerBox->SetWidgetController(OverlayController);
-	}
-
-	OverlayController->OnHealthChanged.AddDynamic(this, &ThisClass::OnHealthChanged);
-	OverlayController->OnMaxHealthChanged.AddDynamic(this, &ThisClass::OnMaxHealthChanged);
-	OverlayController->OnSPChanged.AddDynamic(this, &ThisClass::OnSPChanged);
-	OverlayController->OnMaxSPChanged.AddDynamic(this, &ThisClass::OnMaxSPChanged);
+	OverlayController->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerBoxes);
+	OverlayController->OnPlayerListChanged.AddDynamic(this, &ThisClass::RefreshPlayerBoxes);
+	RefreshPlayerBoxes();
 }
 
-void UGProjectOverlayWidget::OnHealthChanged(float NewValue)
+void UGProjectOverlayWidget::RefreshPlayerBoxes()
 {
-	if (LocalPlayerBox)
+	UGProjectOverlayWidgetController* OverlayController = Cast<UGProjectOverlayWidgetController>(WidgetController);
+	if (!OverlayController || !PlayerBoxContainer || !PlayerBoxWidgetClass)
 	{
-		LocalPlayerBox->SetHealth(NewValue);
+		return;
 	}
-}
 
-void UGProjectOverlayWidget::OnMaxHealthChanged(float NewValue)
-{
-	if (LocalPlayerBox)
-	{
-		LocalPlayerBox->SetMaxHealth(NewValue);
-	}
-}
+	PlayerBoxContainer->ClearChildren();
+	PlayerBoxControllers.Reset();
 
-void UGProjectOverlayWidget::OnSPChanged(float NewValue)
-{
-	if (LocalPlayerBox)
+	for (AGProjectPlayerState* CurrentPlayerState : OverlayController->GetOrderedPlayerStates())
 	{
-		LocalPlayerBox->SetSP(NewValue);
-	}
-}
+		if (!CurrentPlayerState || !CurrentPlayerState->GetGProjectAbilitySystemComponent() || !CurrentPlayerState->GetAttributeSet())
+		{
+			continue;
+		}
 
-void UGProjectOverlayWidget::OnMaxSPChanged(float NewValue)
-{
-	if (LocalPlayerBox)
-	{
-		LocalPlayerBox->SetMaxSP(NewValue);
+		UGProjectPlayerBoxWidgetController* BoxController = NewObject<UGProjectPlayerBoxWidgetController>(this);
+		const FGProjectWidgetControllerParams Params(
+			GetOwningPlayer(),
+			CurrentPlayerState,
+			CurrentPlayerState->GetGProjectAbilitySystemComponent(),
+			CurrentPlayerState->GetAttributeSet());
+		BoxController->SetWidgetControllerParams(Params);
+		BoxController->BindCallbacksToDependencies();
+
+		UGProjectPlayerBoxWidget* PlayerBox = CreateWidget<UGProjectPlayerBoxWidget>(
+			GetOwningPlayer(), PlayerBoxWidgetClass);
+		if (!PlayerBox)
+		{
+			continue;
+		}
+
+		PlayerBox->SetWidgetController(BoxController);
+		PlayerBoxContainer->AddChild(PlayerBox);
+		BoxController->BroadcastInitialValues();
+		PlayerBoxControllers.Add(BoxController);
 	}
 }

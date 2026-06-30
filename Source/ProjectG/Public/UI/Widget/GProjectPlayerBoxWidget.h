@@ -37,6 +37,7 @@ public:
 
 protected:
 	virtual void NativePreConstruct() override;
+	virtual void NativeWidgetControllerSet() override;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NameText;

@@ -13,6 +13,8 @@ class UAttributeSet;
 class UGProjectAbilitySystemComponent;
 class UGProjectAttributeSet;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnAttributeChangedSignature, float, NewValue);
+
 USTRUCT(BlueprintType)
 struct FGProjectWidgetControllerParams
 {

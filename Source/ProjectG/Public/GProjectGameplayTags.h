@@ -39,8 +39,10 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Targeting_LockOn);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Root);
+	
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Combat_BasicAttack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Input_Combat_StrongAttack);
+	
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Open);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Close);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Hit);

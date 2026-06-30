@@ -2,58 +2,61 @@
 
 #include "UI/WidgetController/GProjectOverlayWidgetController.h"
 
-#include "AbilitySystem/GProjectAbilitySystemComponent.h"
-#include "AbilitySystem/GProjectAttributeSet.h"
-#include "GameplayEffectTypes.h"
-
-void UGProjectOverlayWidgetController::BroadcastInitialValues()
-{
-	UGProjectAttributeSet* AS = GetGProjectAS();
-	if (!AS)
-	{
-		return;
-	}
-
-	OnHealthChanged.Broadcast(AS->GetHealth());
-	OnMaxHealthChanged.Broadcast(AS->GetMaxHealth());
-	OnSPChanged.Broadcast(AS->GetSP());
-	OnMaxSPChanged.Broadcast(AS->GetMaxSP());
-}
+#include "Engine/World.h"
+#include "Game/GProjectGameState.h"
+#include "GameFramework/PlayerController.h"
+#include "Player/GProjectPlayerState.h"
 
 void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 {
-	UGProjectAbilitySystemComponent* ASC = GetGProjectASC();
-	UGProjectAttributeSet* AS = GetGProjectAS();
-	if (!ASC || !AS)
+	if (!PlayerController)
 	{
 		return;
 	}
 
-	ASC->GetGameplayAttributeValueChangeDelegate(AS->GetHealthAttribute()).AddLambda(
-		[this](const FOnAttributeChangeData& Data)
-		{
-			OnHealthChanged.Broadcast(Data.NewValue);
-		}
-	);
+	if (AGProjectGameState* GameState = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
+	{
+		GameState->OnPlayerListChanged.AddUObject(this, &ThisClass::HandlePlayerListChanged);
+	}
+}
 
-	ASC->GetGameplayAttributeValueChangeDelegate(AS->GetMaxHealthAttribute()).AddLambda(
-		[this](const FOnAttributeChangeData& Data)
-		{
-			OnMaxHealthChanged.Broadcast(Data.NewValue);
-		}
-	);
+TArray<AGProjectPlayerState*> UGProjectOverlayWidgetController::GetOrderedPlayerStates() const
+{
+	TArray<AGProjectPlayerState*> OrderedPlayerStates;
+	AGProjectPlayerState* LocalPlayerState = Cast<AGProjectPlayerState>(PlayerState);
+	if (LocalPlayerState)
+	{
+		OrderedPlayerStates.Add(LocalPlayerState);
+	}
 
-	ASC->GetGameplayAttributeValueChangeDelegate(AS->GetSPAttribute()).AddLambda(
-		[this](const FOnAttributeChangeData& Data)
-		{
-			OnSPChanged.Broadcast(Data.NewValue);
-		}
-	);
+	const UWorld* World = PlayerController ? PlayerController->GetWorld() : nullptr;
+	const AGProjectGameState* GameState = World ? World->GetGameState<AGProjectGameState>() : nullptr;
+	if (!GameState)
+	{
+		return OrderedPlayerStates;
+	}
 
-	ASC->GetGameplayAttributeValueChangeDelegate(AS->GetMaxSPAttribute()).AddLambda(
-		[this](const FOnAttributeChangeData& Data)
+	TArray<AGProjectPlayerState*> OtherPlayerStates;
+	for (APlayerState* CurrentPlayerState : GameState->PlayerArray)
+	{
+		AGProjectPlayerState* GProjectPlayerState = Cast<AGProjectPlayerState>(CurrentPlayerState);
+		if (GProjectPlayerState && GProjectPlayerState != LocalPlayerState)
 		{
-			OnMaxSPChanged.Broadcast(Data.NewValue);
+			OtherPlayerStates.Add(GProjectPlayerState);
 		}
-	);
+	}
+
+	OtherPlayerStates.Sort(
+		[](const AGProjectPlayerState& Left, const AGProjectPlayerState& Right)
+		{
+			return Left.GetPlayerId() < Right.GetPlayerId();
+		});
+	OrderedPlayerStates.Append(OtherPlayerStates);
+
+	return OrderedPlayerStates;
+}
+
+void UGProjectOverlayWidgetController::HandlePlayerListChanged()
+{
+	OnPlayerListChanged.Broadcast();
 }
