@@ -10,6 +10,7 @@
 class UAbilityTask_PlayMontageAndWait;
 class UAbilityTask_WaitGameplayEvent;
 class UAnimMontage;
+class UGameplayEffect;
 
 UENUM(BlueprintType)
 enum class EGProjectAttackInput : uint8
@@ -79,6 +80,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection", meta = (ClampMin = "0.0"))
 	float AttackRadius = 100.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction")
+	TSubclassOf<UGameplayEffect> HitstunGameplayEffectClass;
+
 private:
 	UFUNCTION()
 	void OnGameplayEvent(FGameplayEventData Payload);
@@ -93,9 +97,12 @@ private:
 	void TryReserveNextSection();
 	void SyncCurrentStepFromMontage();
 	void ApplyCurrentStepHit();
+	
 	int32 FindComboStepIndex(const TArray<EGProjectAttackInput>& InputSequence) const;
 	int32 FindComboStepIndexBySection(FName MontageSection) const;
+	
 	const FGProjectComboStep* GetCurrentComboStep() const;
+	
 	void FinishAbility();
 
 	UPROPERTY()

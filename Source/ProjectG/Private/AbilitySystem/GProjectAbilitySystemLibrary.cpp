@@ -37,6 +37,70 @@ FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(co
 	return EffectContextHandle;
 }
 
+void UGProjectAbilitySystemLibrary::ApplyHitstunEffect(
+	const FGProjectDamageEffectParams& DamageEffectParams,
+	TSubclassOf<UGameplayEffect> HitstunEffectClass)
+{
+	UAbilitySystemComponent* SourceASC = DamageEffectParams.SourceAbilitySystemComponent;
+	UAbilitySystemComponent* TargetASC = DamageEffectParams.TargetAbilitySystemComponent;
+	if (!SourceASC || !TargetASC || !HitstunEffectClass || DamageEffectParams.HitstunTime <= 0.0f)
+	{
+		return;
+	}
+
+	if (TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(SourceASC->GetAvatarActor());
+
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
+		HitstunEffectClass,
+		DamageEffectParams.AbilityLevel,
+		EffectContextHandle);
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	SpecHandle.Data->SetDuration(DamageEffectParams.HitstunTime, true);
+
+	FGameplayTagContainer AbilitiesToCancel;
+	AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_Attack);
+	TargetASC->CancelAbilities(&AbilitiesToCancel);
+	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+}
+
+void UGProjectAbilitySystemLibrary::SendHitReactEvent(const FGProjectDamageEffectParams& DamageEffectParams)
+{
+	UAbilitySystemComponent* TargetASC = DamageEffectParams.TargetAbilitySystemComponent;
+	if (!TargetASC || TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	{
+		return;
+	}
+
+	AActor* TargetActor = TargetASC->GetAvatarActor();
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	FGameplayEventData EventData;
+	EventData.EventTag = GProjectGameplayTags::Event_Combat_HitReact;
+	EventData.Instigator = DamageEffectParams.SourceAbilitySystemComponent
+		? DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor()
+		: nullptr;
+	EventData.Target = TargetActor;
+	EventData.EventMagnitude = DamageEffectParams.HitstunTime;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		TargetActor,
+		EventData.EventTag,
+		EventData);
+}
+
 void UGProjectAbilitySystemLibrary::SetKnockbackDirection(FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude)
 {
 	KnockbackDirection.Normalize();

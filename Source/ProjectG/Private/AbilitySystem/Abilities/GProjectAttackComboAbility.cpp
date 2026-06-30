@@ -22,6 +22,7 @@ UGProjectAttackComboAbility::UGProjectAttackComboAbility()
 
 	ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Combat_Attacking);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
+	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
 
 	FAbilityTriggerData BasicAttackTrigger;
 	BasicAttackTrigger.TriggerTag = GProjectGameplayTags::Event_Input_Combat_BasicAttack;
@@ -289,6 +290,8 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		);
 
 		UGProjectAbilitySystemLibrary::ApplyDamageEffect(DamageParams);
+		UGProjectAbilitySystemLibrary::ApplyHitstunEffect(DamageParams, HitstunGameplayEffectClass);
+		UGProjectAbilitySystemLibrary::SendHitReactEvent(DamageParams);
 		HitActorsThisStep.Add(TargetPtr);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target); !DamageParams.KnockbackForce.IsNearlyZero())

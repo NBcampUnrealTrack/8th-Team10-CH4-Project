@@ -31,6 +31,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Targeting_LockOn, "State.Targeting.LockOn");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Attack, "Ability.Combat.Attack");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_HitReact, "Ability.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Movement_Dash, "Ability.Movement.Dash");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Skill_Accessory, "Ability.Skill.Accessory");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Targeting_LockOn, "Ability.Targeting.LockOn");
@@ -41,6 +42,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Combo_Window_Open, "Event.Combat.Combo.Window.Open");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Combo_Window_Close, "Event.Combat.Combo.Window.Close");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Hit, "Event.Combat.Attack.Hit");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
 }

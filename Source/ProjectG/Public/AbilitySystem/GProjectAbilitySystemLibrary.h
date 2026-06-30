@@ -53,6 +53,14 @@ public:
 	static FGameplayEffectContextHandle ApplyDamageEffect(const FGProjectDamageEffectParams& DamageEffectParams);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static void ApplyHitstunEffect(
+		const FGProjectDamageEffectParams& DamageEffectParams,
+		TSubclassOf<UGameplayEffect> HitstunEffectClass);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static void SendHitReactEvent(const FGProjectDamageEffectParams& DamageEffectParams);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
 	static void SetKnockbackDirection(UPARAM(ref) FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude = 0.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem", meta = (WorldContext = "WorldContextObject"))

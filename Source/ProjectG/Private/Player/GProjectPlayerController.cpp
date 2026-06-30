@@ -104,6 +104,17 @@ UGProjectAbilitySystemComponent* AGProjectPlayerController::GetASC()
 	return GProjectAbilitySystemComponent;
 }
 
+bool AGProjectPlayerController::IsGameplayInputBlocked()
+{
+	if (UGProjectAbilitySystemComponent* ASC = GetASC())
+	{
+		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun);
+	}
+
+	return false;
+}
+
 void AGProjectPlayerController::InitHUD()
 {
 	if (!IsLocalController())
@@ -140,7 +151,7 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 		return;
 	}
 
-	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	if (IsGameplayInputBlocked())
 	{
 		return;
 	}
@@ -155,7 +166,7 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AGProjectPlayerController::JumpPressed()
 {
-	if (UGProjectAbilitySystemComponent* ASC = GetASC(); ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	if (IsGameplayInputBlocked())
 	{
 		return;
 	}
@@ -176,6 +187,11 @@ void AGProjectPlayerController::JumpReleased()
 
 void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
+	if (IsGameplayInputBlocked())
+	{
+		return;
+	}
+
 	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) ||
 		InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
 	{
@@ -199,6 +215,11 @@ void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AGProjectPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
+	if (IsGameplayInputBlocked())
+	{
+		return;
+	}
+
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		ASC->AbilityInputTagHeld(InputTag);
