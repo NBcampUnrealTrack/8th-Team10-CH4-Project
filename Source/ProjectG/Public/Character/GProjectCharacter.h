@@ -11,6 +11,7 @@ class UAbilitySystemComponent;
 class UCameraComponent;
 class UGProjectAbilitySystemComponent;
 class UGProjectGameplayAbility;
+class UGProjectLockOnComponent;
 class USpringArmComponent;
 
 UCLASS()
@@ -23,6 +24,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
+	UGProjectLockOnComponent* GetLockOnComponent() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
@@ -52,4 +54,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> TopDownCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UGProjectLockOnComponent> LockOnComponent;
 };
