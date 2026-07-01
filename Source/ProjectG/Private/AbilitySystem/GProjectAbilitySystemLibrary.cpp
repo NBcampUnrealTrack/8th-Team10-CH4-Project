@@ -4,6 +4,7 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
 #include "GProjectGameplayTags.h"
 #include "CollisionQueryParams.h"
 #include "Engine/Engine.h"
@@ -13,6 +14,12 @@
 FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(const FGProjectDamageEffectParams& DamageEffectParams)
 {
 	if (!DamageEffectParams.SourceAbilitySystemComponent || !DamageEffectParams.TargetAbilitySystemComponent || !DamageEffectParams.DamageGameplayEffectClass)
+	{
+		return FGameplayEffectContextHandle();
+	}
+
+	if (DamageEffectParams.TargetAbilitySystemComponent->HasMatchingGameplayTag(
+		GProjectGameplayTags::State_Character_Invulnerable))
 	{
 		return FGameplayEffectContextHandle();
 	}
@@ -28,11 +35,13 @@ FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(co
 		EffectContextHandle
 	);
 
-	if (SpecHandle.IsValid())
+	if (!SpecHandle.IsValid())
 	{
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_Damage, DamageEffectParams.BaseDamage);
-		DamageEffectParams.TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		return FGameplayEffectContextHandle();
 	}
+
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_Damage, DamageEffectParams.BaseDamage);
+	DamageEffectParams.TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
 	return EffectContextHandle;
 }
@@ -101,12 +110,73 @@ void UGProjectAbilitySystemLibrary::SendHitReactEvent(const FGProjectDamageEffec
 		EventData);
 }
 
+void UGProjectAbilitySystemLibrary::SendKnockdownEvent(const FGProjectDamageEffectParams& DamageEffectParams)
+{
+	UAbilitySystemComponent* TargetASC = DamageEffectParams.TargetAbilitySystemComponent;
+	if (!TargetASC || TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead))
+	{
+		return;
+	}
+
+	AActor* TargetActor = TargetASC->GetAvatarActor();
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	FGameplayTagContainer AbilitiesToCancel;
+	AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_Attack);
+	AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_HitReact);
+	TargetASC->CancelAbilities(&AbilitiesToCancel);
+
+	FGameplayEventData EventData;
+	EventData.EventTag = GProjectGameplayTags::Event_Combat_Knockdown;
+	EventData.Instigator = DamageEffectParams.SourceAbilitySystemComponent
+		? DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor()
+		: nullptr;
+	EventData.Target = TargetActor;
+	EventData.EventMagnitude = DamageEffectParams.KnockdownGroundTime;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		TargetActor,
+		EventData.EventTag,
+		EventData);
+}
+
 void UGProjectAbilitySystemLibrary::SetKnockbackDirection(FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude)
 {
-	KnockbackDirection.Normalize();
+	if (KnockbackDirection.IsNearlyZero())
+	{
+		DamageEffectParams.HitDirection = FVector::ZeroVector;
+		DamageEffectParams.KnockbackForce = FVector::ZeroVector;
+		return;
+	}
 
-	const float KnockbackMagnitude = Magnitude == 0.0f ? DamageEffectParams.KnockbackForceMagnitude : Magnitude;
-	DamageEffectParams.KnockbackForce = KnockbackDirection * KnockbackMagnitude;
+	KnockbackDirection.Normalize();
+	DamageEffectParams.HitDirection = KnockbackDirection;
+
+	const float BaseMagnitude = Magnitude > 0.0f ? Magnitude : DamageEffectParams.KnockbackForceMagnitude;
+
+	float KnockbackPower = 1.0f;
+	if (DamageEffectParams.SourceAbilitySystemComponent)
+	{
+		KnockbackPower = DamageEffectParams.SourceAbilitySystemComponent->GetNumericAttribute(
+			UGProjectAttributeSet::GetKnockbackPowerAttribute());
+	}
+
+	float KnockbackResistance = 0.0f;
+	if (DamageEffectParams.TargetAbilitySystemComponent)
+	{
+		KnockbackResistance = DamageEffectParams.TargetAbilitySystemComponent->GetNumericAttribute(
+			UGProjectAttributeSet::GetKnockbackResistanceAttribute());
+	}
+
+	KnockbackPower = FMath::Max(KnockbackPower, 0.0f);
+	KnockbackResistance = FMath::Max(KnockbackResistance, 0.0f);
+
+	const float ResistanceMultiplier = 100.0f / (100.0f + KnockbackResistance);
+	const float FinalMagnitude = FMath::Max(BaseMagnitude, 0.0f) * KnockbackPower * ResistanceMultiplier;
+	DamageEffectParams.KnockbackForce = KnockbackDirection * FinalMagnitude;
 }
 
 void UGProjectAbilitySystemLibrary::GetLivePlayersWithinRadius(

@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "Character/GProjectCharacter.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
@@ -13,6 +14,7 @@
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "Player/GProjectPlayerState.h"
+#include "Targeting/GProjectLockOnComponent.h"
 #include "UI/HUD/GProjectHUD.h"
 
 AGProjectPlayerController::AGProjectPlayerController()
@@ -109,7 +111,8 @@ bool AGProjectPlayerController::IsGameplayInputBlocked()
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
-			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun);
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun) ||
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Knockdown);
 	}
 
 	return false;
@@ -192,6 +195,18 @@ void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 		return;
 	}
 
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
+	{
+		if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
+		{
+			if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
+			{
+				LockOnComponent->StartLockOn();
+			}
+		}
+		return;
+	}
+
 	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) ||
 		InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
 	{
@@ -207,6 +222,18 @@ void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
+	{
+		if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
+		{
+			if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
+			{
+				LockOnComponent->ClearLockOn();
+			}
+		}
+		return;
+	}
+
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		ASC->AbilityInputTagReleased(InputTag);
@@ -215,6 +242,21 @@ void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AGProjectPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
+	{
+		if (!IsGameplayInputBlocked())
+		{
+			if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
+			{
+				if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
+				{
+					LockOnComponent->StartLockOn();
+				}
+			}
+		}
+		return;
+	}
+
 	if (IsGameplayInputBlocked())
 	{
 		return;
