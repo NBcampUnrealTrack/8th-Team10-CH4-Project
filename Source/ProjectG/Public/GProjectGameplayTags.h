@@ -28,12 +28,15 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_Interact);
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Invulnerable);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Attacking);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Hitstun);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Targeting_LockOn);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Attack);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_HitReact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Movement_Dash);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Skill_Accessory);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Targeting_LockOn);
@@ -46,6 +49,8 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Open);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Close);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Hit);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_HitReact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Knockdown);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Combat_Damage);
 }

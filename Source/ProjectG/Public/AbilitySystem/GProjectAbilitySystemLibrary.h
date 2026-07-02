@@ -31,6 +31,9 @@ struct FGProjectDamageEffectParams
 	float AbilityLevel = 1.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Hit Reaction")
+	FVector HitDirection = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadWrite, Category = "Hit Reaction")
 	FVector KnockbackForce = FVector::ZeroVector;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
@@ -39,8 +42,13 @@ struct FGProjectDamageEffectParams
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
 	float HitstunTime = 0.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
-	bool bCausesKnockdown = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction", meta = (ClampMin = "0.0"))
+	float KnockdownGroundTime = 0.0f;
+
+	bool CausesKnockdown() const
+	{
+		return KnockdownGroundTime > 0.0f;
+	}
 };
 
 UCLASS()
@@ -53,7 +61,18 @@ public:
 	static FGameplayEffectContextHandle ApplyDamageEffect(const FGProjectDamageEffectParams& DamageEffectParams);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
-	static void SetKnockbackDirection(UPARAM(ref) FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude = 0.0f);
+	static void ApplyHitstunEffect(
+		const FGProjectDamageEffectParams& DamageEffectParams,
+		TSubclassOf<UGameplayEffect> HitstunEffectClass);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static void SendHitReactEvent(const FGProjectDamageEffectParams& DamageEffectParams);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static void SendKnockdownEvent(const FGProjectDamageEffectParams& DamageEffectParams);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static void SetKnockbackDirection(FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude = 0.0f);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem", meta = (WorldContext = "WorldContextObject"))
 	static void GetLivePlayersWithinRadius(const UObject* WorldContextObject, TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius, const FVector& SphereOrigin);

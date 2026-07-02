@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GProjectGameplayTags.h"
 #include "Player/GProjectPlayerState.h"
+#include "Targeting/GProjectLockOnComponent.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -38,6 +39,8 @@ AGProjectCharacter::AGProjectCharacter()
 	TopDownCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	TopDownCamera->bUsePawnControlRotation = false;
 	TopDownCamera->FieldOfView = 60.0f;
+
+	LockOnComponent = CreateDefaultSubobject<UGProjectLockOnComponent>(TEXT("LockOnComponent"));
 }
 
 UAbilitySystemComponent* AGProjectCharacter::GetAbilitySystemComponent() const
@@ -49,6 +52,11 @@ UGProjectAbilitySystemComponent* AGProjectCharacter::GetGProjectAbilitySystemCom
 {
 	const AGProjectPlayerState* GProjectPlayerState = GetPlayerState<AGProjectPlayerState>();
 	return GProjectPlayerState ? GProjectPlayerState->GetGProjectAbilitySystemComponent() : nullptr;
+}
+
+UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
+{
+	return FindComponentByClass<UGProjectLockOnComponent>();
 }
 
 void AGProjectCharacter::HandleDeath()

@@ -6,6 +6,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/Combo/GProjectComboData.h"
 #include "Animation/AnimInstance.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -22,6 +23,8 @@ UGProjectAttackComboAbility::UGProjectAttackComboAbility()
 
 	ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Combat_Attacking);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
+	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
+	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
 
 	FAbilityTriggerData BasicAttackTrigger;
 	BasicAttackTrigger.TriggerTag = GProjectGameplayTags::Event_Input_Combat_BasicAttack;
@@ -127,9 +130,15 @@ void UGProjectAttackComboAbility::HandleAttackInput(EGProjectAttackInput AttackI
 
 void UGProjectAttackComboAbility::StartCombo(EGProjectAttackInput AttackInput)
 {
+	if (!ComboData)
+	{
+		FinishAbility();
+		return;
+	}
+
 	TArray<EGProjectAttackInput> InitialSequence{ AttackInput };
 	CurrentComboStepIndex = FindComboStepIndex(InitialSequence);
-	if (!ComboSteps.IsValidIndex(CurrentComboStepIndex) || !ComboMontage)
+	if (!ComboData->ComboSteps.IsValidIndex(CurrentComboStepIndex) || !ComboData->ComboMontage)
 	{
 		FinishAbility();
 		return;
@@ -139,9 +148,9 @@ void UGProjectAttackComboAbility::StartCombo(EGProjectAttackInput AttackInput)
 	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
-		ComboMontage,
+		ComboData->ComboMontage,
 		1.0f,
-		ComboSteps[CurrentComboStepIndex].MontageSection
+		ComboData->ComboSteps[CurrentComboStepIndex].MontageSection
 	);
 	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageEnded);
 	MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageEnded);
@@ -152,13 +161,13 @@ void UGProjectAttackComboAbility::StartCombo(EGProjectAttackInput AttackInput)
 void UGProjectAttackComboAbility::AddBufferedInput(EGProjectAttackInput AttackInput)
 {
 	UWorld* World = GetWorld();
-	if (!World)
+	if (!World || !ComboData)
 	{
 		return;
 	}
 
 	RemoveExpiredInputs();
-	const int32 BufferLimit = FMath::Max(MaxBufferedInputs, 1);
+	const int32 BufferLimit = FMath::Max(ComboData->MaxBufferedInputs, 1);
 	while (InputBuffer.Num() >= BufferLimit)
 	{
 		InputBuffer.RemoveAt(0);
@@ -166,7 +175,7 @@ void UGProjectAttackComboAbility::AddBufferedInput(EGProjectAttackInput AttackIn
 
 	FGProjectBufferedAttackInput& BufferedInput = InputBuffer.AddDefaulted_GetRef();
 	BufferedInput.Input = AttackInput;
-	BufferedInput.ExpireTime = World->GetTimeSeconds() + InputBufferLifetime;
+	BufferedInput.ExpireTime = World->GetTimeSeconds() + ComboData->InputBufferLifetime;
 }
 
 void UGProjectAttackComboAbility::RemoveExpiredInputs()
@@ -189,13 +198,14 @@ void UGProjectAttackComboAbility::RemoveExpiredInputs()
 
 void UGProjectAttackComboAbility::TryReserveNextSection()
 {
-	if (!bComboWindowOpen || bNextSectionReserved || !ComboSteps.IsValidIndex(CurrentComboStepIndex) || !CurrentActorInfo)
+	if (!ComboData || !bComboWindowOpen || bNextSectionReserved ||
+		!ComboData->ComboSteps.IsValidIndex(CurrentComboStepIndex) || !CurrentActorInfo)
 	{
 		return;
 	}
 
 	UAnimInstance* AnimInstance = CurrentActorInfo->GetAnimInstance();
-	if (!AnimInstance || !ComboMontage)
+	if (!AnimInstance || !ComboData->ComboMontage)
 	{
 		return;
 	}
@@ -206,18 +216,18 @@ void UGProjectAttackComboAbility::TryReserveNextSection()
 		const EGProjectAttackInput NextInput = InputBuffer[0].Input;
 		InputBuffer.RemoveAt(0);
 
-		TArray<EGProjectAttackInput> NextSequence = ComboSteps[CurrentComboStepIndex].InputSequence;
+		TArray<EGProjectAttackInput> NextSequence = ComboData->ComboSteps[CurrentComboStepIndex].InputSequence;
 		NextSequence.Add(NextInput);
 		const int32 NextComboStepIndex = FindComboStepIndex(NextSequence);
-		if (!ComboSteps.IsValidIndex(NextComboStepIndex))
+		if (!ComboData->ComboSteps.IsValidIndex(NextComboStepIndex))
 		{
 			continue;
 		}
 
 		AnimInstance->Montage_SetNextSection(
-			ComboSteps[CurrentComboStepIndex].MontageSection,
-			ComboSteps[NextComboStepIndex].MontageSection,
-			ComboMontage
+			ComboData->ComboSteps[CurrentComboStepIndex].MontageSection,
+			ComboData->ComboSteps[NextComboStepIndex].MontageSection,
+			ComboData->ComboMontage
 		);
 		bNextSectionReserved = true;
 		return;
@@ -226,7 +236,7 @@ void UGProjectAttackComboAbility::TryReserveNextSection()
 
 void UGProjectAttackComboAbility::SyncCurrentStepFromMontage()
 {
-	if (!CurrentActorInfo || !ComboMontage)
+	if (!ComboData || !CurrentActorInfo || !ComboData->ComboMontage)
 	{
 		return;
 	}
@@ -237,8 +247,9 @@ void UGProjectAttackComboAbility::SyncCurrentStepFromMontage()
 		return;
 	}
 
-	const int32 NewComboStepIndex = FindComboStepIndexBySection(AnimInstance->Montage_GetCurrentSection(ComboMontage));
-	if (ComboSteps.IsValidIndex(NewComboStepIndex) && NewComboStepIndex != CurrentComboStepIndex)
+	const int32 NewComboStepIndex = FindComboStepIndexBySection(
+		AnimInstance->Montage_GetCurrentSection(ComboData->ComboMontage));
+	if (ComboData->ComboSteps.IsValidIndex(NewComboStepIndex) && NewComboStepIndex != CurrentComboStepIndex)
 	{
 		CurrentComboStepIndex = NewComboStepIndex;
 		HitActorsThisStep.Reset();
@@ -250,19 +261,20 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 	AActor* Attacker = GetAvatarActorFromActorInfo();
 	const FGProjectComboStep* CurrentComboStep = GetCurrentComboStep();
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-	if (!Attacker || !Attacker->HasAuthority() || !CurrentComboStep || !SourceASC)
+	if (!ComboData || !Attacker || !Attacker->HasAuthority() || !CurrentComboStep || !SourceASC)
 	{
 		return;
 	}
 
-	const FVector HitCenter = Attacker->GetActorLocation() + Attacker->GetActorForwardVector() * AttackRange;
+	const FVector HitCenter = Attacker->GetActorLocation() +
+		Attacker->GetActorForwardVector() * ComboData->AttackRange;
 	TArray<AActor*> Targets;
 	TArray<AActor*> ActorsToIgnore{ Attacker };
 	UGProjectAbilitySystemLibrary::GetLivePlayersWithinRadius(
 		Attacker,
 		Targets,
 		ActorsToIgnore,
-		AttackRadius,
+		ComboData->AttackRadius,
 		HitCenter
 	);
 
@@ -288,19 +300,40 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			Target->GetActorLocation() - Attacker->GetActorLocation()
 		);
 
-		UGProjectAbilitySystemLibrary::ApplyDamageEffect(DamageParams);
+		const FGameplayEffectContextHandle DamageContext = UGProjectAbilitySystemLibrary::ApplyDamageEffect(DamageParams);
+		if (!DamageContext.IsValid())
+		{
+			continue;
+		}
+
+		if (DamageParams.CausesKnockdown())
+		{
+			UGProjectAbilitySystemLibrary::SendKnockdownEvent(DamageParams);
+		}
+		else
+		{
+			UGProjectAbilitySystemLibrary::ApplyHitstunEffect(DamageParams, HitstunGameplayEffectClass);
+			UGProjectAbilitySystemLibrary::SendHitReactEvent(DamageParams);
+		}
 		HitActorsThisStep.Add(TargetPtr);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target); !DamageParams.KnockbackForce.IsNearlyZero())
 		{
-			TargetCharacter->LaunchCharacter(DamageParams.KnockbackForce, true, true);
+			FVector LaunchVelocity = DamageParams.KnockbackForce;
+			LaunchVelocity.Z = 200.0f;
+			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 		}
 	}
 }
 
 int32 UGProjectAttackComboAbility::FindComboStepIndex(const TArray<EGProjectAttackInput>& InputSequence) const
 {
-	return ComboSteps.IndexOfByPredicate(
+	if (!ComboData)
+	{
+		return INDEX_NONE;
+	}
+
+	return ComboData->ComboSteps.IndexOfByPredicate(
 		[&InputSequence](const FGProjectComboStep& ComboStep)
 		{
 			return ComboStep.InputSequence == InputSequence;
@@ -310,7 +343,12 @@ int32 UGProjectAttackComboAbility::FindComboStepIndex(const TArray<EGProjectAtta
 
 int32 UGProjectAttackComboAbility::FindComboStepIndexBySection(FName MontageSection) const
 {
-	return ComboSteps.IndexOfByPredicate(
+	if (!ComboData)
+	{
+		return INDEX_NONE;
+	}
+
+	return ComboData->ComboSteps.IndexOfByPredicate(
 		[MontageSection](const FGProjectComboStep& ComboStep)
 		{
 			return ComboStep.MontageSection == MontageSection;
@@ -320,7 +358,9 @@ int32 UGProjectAttackComboAbility::FindComboStepIndexBySection(FName MontageSect
 
 const FGProjectComboStep* UGProjectAttackComboAbility::GetCurrentComboStep() const
 {
-	return ComboSteps.IsValidIndex(CurrentComboStepIndex) ? &ComboSteps[CurrentComboStepIndex] : nullptr;
+	return ComboData && ComboData->ComboSteps.IsValidIndex(CurrentComboStepIndex)
+		? &ComboData->ComboSteps[CurrentComboStepIndex]
+		: nullptr;
 }
 
 void UGProjectAttackComboAbility::FinishAbility()

@@ -41,6 +41,7 @@ protected:
 
 private:
 	UGProjectAbilitySystemComponent* GetASC();
+	bool IsGameplayInputBlocked();
 	void InitHUD();
 
 	void Move(const FInputActionValue& InputActionValue);
