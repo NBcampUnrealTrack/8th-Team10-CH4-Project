@@ -6,14 +6,22 @@
 #include "Engine/DataAsset.h"
 #include "GItemDefinition.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class PROJECTG_API UGItemDefinition : public UPrimaryDataAsset
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    FText DisplayName;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (MultiLine = true))
+    FText Description;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TSoftObjectPtr<UTexture2D> Icon;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TSoftObjectPtr<UStaticMesh> PickupMesh;
 };
