@@ -21,7 +21,7 @@ AGProjectGameMode::AGProjectGameMode()
 void AGProjectGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	StartMatchTimer();
 }
 
@@ -54,7 +54,6 @@ void AGProjectGameMode::TickMatchTimer()
 	}
 
 	const int NewTime = GS->GetRemainMatchTime() - 1;
-
 	GS->SetRemainMatchTime(NewTime);
 
 	if (NewTime <= 0)

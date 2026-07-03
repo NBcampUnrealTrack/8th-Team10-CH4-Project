@@ -27,7 +27,7 @@ protected:
 	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;
 
 	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UGProjectMatchTimerWidget> MatchTimerWIdget;
+	TObjectPtr<UGProjectMatchTimerWidget> MatchTimerWidget;
 
 private:
 	UFUNCTION()
