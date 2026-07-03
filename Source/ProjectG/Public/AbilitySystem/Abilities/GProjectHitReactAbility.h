@@ -27,7 +27,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction")
 	TObjectPtr<UAnimMontage> HitReactMontage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
+	FName FrontSection = TEXT("HitFront");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
+	FName BackSection = TEXT("HitBack");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
+	FName LeftSection = TEXT("HitLeft");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
+	FName RightSection = TEXT("HitRight");
+
 private:
+	FName DetermineHitSection(const FGameplayEventData* TriggerEventData) const;
+
 	UFUNCTION()
 	void FinishHitReact();
 
