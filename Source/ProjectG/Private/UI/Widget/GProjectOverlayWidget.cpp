@@ -4,8 +4,13 @@
 
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Character/GProjectCharacter.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Player/GProjectPlayerState.h"
+#include "Targeting/GProjectLockOnComponent.h"
 #include "UI/Widget/GProjectPlayerBoxWidget.h"
 #include "UI/WidgetController/GProjectOverlayWidgetController.h"
 #include "UI/WidgetController/GProjectPlayerBoxWidgetController.h"
@@ -26,8 +31,29 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	OverlayController->OnPlayerListChanged.AddDynamic(this, &ThisClass::RefreshPlayerBoxes);
 	RefreshPlayerBoxes();
 
+
 	OverlayController->OnMatchTimeChanged.RemoveDynamic(this, &ThisClass::RefreshMatchTimer);
 	OverlayController->OnMatchTimeChanged.AddDynamic(this, &ThisClass::RefreshMatchTimer);
+
+	BindLockOnComponent();
+}
+
+void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	UpdateLockOnIndicator();
+}
+
+void UGProjectOverlayWidget::NativeDestruct()
+{
+	if (BoundLockOnComponent)
+	{
+		BoundLockOnComponent->OnLockOnTargetChanged.RemoveDynamic(
+			this, &ThisClass::OnLockOnTargetChanged);
+	}
+
+	Super::NativeDestruct();
+
 }
 
 void UGProjectOverlayWidget::RefreshPlayerBoxes()
@@ -77,4 +103,69 @@ void UGProjectOverlayWidget::RefreshMatchTimer(int32 RemainTime)
 	{
 		MatchTimerWidget->SetRemainTime(RemainTime);
 	}
+}
+
+void UGProjectOverlayWidget::BindLockOnComponent()
+{
+	if (BoundLockOnComponent)
+	{
+		BoundLockOnComponent->OnLockOnTargetChanged.RemoveDynamic(
+			this, &ThisClass::OnLockOnTargetChanged);
+	}
+
+	const AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetOwningPlayerPawn());
+	BoundLockOnComponent = Character ? Character->GetLockOnComponent() : nullptr;
+	if (!BoundLockOnComponent)
+	{
+		OnLockOnTargetChanged(nullptr);
+		return;
+	}
+
+	BoundLockOnComponent->OnLockOnTargetChanged.AddDynamic(
+		this, &ThisClass::OnLockOnTargetChanged);
+	OnLockOnTargetChanged(BoundLockOnComponent->GetCurrentTarget());
+}
+
+void UGProjectOverlayWidget::OnLockOnTargetChanged(AActor* NewTarget)
+{
+	LockOnTarget = NewTarget;
+
+	if (LockOnIndicator)
+	{
+		LockOnIndicator->SetVisibility(
+			LockOnTarget ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+	}
+}
+
+void UGProjectOverlayWidget::UpdateLockOnIndicator()
+{
+	if (!LockOnIndicator)
+	{
+		return;
+	}
+
+	if (!IsValid(LockOnTarget))
+	{
+		LockOnIndicator->SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
+
+	FVector2D WidgetPosition;
+	const FVector WorldPosition = LockOnTarget->GetActorLocation() + FVector::UpVector * IndicatorHeightOffset;
+	const bool bProjected = UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(
+		GetOwningPlayer(),
+		WorldPosition,
+		WidgetPosition,
+		true);
+
+	UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(LockOnIndicator->Slot);
+	if (!bProjected || !CanvasSlot)
+	{
+		LockOnIndicator->SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
+
+	CanvasSlot->SetPosition(WidgetPosition);
+	CanvasSlot->SetAlignment(FVector2D(0.5f));
+	LockOnIndicator->SetVisibility(ESlateVisibility::HitTestInvisible);
 }

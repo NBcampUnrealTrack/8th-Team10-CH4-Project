@@ -11,9 +11,11 @@
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 
-FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(const FGProjectDamageEffectParams& DamageEffectParams)
+FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(
+	const FGProjectDamageEffectParams& DamageEffectParams,
+	TSubclassOf<UGameplayEffect> DamageEffectClass)
 {
-	if (!DamageEffectParams.SourceAbilitySystemComponent || !DamageEffectParams.TargetAbilitySystemComponent || !DamageEffectParams.DamageGameplayEffectClass)
+	if (!DamageEffectParams.SourceAbilitySystemComponent || !DamageEffectParams.TargetAbilitySystemComponent || !DamageEffectClass)
 	{
 		return FGameplayEffectContextHandle();
 	}
@@ -30,8 +32,8 @@ FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(co
 	EffectContextHandle.AddSourceObject(SourceAvatarActor);
 
 	const FGameplayEffectSpecHandle SpecHandle = DamageEffectParams.SourceAbilitySystemComponent->MakeOutgoingSpec(
-		DamageEffectParams.DamageGameplayEffectClass,
-		DamageEffectParams.AbilityLevel,
+		DamageEffectClass,
+		1.0f,
 		EffectContextHandle
 	);
 
@@ -67,7 +69,7 @@ void UGProjectAbilitySystemLibrary::ApplyHitstunEffect(
 
 	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(
 		HitstunEffectClass,
-		DamageEffectParams.AbilityLevel,
+		1.0f,
 		EffectContextHandle);
 	if (!SpecHandle.IsValid())
 	{
