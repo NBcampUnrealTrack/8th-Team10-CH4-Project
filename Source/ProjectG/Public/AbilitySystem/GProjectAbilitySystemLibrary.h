@@ -22,13 +22,7 @@ struct FGProjectDamageEffectParams
 	TObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Damage")
-	TSubclassOf<UGameplayEffect> DamageGameplayEffectClass;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Damage")
 	float BaseDamage = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Damage")
-	float AbilityLevel = 1.0f;
 
 	UPROPERTY(BlueprintReadWrite, Category = "Hit Reaction")
 	FVector HitDirection = FVector::ZeroVector;
@@ -58,7 +52,9 @@ class PROJECTG_API UGProjectAbilitySystemLibrary : public UBlueprintFunctionLibr
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
-	static FGameplayEffectContextHandle ApplyDamageEffect(const FGProjectDamageEffectParams& DamageEffectParams);
+	static FGameplayEffectContextHandle ApplyDamageEffect(
+		const FGProjectDamageEffectParams& DamageEffectParams,
+		TSubclassOf<UGameplayEffect> DamageEffectClass);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
 	static void ApplyHitstunEffect(

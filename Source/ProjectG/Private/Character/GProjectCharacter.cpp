@@ -4,13 +4,16 @@
 
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
+#include "AbilitySystem/Combo/GProjectComboData.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/MeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GProjectGameplayTags.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -64,6 +67,62 @@ UGProjectAbilitySystemComponent* AGProjectCharacter::GetGProjectAbilitySystemCom
 UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 {
 	return FindComponentByClass<UGProjectLockOnComponent>();
+}
+
+UGProjectComboData* AGProjectCharacter::GetActiveComboData() const
+{
+	return ActiveComboData ? ActiveComboData.Get() : DefaultComboData.Get();
+}
+
+UMeshComponent* AGProjectCharacter::GetAttackTraceMesh() const
+{
+	return AttackTraceMesh;
+}
+
+FName AGProjectCharacter::GetAttackTraceStartSocketName() const
+{
+	return AttackTraceStartSocket;
+}
+
+FName AGProjectCharacter::GetAttackTraceEndSocketName() const
+{
+	return AttackTraceEndSocket;
+}
+
+void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
+{
+	AttackTraceMesh = InTraceMesh;
+	AttackTraceStartSocket = InStartSocket;
+	AttackTraceEndSocket = InEndSocket;
+}
+
+void AGProjectCharacter::ResetAttackTraceSource()
+{
+	AttackTraceMesh = nullptr;
+	AttackTraceStartSocket = NAME_None;
+	AttackTraceEndSocket = NAME_None;
+}
+
+void AGProjectCharacter::SetActiveComboData(UGProjectComboData* NewComboData)
+{
+	if (HasAuthority())
+	{
+		ActiveComboData = NewComboData;
+	}
+}
+
+void AGProjectCharacter::ResetActiveComboData()
+{
+	if (HasAuthority())
+	{
+		ActiveComboData = nullptr;
+	}
+}
+
+void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AGProjectCharacter, ActiveComboData);
 }
 
 void AGProjectCharacter::HandleDeath()
