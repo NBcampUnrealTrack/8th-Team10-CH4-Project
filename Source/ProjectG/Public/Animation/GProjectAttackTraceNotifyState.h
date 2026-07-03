@@ -7,12 +7,14 @@
 #include "GameplayTagContainer.h"
 #include "GProjectAttackTraceNotifyState.generated.h"
 
-UCLASS(meta = (DisplayName = "GProject Attack Trace"))
+UCLASS(meta = (DisplayName = "GProject Attack Hit Window"))
 class PROJECTG_API UGProjectAttackTraceNotifyState : public UAnimNotifyState
 {
 	GENERATED_BODY()
 
 public:
+	FName GetTraceSocketName() const { return TraceSocketName; }
+
 	virtual void NotifyBegin(
 		USkeletalMeshComponent* MeshComp,
 		UAnimSequenceBase* Animation,
@@ -32,4 +34,7 @@ public:
 
 private:
 	void SendTraceEvent(USkeletalMeshComponent* MeshComp, const FGameplayTag& EventTag) const;
+
+	UPROPERTY(EditAnywhere, Category = "Trace")
+	FName TraceSocketName = TEXT("hand_r");
 };

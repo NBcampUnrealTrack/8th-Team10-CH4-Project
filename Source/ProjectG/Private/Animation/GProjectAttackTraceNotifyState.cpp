@@ -50,5 +50,6 @@ void UGProjectAttackTraceNotifyState::SendTraceEvent(
 	EventData.EventTag = EventTag;
 	EventData.Instigator = OwnerActor;
 	EventData.Target = OwnerActor;
+	EventData.OptionalObject = this;
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, EventTag, EventData);
 }
