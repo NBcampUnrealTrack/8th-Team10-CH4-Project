@@ -9,9 +9,11 @@
 
 class UAbilitySystemComponent;
 class UCameraComponent;
+class UMeshComponent;
 class UGProjectAbilitySystemComponent;
 class UGProjectGameplayAbility;
 class UGProjectLockOnComponent;
+class UGProjectComboData;
 class USpringArmComponent;
 
 UCLASS()
@@ -25,6 +27,22 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
 	UGProjectLockOnComponent* GetLockOnComponent() const;
+	UGProjectComboData* GetActiveComboData() const;
+	UMeshComponent* GetAttackTraceMesh() const;
+	FName GetAttackTraceStartSocketName() const;
+	FName GetAttackTraceEndSocketName() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
+	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
+	void ResetAttackTraceSource();
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
+	void SetActiveComboData(UGProjectComboData* NewComboData);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
+	void ResetActiveComboData();
 
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
@@ -33,11 +51,15 @@ public:
 	bool IsDead() const;
 
 protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Settings")
 	TArray<TSubclassOf<UGProjectGameplayAbility>> StartupAbilities;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Settings")
+	TObjectPtr<UGProjectComboData> DefaultComboData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
 	float RespawnDelay = 3.0f;
@@ -55,6 +77,15 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> TopDownCamera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Settings", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGProjectLockOnComponent> LockOnComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMeshComponent> AttackTraceMesh;
+
+	FName AttackTraceStartSocket;
+	FName AttackTraceEndSocket;
+
+	UPROPERTY(Replicated)
+	TObjectPtr<UGProjectComboData> ActiveComboData;
 };

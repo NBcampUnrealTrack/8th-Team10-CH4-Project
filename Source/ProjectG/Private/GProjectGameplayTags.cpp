@@ -43,7 +43,9 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Input_Combat_StrongAttack, "Event.Input.Combat.StrongAttack");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Combo_Window_Open, "Event.Combat.Combo.Window.Open");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Combo_Window_Close, "Event.Combat.Combo.Window.Close");
-	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Hit, "Event.Combat.Attack.Hit");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_Begin, "Event.Combat.Attack.Trace.Begin");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_Tick, "Event.Combat.Attack.Trace.Tick");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_End, "Event.Combat.Attack.Trace.End");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
 
