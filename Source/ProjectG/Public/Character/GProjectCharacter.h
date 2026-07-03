@@ -9,6 +9,7 @@
 
 class UAbilitySystemComponent;
 class UCameraComponent;
+class UMeshComponent;
 class UGProjectAbilitySystemComponent;
 class UGProjectGameplayAbility;
 class UGProjectLockOnComponent;
@@ -25,6 +26,15 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
 	UGProjectLockOnComponent* GetLockOnComponent() const;
+	UMeshComponent* GetAttackTraceMesh() const;
+	FName GetAttackTraceStartSocketName() const;
+	FName GetAttackTraceEndSocketName() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
+	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
+	void ResetAttackTraceSource();
 
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
@@ -57,4 +67,16 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Targeting", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGProjectLockOnComponent> LockOnComponent;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UMeshComponent> AttackTraceMesh;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Trace")
+	FName DefaultTraceStartSocket = TEXT("hand_r");
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Trace")
+	FName DefaultTraceEndSocket = TEXT("hand_l");
+
+	FName AttackTraceStartSocket;
+	FName AttackTraceEndSocket;
 };

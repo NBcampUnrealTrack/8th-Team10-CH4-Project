@@ -8,6 +8,9 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Combo/GProjectComboData.h"
 #include "Animation/AnimInstance.h"
+#include "Character/GProjectCharacter.h"
+#include "Components/MeshComponent.h"
+#include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
@@ -72,6 +75,8 @@ void UGProjectAttackComboAbility::EndAbility(
 	CurrentComboStepIndex = INDEX_NONE;
 	bComboWindowOpen = false;
 	bNextSectionReserved = false;
+	bHasPreviousUnarmedTraceLocation = false;
+	PreviousUnarmedTraceLocation = FVector::ZeroVector;
 	EventTask = nullptr;
 	MontageTask = nullptr;
 
@@ -101,10 +106,20 @@ void UGProjectAttackComboAbility::OnGameplayEvent(FGameplayEventData Payload)
 	{
 		bComboWindowOpen = false;
 	}
-	else if (EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_Attack_Hit))
+	else if (EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_Attack_Trace_Begin))
+	{
+		SyncCurrentStepFromMontage();
+		BeginCurrentStepTrace();
+	}
+	else if (EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_Attack_Trace_Tick) ||
+		EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_Attack_Hit))
 	{
 		SyncCurrentStepFromMontage();
 		ApplyCurrentStepHit();
+	}
+	else if (EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_Attack_Trace_End))
+	{
+		EndCurrentStepTrace();
 	}
 }
 
@@ -253,7 +268,32 @@ void UGProjectAttackComboAbility::SyncCurrentStepFromMontage()
 	{
 		CurrentComboStepIndex = NewComboStepIndex;
 		HitActorsThisStep.Reset();
+		EndCurrentStepTrace();
 	}
+}
+
+void UGProjectAttackComboAbility::BeginCurrentStepTrace()
+{
+	bHasPreviousUnarmedTraceLocation = false;
+	PreviousUnarmedTraceLocation = FVector::ZeroVector;
+
+	AActor* Attacker = GetAvatarActorFromActorInfo();
+	const FGProjectComboStep* CurrentComboStep = GetCurrentComboStep();
+	const AGProjectCharacter* Character = Cast<AGProjectCharacter>(Attacker);
+	UMeshComponent* TraceMesh = Character ? Character->GetMesh() : nullptr;
+	if (!CurrentComboStep || CurrentComboStep->TraceType != EGProjectAttackTraceType::Unarmed || !TraceMesh)
+	{
+		return;
+	}
+
+	PreviousUnarmedTraceLocation = TraceMesh->GetSocketLocation(CurrentComboStep->UnarmedTraceSocket);
+	bHasPreviousUnarmedTraceLocation = true;
+}
+
+void UGProjectAttackComboAbility::EndCurrentStepTrace()
+{
+	bHasPreviousUnarmedTraceLocation = false;
+	PreviousUnarmedTraceLocation = FVector::ZeroVector;
 }
 
 void UGProjectAttackComboAbility::ApplyCurrentStepHit()
@@ -266,20 +306,72 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		return;
 	}
 
-	const FVector HitCenter = Attacker->GetActorLocation() +
-		Attacker->GetActorForwardVector() * ComboData->AttackRange;
-	TArray<AActor*> Targets;
-	TArray<AActor*> ActorsToIgnore{ Attacker };
-	UGProjectAbilitySystemLibrary::GetLivePlayersWithinRadius(
-		Attacker,
-		Targets,
-		ActorsToIgnore,
-		ComboData->AttackRadius,
-		HitCenter
-	);
-
-	for (AActor* Target : Targets)
+	const AGProjectCharacter* Character = Cast<AGProjectCharacter>(Attacker);
+	UMeshComponent* TraceMesh = nullptr;
+	if (Character)
 	{
+		TraceMesh = CurrentComboStep->TraceType == EGProjectAttackTraceType::Unarmed
+			? Character->GetMesh()
+			: Character->GetAttackTraceMesh();
+	}
+	if (!TraceMesh || !GetWorld())
+	{
+		return;
+	}
+
+	FVector TraceStart;
+	FVector TraceEnd;
+	if (CurrentComboStep->TraceType == EGProjectAttackTraceType::Unarmed)
+	{
+		TraceEnd = TraceMesh->GetSocketLocation(CurrentComboStep->UnarmedTraceSocket);
+		TraceStart = bHasPreviousUnarmedTraceLocation ? PreviousUnarmedTraceLocation : TraceEnd;
+		PreviousUnarmedTraceLocation = TraceEnd;
+		bHasPreviousUnarmedTraceLocation = true;
+	}
+	else
+	{
+		TraceStart = TraceMesh->GetSocketLocation(Character->GetAttackTraceStartSocketName());
+		TraceEnd = TraceMesh->GetSocketLocation(Character->GetAttackTraceEndSocketName());
+	}
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(AttackSocketTrace), false, Attacker);
+	TArray<FHitResult> HitResults;
+	GetWorld()->SweepMultiByChannel(
+		HitResults,
+		TraceStart,
+		TraceEnd,
+		FQuat::Identity,
+		ECC_Pawn,
+		FCollisionShape::MakeSphere(CurrentComboStep->TraceRadius),
+		QueryParams);
+
+#if ENABLE_DRAW_DEBUG
+	if (ComboData->bDrawDebugTrace)
+	{
+		const FVector TraceDirection = TraceEnd - TraceStart;
+		const FVector TraceCenter = (TraceStart + TraceEnd) * 0.5f;
+		const FQuat TraceRotation = TraceDirection.IsNearlyZero()
+			? FQuat::Identity
+			: FRotationMatrix::MakeFromZ(TraceDirection).ToQuat();
+		const float CapsuleHalfHeight = TraceDirection.Size() * 0.5f + CurrentComboStep->TraceRadius;
+
+		DrawDebugCapsule(
+			GetWorld(),
+			TraceCenter,
+			CapsuleHalfHeight,
+			CurrentComboStep->TraceRadius,
+			TraceRotation,
+			HitResults.IsEmpty() ? FColor::Green : FColor::Red,
+			false,
+			ComboData->DebugTraceDuration,
+			0,
+			1.5f);
+	}
+#endif
+
+	for (const FHitResult& HitResult : HitResults)
+	{
+		AActor* Target = HitResult.GetActor();
 		const TWeakObjectPtr<AActor> TargetPtr(Target);
 		if (!Target || HitActorsThisStep.Contains(TargetPtr))
 		{

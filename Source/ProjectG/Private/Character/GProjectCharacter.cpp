@@ -6,6 +6,7 @@
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/MeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GProjectGameplayTags.h"
@@ -57,6 +58,35 @@ UGProjectAbilitySystemComponent* AGProjectCharacter::GetGProjectAbilitySystemCom
 UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 {
 	return FindComponentByClass<UGProjectLockOnComponent>();
+}
+
+UMeshComponent* AGProjectCharacter::GetAttackTraceMesh() const
+{
+	return AttackTraceMesh ? AttackTraceMesh.Get() : GetMesh();
+}
+
+FName AGProjectCharacter::GetAttackTraceStartSocketName() const
+{
+	return AttackTraceStartSocket.IsNone() ? DefaultTraceStartSocket : AttackTraceStartSocket;
+}
+
+FName AGProjectCharacter::GetAttackTraceEndSocketName() const
+{
+	return AttackTraceEndSocket.IsNone() ? DefaultTraceEndSocket : AttackTraceEndSocket;
+}
+
+void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
+{
+	AttackTraceMesh = InTraceMesh;
+	AttackTraceStartSocket = InStartSocket;
+	AttackTraceEndSocket = InEndSocket;
+}
+
+void AGProjectCharacter::ResetAttackTraceSource()
+{
+	AttackTraceMesh = nullptr;
+	AttackTraceStartSocket = NAME_None;
+	AttackTraceEndSocket = NAME_None;
 }
 
 void AGProjectCharacter::HandleDeath()

@@ -60,6 +60,8 @@ private:
 	void RemoveExpiredInputs();
 	void TryReserveNextSection();
 	void SyncCurrentStepFromMontage();
+	void BeginCurrentStepTrace();
+	void EndCurrentStepTrace();
 	void ApplyCurrentStepHit();
 	
 	int32 FindComboStepIndex(const TArray<EGProjectAttackInput>& InputSequence) const;
@@ -80,4 +82,6 @@ private:
 	int32 CurrentComboStepIndex = INDEX_NONE;
 	bool bComboWindowOpen = false;
 	bool bNextSectionReserved = false;
+	bool bHasPreviousUnarmedTraceLocation = false;
+	FVector PreviousUnarmedTraceLocation = FVector::ZeroVector;
 };

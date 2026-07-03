@@ -13,6 +13,13 @@ enum class EGProjectAttackInput : uint8
 	Strong
 };
 
+UENUM(BlueprintType)
+enum class EGProjectAttackTraceType : uint8
+{
+	Unarmed,
+	Weapon
+};
+
 USTRUCT(BlueprintType)
 struct FGProjectComboStep
 {
@@ -26,4 +33,13 @@ struct FGProjectComboStep
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
 	FGProjectDamageEffectParams DamageParams;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection")
+	EGProjectAttackTraceType TraceType = EGProjectAttackTraceType::Unarmed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection")
+	FName UnarmedTraceSocket = TEXT("hand_r");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection", meta = (ClampMin = "0.0"))
+	float TraceRadius = 20.0f;
 };
