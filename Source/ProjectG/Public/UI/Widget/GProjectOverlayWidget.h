@@ -26,11 +26,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Player List")
 	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;
 
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPanelWidget> MatchTimerContainer;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Match Timer")
-	TObjectPtr<UGProjectMatchTimerWidget> MatchTimerWidget;
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UGProjectMatchTimerWidget> MatchTimerWIdget;
 
 private:
 	UFUNCTION()
