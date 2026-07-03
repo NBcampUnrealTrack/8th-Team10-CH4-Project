@@ -10,6 +10,7 @@ class UGProjectOverlayWidgetController;
 class UGProjectPlayerBoxWidget;
 class UGProjectPlayerBoxWidgetController;
 class UPanelWidget;
+class UGProjectMatchTimerWidget;
 
 UCLASS()
 class PROJECTG_API UGProjectOverlayWidget : public UGProjectUserWidget
@@ -25,9 +26,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Player List")
 	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPanelWidget> MatchTimerContainer;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Match Timer")
+	TObjectPtr<UGProjectMatchTimerWidget> MatchTimerWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
+
+	UFUNCTION()
+	void RefreshMatchTimer(int32 RemainTime);
 
 	UPROPERTY()
 	TArray<TObjectPtr<UGProjectPlayerBoxWidgetController>> PlayerBoxControllers;

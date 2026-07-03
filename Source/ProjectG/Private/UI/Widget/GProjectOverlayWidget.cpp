@@ -10,6 +10,7 @@
 #include "UI/WidgetController/GProjectOverlayWidgetController.h"
 #include "UI/WidgetController/GProjectPlayerBoxWidgetController.h"
 #include "UI/WidgetController/GProjectWidgetController.h"
+#include "UI/Widget/GProjectMatchTimerWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -24,6 +25,9 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	OverlayController->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerBoxes);
 	OverlayController->OnPlayerListChanged.AddDynamic(this, &ThisClass::RefreshPlayerBoxes);
 	RefreshPlayerBoxes();
+
+	OverlayController->OnMatchTimeChanged.RemoveDynamic(this, &ThisClass::RefreshMatchTimer);
+	OverlayController->OnMatchTimeChanged.AddDynamic(this, &ThisClass::RefreshMatchTimer);
 }
 
 void UGProjectOverlayWidget::RefreshPlayerBoxes()
@@ -64,5 +68,13 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		PlayerBoxContainer->AddChild(PlayerBox);
 		BoxController->BroadcastInitialValues();
 		PlayerBoxControllers.Add(BoxController);
+	}
+}
+
+void UGProjectOverlayWidget::RefreshMatchTimer(int32 RemainTime)
+{
+	if (MatchTimerWidget)
+	{
+		MatchTimerWidget->SetRemainTime(RemainTime);
 	}
 }
