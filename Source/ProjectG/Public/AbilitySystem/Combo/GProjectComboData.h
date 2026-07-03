@@ -21,15 +21,21 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
 	TArray<FGProjectComboStep> ComboSteps;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "0.05"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Buffer", meta = (ClampMin = "0.05"))
 	float InputBufferLifetime = 1.5f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo", meta = (ClampMin = "1"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Buffer", meta = (ClampMin = "1"))
 	int32 MaxBufferedInputs = 8;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection", meta = (ClampMin = "0.0"))
-	float AttackRange = 100.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace")
+	EGProjectAttackTraceType TraceType = EGProjectAttackTraceType::Unarmed;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Detection", meta = (ClampMin = "0.0"))
-	float AttackRadius = 100.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace", meta = (ClampMin = "0.0"))
+	float TraceRadius = 20.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace|Debug")
+	bool bDrawDebugTrace = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace|Debug", meta = (ClampMin = "0.0"))
+	float DebugTraceDuration = 1.0f;
 };
