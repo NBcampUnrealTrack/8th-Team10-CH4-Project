@@ -30,8 +30,8 @@ AGProjectCharacter::AGProjectCharacter()
 	
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->AirControl = 0.95f; //공중에서 회전 궤적을 변경하기 어렵게 만들려면 수치 Down
-		GetCharacterMovement()->FallingLateralFriction = 0.5f; // 공중에서 관성력 어느정도 줄건가
+		GetCharacterMovement()->AirControl = 0.95f; 
+		GetCharacterMovement()->FallingLateralFriction = 0.5f; 
 		GetCharacterMovement()->AirControlBoostMultiplier = 1.0f;
 	}
 
