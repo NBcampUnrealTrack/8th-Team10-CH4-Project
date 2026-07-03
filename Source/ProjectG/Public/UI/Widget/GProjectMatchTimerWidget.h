@@ -21,7 +21,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Match Timer")
 	void SetRemainTime(int32 Time);
 
-private:
+protected:
 	virtual void NativePreConstruct() override;
 
 	UPROPERTY(meta = (BindWidget))
