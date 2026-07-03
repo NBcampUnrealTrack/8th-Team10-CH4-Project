@@ -23,6 +23,13 @@ AGProjectCharacter::AGProjectCharacter()
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->AirControl = 0.95f; //공중에서 회전 궤적을 변경하기 어렵게 만들려면 수치 Down
+		GetCharacterMovement()->FallingLateralFriction = 0.5f; // 공중에서 관성력 어느정도 줄건가
+		GetCharacterMovement()->AirControlBoostMultiplier = 1.0f;
+	}
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -84,6 +91,46 @@ void AGProjectCharacter::PossessedBy(AController* NewController)
 	AddCharacterAbilities();
 }
 
+void AGProjectCharacter::Jump()
+{
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->GetCurrentAcceleration() = FVector::ZeroVector;
+		
+		FVector CurrentVelocity = GetCharacterMovement()->Velocity;
+		CurrentVelocity.X = 0.35f;
+		CurrentVelocity.Y = 0.35f;
+		GetCharacterMovement()->Velocity = CurrentVelocity;
+	}
+	Super::Jump();
+}
+
+void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	if (GetCharacterMovement())
+	{
+		if (GetCharacterMovement()->MovementMode == MOVE_Falling)
+		{
+			FVector CurrentInput = GetCharacterMovement()->GetCurrentAcceleration();
+			
+			if (!CurrentInput.IsNearlyZero())
+			{
+				GetCharacterMovement()->MaxWalkSpeed = 600.0f; 
+			}
+			else
+			{
+				GetCharacterMovement()->MaxWalkSpeed = 300.0f; 
+			}
+		}
+		else if (GetCharacterMovement()->MovementMode == MOVE_Walking)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = 600.0f; 
+		}
+	}
+}
+	
 void AGProjectCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
@@ -137,6 +184,7 @@ void AGProjectCharacter::AddCharacterAbilities()
 				break;
 			}
 		}
+
 
 		if (bAlreadyGranted)
 		{
