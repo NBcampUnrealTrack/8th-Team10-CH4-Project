@@ -9,6 +9,7 @@
 class AGProjectPlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnMatchTimeChangedSignature, int32, RemainTime);
 
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
@@ -17,12 +18,18 @@ class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetCont
 
 public:
 	virtual void BindCallbacksToDependencies() override;
+	
+	virtual void BroadcastInitialValues() override;
 
 	TArray<AGProjectPlayerState*> GetOrderedPlayerStates() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Player List")
 	FGProjectOnPlayerListChangedSignature OnPlayerListChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Match")
+	FGProjectOnMatchTimeChangedSignature OnMatchTimeChanged;
+
 private:
 	void HandlePlayerListChanged();
+	void HandleMatchTimeChanged(int32 RemainTime);
 };

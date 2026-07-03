@@ -20,6 +20,21 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 	}
 }
 
+void UGProjectOverlayWidgetController::BroadcastInitialValues()
+{
+	Super::BroadcastInitialValues();
+
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	if (AGProjectGameState* GS = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
+	{
+		OnMatchTimeChanged.Broadcast(GS->GetRemainMatchTime());
+	}
+}
+
 TArray<AGProjectPlayerState*> UGProjectOverlayWidgetController::GetOrderedPlayerStates() const
 {
 	TArray<AGProjectPlayerState*> OrderedPlayerStates;
@@ -59,4 +74,9 @@ TArray<AGProjectPlayerState*> UGProjectOverlayWidgetController::GetOrderedPlayer
 void UGProjectOverlayWidgetController::HandlePlayerListChanged()
 {
 	OnPlayerListChanged.Broadcast();
+}
+
+void UGProjectOverlayWidgetController::HandleMatchTimeChanged(int32 RemainTime)
+{
+	OnMatchTimeChanged.Broadcast(RemainTime);
 }

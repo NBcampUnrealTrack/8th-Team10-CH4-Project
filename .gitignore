@@ -46,3 +46,6 @@ Desktop.ini
 
 # Optional local config
 .vsconfig
+
+#Personal developer assets
+/Content/Developers/ChangWuk/
