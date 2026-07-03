@@ -48,7 +48,6 @@ namespace GProjectGameplayTags
 	
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Open);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Combo_Window_Close);
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Hit);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_Begin);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_Tick);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_End);

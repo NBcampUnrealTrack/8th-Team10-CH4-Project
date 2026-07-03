@@ -41,8 +41,8 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled) override;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
-	TObjectPtr<UGProjectComboData> ComboData;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
+	TSubclassOf<UGameplayEffect> DamageGameplayEffectClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction")
 	TSubclassOf<UGameplayEffect> HitstunGameplayEffectClass;
@@ -60,7 +60,7 @@ private:
 	void RemoveExpiredInputs();
 	void TryReserveNextSection();
 	void SyncCurrentStepFromMontage();
-	void BeginCurrentStepTrace();
+	void BeginCurrentStepTrace(FName TraceSocketName);
 	void EndCurrentStepTrace();
 	void ApplyCurrentStepHit();
 	
@@ -77,6 +77,9 @@ private:
 	UPROPERTY()
 	TObjectPtr<UAbilityTask_PlayMontageAndWait> MontageTask;
 
+	UPROPERTY()
+	TObjectPtr<UGProjectComboData> ComboData;
+
 	TArray<FGProjectBufferedAttackInput> InputBuffer;
 	TSet<TWeakObjectPtr<AActor>> HitActorsThisStep;
 	int32 CurrentComboStepIndex = INDEX_NONE;
@@ -84,4 +87,5 @@ private:
 	bool bNextSectionReserved = false;
 	bool bHasPreviousUnarmedTraceLocation = false;
 	FVector PreviousUnarmedTraceLocation = FVector::ZeroVector;
+	FName CurrentUnarmedTraceSocket = NAME_None;
 };
