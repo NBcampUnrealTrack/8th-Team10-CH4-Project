@@ -48,7 +48,22 @@ void UGProjectAttackComboAbility::ActivateAbility(
 	const FGameplayEventData* TriggerEventData)
 {
 	const AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo());
-	ComboData = Character ? Character->GetActiveComboData() : nullptr;
+	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	const bool bAirborne = ASC && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Movement_Airborne);
+	const bool bDashing = !bAirborne && ASC &&
+		ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Movement_Dashing);
+	if (bAirborne && ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_AirAttackUsed))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (Character)
+	{
+		ComboData = bAirborne
+			? Character->GetActiveAirComboData()
+			: (bDashing ? Character->GetActiveDashComboData() : Character->GetActiveGroundComboData());
+	}
 	if (!ComboData)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -59,6 +74,17 @@ void UGProjectAttackComboAbility::ActivateAbility(
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
+	}
+
+	if (bAirborne)
+	{
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 1);
+	}
+	else if (bDashing)
+	{
+		FGameplayTagContainer DashAbilityTags;
+		DashAbilityTags.AddTag(GProjectGameplayTags::Ability_Movement_Dash);
+		ASC->CancelAbilities(&DashAbilityTags);
 	}
 
 	EventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
