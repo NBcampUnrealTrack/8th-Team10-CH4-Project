@@ -62,9 +62,19 @@ UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 	return FindComponentByClass<UGProjectLockOnComponent>();
 }
 
-UGProjectComboData* AGProjectCharacter::GetActiveComboData() const
+UGProjectComboData* AGProjectCharacter::GetActiveGroundComboData() const
 {
-	return ActiveComboData ? ActiveComboData.Get() : DefaultComboData.Get();
+	return ActiveGroundComboData ? ActiveGroundComboData.Get() : DefaultGroundComboData.Get();
+}
+
+UGProjectComboData* AGProjectCharacter::GetActiveAirComboData() const
+{
+	return ActiveAirComboData ? ActiveAirComboData.Get() : DefaultAirComboData.Get();
+}
+
+UGProjectComboData* AGProjectCharacter::GetActiveDashComboData() const
+{
+	return ActiveDashComboData ? ActiveDashComboData.Get() : DefaultDashComboData.Get();
 }
 
 UMeshComponent* AGProjectCharacter::GetAttackTraceMesh() const
@@ -96,11 +106,16 @@ void AGProjectCharacter::ResetAttackTraceSource()
 	AttackTraceEndSocket = NAME_None;
 }
 
-void AGProjectCharacter::SetActiveComboData(UGProjectComboData* NewComboData)
+void AGProjectCharacter::SetActiveComboData(
+	UGProjectComboData* NewGroundComboData,
+	UGProjectComboData* NewAirComboData,
+	UGProjectComboData* NewDashComboData)
 {
 	if (HasAuthority())
 	{
-		ActiveComboData = NewComboData;
+		ActiveGroundComboData = NewGroundComboData;
+		ActiveAirComboData = NewAirComboData;
+		ActiveDashComboData = NewDashComboData;
 	}
 }
 
@@ -108,14 +123,24 @@ void AGProjectCharacter::ResetActiveComboData()
 {
 	if (HasAuthority())
 	{
-		ActiveComboData = nullptr;
+		ActiveGroundComboData = nullptr;
+		ActiveAirComboData = nullptr;
+		ActiveDashComboData = nullptr;
 	}
 }
 
 void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AGProjectCharacter, ActiveComboData);
+	DOREPLIFETIME(AGProjectCharacter, ActiveGroundComboData);
+	DOREPLIFETIME(AGProjectCharacter, ActiveAirComboData);
+	DOREPLIFETIME(AGProjectCharacter, ActiveDashComboData);
+}
+
+void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	RefreshMovementStateTags();
 }
 
 void AGProjectCharacter::HandleDeath()
@@ -173,6 +198,23 @@ void AGProjectCharacter::InitAbilityActorInfo()
 	}
 
 	ASC->InitAbilityActorInfo(GProjectPlayerState, this);
+	RefreshMovementStateTags();
+}
+
+void AGProjectCharacter::RefreshMovementStateTags()
+{
+	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
+	if (!ASC || !GetCharacterMovement())
+	{
+		return;
+	}
+
+	const bool bAirborne = GetCharacterMovement()->IsFalling();
+	ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, bAirborne ? 1 : 0);
+	if (!bAirborne)
+	{
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+	}
 }
 
 void AGProjectCharacter::AddCharacterAbilities()

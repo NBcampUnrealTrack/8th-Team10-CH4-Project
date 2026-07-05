@@ -15,7 +15,6 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_BasicAttack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_StrongAttack);
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_DashAttack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_WeaponAttack);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Skill);
@@ -30,7 +29,10 @@ namespace GProjectGameplayTags
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Invulnerable);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Airborne);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dashing);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Attacking);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_AirAttackUsed);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Hitstun);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Targeting_LockOn);

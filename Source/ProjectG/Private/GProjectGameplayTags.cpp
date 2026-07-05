@@ -12,7 +12,6 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat, "InputTag.Combat");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_BasicAttack, "InputTag.Combat.BasicAttack");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_StrongAttack, "InputTag.Combat.StrongAttack");
-	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_DashAttack, "InputTag.Combat.DashAttack");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_WeaponAttack, "InputTag.Combat.WeaponAttack");
 
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Skill, "InputTag.Skill");
@@ -27,7 +26,10 @@ namespace GProjectGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Dead, "State.Character.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Invulnerable, "State.Character.Invulnerable");
+	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Airborne, "State.Movement.Airborne");
+	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dashing, "State.Movement.Dashing");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Attacking, "State.Combat.Attacking");
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_AirAttackUsed, "State.Combat.AirAttackUsed");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Hitstun, "State.Combat.Hitstun");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Knockdown, "State.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(State_Targeting_LockOn, "State.Targeting.LockOn");
