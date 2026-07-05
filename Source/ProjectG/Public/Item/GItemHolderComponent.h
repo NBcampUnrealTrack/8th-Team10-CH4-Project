@@ -4,7 +4,6 @@
 #include "Components/ActorComponent.h"
 #include "GItemHolderComponent.generated.h"
 
-
 class UGConsumableDefinition;
 class UStaticMeshComponent;
 
@@ -15,6 +14,8 @@ class PROJECTG_API UGItemHolderComponent : public UActorComponent
 
 public:
     UGItemHolderComponent();
+
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UFUNCTION(BlueprintCallable, Category = "Item")
     void HoldItem(UGConsumableDefinition* NewItem);
@@ -31,7 +32,7 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    UPROPERTY(ReplicatedUsing = OnRep_HeldItem, VisibleAnywhere, BlueprintReadOnly, Category = "Item")
     TObjectPtr<UGConsumableDefinition> HeldItem;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
@@ -39,4 +40,10 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
     FName AttachSocketName = TEXT("hand_r");
+
+    UFUNCTION()
+    void OnRep_HeldItem();
+
+private:
+    void RefreshHeldMesh();
 };

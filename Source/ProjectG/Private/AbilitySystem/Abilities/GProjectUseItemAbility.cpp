@@ -5,6 +5,7 @@
 UGProjectUseItemAbility::UGProjectUseItemAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
 
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);

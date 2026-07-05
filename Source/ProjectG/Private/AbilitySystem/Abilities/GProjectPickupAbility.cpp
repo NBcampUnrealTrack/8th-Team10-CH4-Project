@@ -1,5 +1,7 @@
 #include "AbilitySystem/Abilities/GProjectPickupAbility.h"
 
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Item/GItemHolderComponent.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
@@ -7,6 +9,7 @@
 UGProjectPickupAbility::UGProjectPickupAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
 
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
@@ -25,6 +28,59 @@ void UGProjectPickupAbility::ActivateAbility(
         return;
     }
 
+    bPickedUp = false;
+
+    if (!PickupMontage)
+    {
+        DoPickup();
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        return;
+    }
+
+    EventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+        this,
+        GProjectGameplayTags::Event_Interaction_Pickup,
+        nullptr,
+        false,
+        false);
+    EventTask->EventReceived.AddDynamic(this, &ThisClass::OnPickupEvent);
+    EventTask->ReadyForActivation();
+
+    MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+        this,
+        NAME_None,
+        PickupMontage,
+        1.0f);
+    MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageFinished);
+    MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageFinished);
+    MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageFinished);
+    MontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnMontageFinished);
+    MontageTask->ReadyForActivation();
+}
+
+void UGProjectPickupAbility::OnPickupEvent(FGameplayEventData Payload)
+{
+    DoPickup();
+}
+
+void UGProjectPickupAbility::OnMontageFinished()
+{
+    if (!bPickedUp)
+    {
+        DoPickup();
+    }
+
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGProjectPickupAbility::DoPickup()
+{
+    if (bPickedUp)
+    {
+        return;
+    }
+    bPickedUp = true;
+
     if (AActor* Avatar = GetAvatarActorFromActorInfo())
     {
         if (UGItemHolderComponent* Holder = Avatar->FindComponentByClass<UGItemHolderComponent>())
@@ -32,6 +88,4 @@ void UGProjectPickupAbility::ActivateAbility(
             Holder->TryPickupNearby();
         }
     }
-
-    EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }

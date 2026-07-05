@@ -1,18 +1,28 @@
 #include "Item/GItemHolderComponent.h"
 #include "Item/Consumable/GConsumableDefinition.h"
-#include "Item/GItemPickup.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayEffect.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Character.h"
+#include "Net/UnrealNetwork.h"
+#include "Item/GItemPickup.h"
 
 UGItemHolderComponent::UGItemHolderComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
 
+    SetIsReplicatedByDefault(true);
+
     HeldMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HeldMesh"));
     HeldMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void UGItemHolderComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(UGItemHolderComponent, HeldItem);
 }
 
 bool UGItemHolderComponent::TryPickupNearby()
@@ -54,10 +64,17 @@ void UGItemHolderComponent::BeginPlay()
                 AttachSocketName);
         }
     }
+
+    RefreshHeldMesh();
 }
 
 void UGItemHolderComponent::HoldItem(UGConsumableDefinition* NewItem)
 {
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        return;
+    }
+
     if (!NewItem)
     {
         return;
@@ -65,14 +82,16 @@ void UGItemHolderComponent::HoldItem(UGConsumableDefinition* NewItem)
 
     HeldItem = NewItem;
 
-    if (HeldMeshComponent)
-    {
-        HeldMeshComponent->SetStaticMesh(NewItem->HeldMesh);
-    }
+    RefreshHeldMesh();
 }
 
 void UGItemHolderComponent::UseHeldItem()
 {
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        return;
+    }
+
     if (!HeldItem)
     {
         return;
@@ -108,8 +127,20 @@ void UGItemHolderComponent::UseHeldItem()
 
     HeldItem = nullptr;
 
-    if (HeldMeshComponent)
+    RefreshHeldMesh();
+}
+
+void UGItemHolderComponent::OnRep_HeldItem()
+{
+    RefreshHeldMesh();
+}
+
+void UGItemHolderComponent::RefreshHeldMesh()
+{
+    if (!HeldMeshComponent)
     {
-        HeldMeshComponent->SetStaticMesh(nullptr);
+        return;
     }
+
+    HeldMeshComponent->SetStaticMesh(HeldItem ? HeldItem->HeldMesh : nullptr);
 }
