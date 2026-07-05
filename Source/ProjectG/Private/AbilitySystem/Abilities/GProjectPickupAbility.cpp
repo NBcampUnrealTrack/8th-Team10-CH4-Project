@@ -50,7 +50,7 @@ void UGProjectPickupAbility::ActivateAbility(
         this,
         NAME_None,
         PickupMontage,
-        1.0f);
+        3.0f);
     MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageFinished);

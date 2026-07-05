@@ -7,6 +7,9 @@
 #include "GameFramework/Character.h"
 #include "Net/UnrealNetwork.h"
 #include "Item/GItemPickup.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+
 
 UGItemHolderComponent::UGItemHolderComponent()
 {
@@ -48,6 +51,26 @@ bool UGItemHolderComponent::TryPickupNearby()
     }
 
     return false;
+}
+
+void UGItemHolderComponent::Multicast_PlayUseEffect_Implementation(UNiagaraSystem* Effect)
+{
+    if (!Effect)
+    {
+        return;
+    }
+
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return;
+    }
+
+    UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+        Owner->GetWorld(),
+        Effect,
+        Owner->GetActorLocation() + FVector(0,0,50.f),
+        Owner->GetActorRotation());
 }
 
 void UGItemHolderComponent::BeginPlay()
@@ -123,6 +146,11 @@ void UGItemHolderComponent::UseHeldItem()
         {
             ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
         }
+    }
+
+    if (HeldItem->UseEffect)
+    {
+        Multicast_PlayUseEffect(HeldItem->UseEffect);
     }
 
     HeldItem = nullptr;

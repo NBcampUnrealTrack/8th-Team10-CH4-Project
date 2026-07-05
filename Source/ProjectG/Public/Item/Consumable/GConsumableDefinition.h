@@ -7,6 +7,7 @@
 
 class UGameplayEffect;
 class UStaticMesh;
+class UNiagaraSystem;
 
 UCLASS()
 class PROJECTG_API UGConsumableDefinition : public UGItemDefinition
@@ -22,4 +23,7 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
     TObjectPtr<UStaticMesh> HeldMesh;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
+    TObjectPtr<UNiagaraSystem> UseEffect;
 };

@@ -6,6 +6,7 @@
 
 class UGConsumableDefinition;
 class UStaticMeshComponent;
+class UNiagaraSystem;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class PROJECTG_API UGItemHolderComponent : public UActorComponent
@@ -28,6 +29,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Item")
     bool TryPickupNearby();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayUseEffect(UNiagaraSystem* Effect);
 
 protected:
     virtual void BeginPlay() override;
