@@ -16,9 +16,29 @@
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "UI/HUD/GProjectHUD.h"
+#include "Game/GProjectGameState.h"
+
+namespace
+{
+	constexpr int32 MaxChatMessageLength = 120;
+}
 
 AGProjectPlayerController::AGProjectPlayerController()
 {
+}
+
+void AGProjectPlayerController::SendChatMessage(const FString& Message)
+{
+	FString SanitizedMessage = Message;
+	SanitizedMessage.TrimStartAndEndInline();
+
+	if (SanitizedMessage.IsEmpty())
+	{
+		return;
+	}
+
+	SanitizedMessage = SanitizedMessage.Left(MaxChatMessageLength);
+	ServerSendChatMessage(SanitizedMessage);
 }
 
 void AGProjectPlayerController::BeginPlay()
@@ -300,6 +320,36 @@ void AGProjectPlayerController::SendAttackInputEvent(FGameplayTag InputTag)
 	{
 		ServerSendAttackInputEvent(InputTag);
 	}
+}
+
+void AGProjectPlayerController::ServerSendChatMessage_Implementation(const FString& Message)
+{
+	FString SanitizedMessage = Message;
+	SanitizedMessage.TrimStartAndEndInline();
+	SanitizedMessage = SanitizedMessage.Left(MaxChatMessageLength);
+
+	if (SanitizedMessage.IsEmpty())
+	{
+		return;
+	}
+
+	const AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+
+	if (!PS) 
+	{
+		return;
+	}
+	
+	const FString SenderName = PS->GetPlayerName();
+
+	AGProjectGameState* GS = GetWorld()->GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	GS->BroadcastChatMessage(SenderName, SanitizedMessage);
+	
 }
 
 void AGProjectPlayerController::ServerSendAttackInputEvent_Implementation(FGameplayTag InputTag)

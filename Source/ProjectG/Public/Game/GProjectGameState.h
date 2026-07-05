@@ -8,6 +8,12 @@
 
 DECLARE_MULTICAST_DELEGATE(FGProjectPlayerListChangedSignature);
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(
+	FGProjectChatMessageReceivedSignature,
+	const FString&,
+	const FString&
+);
+
 UCLASS()
 class PROJECTG_API AGProjectGameState : public AGameStateBase
 {
@@ -17,5 +23,13 @@ public:
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
+	void BroadcastChatMessage(const FString& SenderName, const FString& Message);
+
 	FGProjectPlayerListChangedSignature OnPlayerListChanged;
+
+	FGProjectChatMessageReceivedSignature OnChatMessageReceived;
+
+private:
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastReceiveChatMessage(const FString& SenderName, const FString& Message);
 };

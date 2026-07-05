@@ -23,3 +23,19 @@ void AGProjectGameState::RemovePlayerState(APlayerState* InPlayerState)
 		OnPlayerListChanged.Broadcast();
 	}
 }
+
+void AGProjectGameState::BroadcastChatMessage(const FString& SenderName, const FString& Message)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	MulticastReceiveChatMessage(SenderName, Message);
+}
+
+void AGProjectGameState::MulticastReceiveChatMessage_Implementation(const FString& SenderName, const FString& Message)
+{
+	OnChatMessageReceived.Broadcast(SenderName, Message);
+}
+

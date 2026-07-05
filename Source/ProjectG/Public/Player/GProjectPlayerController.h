@@ -21,6 +21,9 @@ class PROJECTG_API AGProjectPlayerController : public APlayerController
 public:
 	AGProjectPlayerController();
 
+	UFUNCTION(BlueprintCallable, Category = "Chat")
+	void SendChatMessage(const FString& Message);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
@@ -55,6 +58,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendAttackInputEvent(FGameplayTag InputTag);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSendChatMessage(const FString& Message);
 
 	UPROPERTY()
 	TObjectPtr<UGProjectAbilitySystemComponent> GProjectAbilitySystemComponent;
