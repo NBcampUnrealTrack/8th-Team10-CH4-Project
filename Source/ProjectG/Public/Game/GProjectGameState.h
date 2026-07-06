@@ -9,6 +9,13 @@
 DECLARE_MULTICAST_DELEGATE(FGProjectPlayerListChangedSignature);
 DECLARE_MULTICAST_DELEGATE_OneParam(FGProjectMatchTimeChangedSignature, int32);
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(
+	FGProjectChatMessageReceivedSignature,
+	int32,
+	const FString&,
+	const FString&
+);
+
 UCLASS()
 class PROJECTG_API AGProjectGameState : public AGameStateBase
 {
@@ -33,4 +40,15 @@ private:
 
 	UFUNCTION()
 	void OnRep_RemainMatchTime();
+
+	void BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
+
+	FGProjectPlayerListChangedSignature OnPlayerListChanged;
+
+	FGProjectChatMessageReceivedSignature OnChatMessageReceived;
+
+private:
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastReceiveChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
+
 };

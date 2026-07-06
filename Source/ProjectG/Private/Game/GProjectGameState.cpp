@@ -43,3 +43,18 @@ void AGProjectGameState::OnRep_RemainMatchTime()
 {
 	OnMatchTimeChanged.Broadcast(RemainMatchTime);
 }
+
+void AGProjectGameState::BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	MulticastReceiveChatMessage(SenderPlayerID, SenderName, Message);
+}
+
+void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
+{
+	OnChatMessageReceived.Broadcast(SenderPlayerID, SenderName, Message);
+}

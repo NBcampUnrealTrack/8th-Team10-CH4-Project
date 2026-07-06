@@ -16,6 +16,7 @@
 #include "UI/WidgetController/GProjectPlayerBoxWidgetController.h"
 #include "UI/WidgetController/GProjectWidgetController.h"
 #include "UI/Widget/GProjectMatchTimerWidget.h"
+#include "UI/Widget/GProjectChatWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -28,14 +29,19 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	}
 
 	OverlayController->OnPlayerListChanged.RemoveDynamic(this, &ThisClass::RefreshPlayerBoxes);
+
 	OverlayController->OnPlayerListChanged.AddDynamic(this, &ThisClass::RefreshPlayerBoxes);
 	RefreshPlayerBoxes();
-
 
 	OverlayController->OnMatchTimeChanged.RemoveDynamic(this, &ThisClass::RefreshMatchTimer);
 	OverlayController->OnMatchTimeChanged.AddDynamic(this, &ThisClass::RefreshMatchTimer);
 
 	BindLockOnComponent();
+
+	OverlayController->OnChatMessageReceived.RemoveDynamic(this, &ThisClass::RefreshChatMessage);
+	OverlayController->OnChatMessageReceived.AddDynamic(this, &ThisClass::RefreshChatMessage);
+
+
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -135,6 +141,16 @@ void UGProjectOverlayWidget::OnLockOnTargetChanged(AActor* NewTarget)
 		LockOnIndicator->SetVisibility(
 			LockOnTarget ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
+}
+
+void UGProjectOverlayWidget::RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
+{
+	if (!ChatWidget)
+	{
+		return;
+	}
+
+	ChatWidget->AddChatMessage(SenderPlayerID, SenderName, Message);
 }
 
 void UGProjectOverlayWidget::UpdateLockOnIndicator()

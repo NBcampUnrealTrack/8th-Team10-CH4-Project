@@ -11,9 +11,11 @@ class UGProjectLockOnComponent;
 class UGProjectOverlayWidgetController;
 class UGProjectPlayerBoxWidget;
 class UGProjectPlayerBoxWidgetController;
+class UGProjectChatWidget;
 class UImage;
 class UPanelWidget;
 class UGProjectMatchTimerWidget;
+
 
 UCLASS()
 class PROJECTG_API UGProjectOverlayWidget : public UGProjectUserWidget
@@ -40,6 +42,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lock On")
 	float IndicatorHeightOffset = 120.0f;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectChatWidget> ChatWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
@@ -49,6 +54,9 @@ private:
 	void RefreshMatchTimer(int32 RemainTime);
 
 	void OnLockOnTargetChanged(AActor* NewTarget);
+
+	UFUNCTION()
+	void RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
 	void BindLockOnComponent();
 	void UpdateLockOnIndicator();
@@ -61,4 +69,6 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AActor> LockOnTarget;
+
+
 };
