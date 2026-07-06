@@ -14,6 +14,7 @@
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -90,6 +91,80 @@ FName AGProjectCharacter::GetAttackTraceStartSocketName() const
 FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 {
 	return AttackTraceEndSocket;
+}
+
+void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
+
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+
+	UGProjectAttributeSet* AttributeSet = PS ? PS->GetAttributeSet() : nullptr;
+
+	if (ASC)
+	{
+		ASC->CancelAllAbilities();
+
+		FGameplayTagContainer EffectTagsToRemove;
+
+		EffectTagsToRemove.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
+
+		ASC->RemoveActiveEffectsWithGrantedTags(EffectTagsToRemove);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Character_Dead, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, 0);
+	}
+
+	if (LockOnComponent)
+	{
+		LockOnComponent->ClearLockOn();
+	}
+
+	StopJumping();
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->ClearAccumulatedForces();
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	TeleportTo(SpawnTransform.GetLocation(), SpawnTransform.Rotator(), false, true);
+
+	bDead = false;
+
+	if (ASC && AttributeSet)
+	{
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetHealthAttribute(),
+			AttributeSet->GetMaxHealth()
+		);
+
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetSPAttribute(),
+			AttributeSet->GetMaxSP()
+		);
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+
+	RefreshMovementStateTags();
+
+	ForceNetUpdate();
 }
 
 void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)

@@ -11,6 +11,8 @@
 
 AGProjectGameMode::AGProjectGameMode()
 {
+	bDelayedStart = true;
+
 	DefaultPawnClass = AGProjectCharacter::StaticClass();
 	PlayerControllerClass = AGProjectPlayerController::StaticClass();
 	PlayerStateClass = AGProjectPlayerState::StaticClass();
@@ -240,4 +242,40 @@ void AGProjectGameMode::FinishMatchAfterDelay()
 
 void AGProjectGameMode::ResetPlayersForNextRound()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+
+		if (!PC)
+		{
+			continue;
+		}
+
+		AGProjectCharacter* Character = Cast<AGProjectCharacter>(PC->GetPawn());
+		if (!Character)
+		{
+			continue;
+		}
+
+		AActor* PlayerStart = FindPlayerStart(PC);
+		if (!PlayerStart)
+		{
+			continue;
+		}
+
+		Character->ResetForNewRound(PlayerStart->GetActorTransform());
+
+		PC->SetControlRotation(PlayerStart->GetActorRotation());
+	}
 }
