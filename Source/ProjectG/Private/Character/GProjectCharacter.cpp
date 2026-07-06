@@ -183,46 +183,6 @@ void AGProjectCharacter::PossessedBy(AController* NewController)
 	AddCharacterAbilities();
 }
 
-void AGProjectCharacter::Jump()
-{
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->GetCurrentAcceleration() = FVector::ZeroVector;
-		
-		FVector CurrentVelocity = GetCharacterMovement()->Velocity;
-		CurrentVelocity.X = 0.35f;
-		CurrentVelocity.Y = 0.35f;
-		GetCharacterMovement()->Velocity = CurrentVelocity;
-	}
-	Super::Jump();
-}
-
-void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
-{
-	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
-
-	if (GetCharacterMovement())
-	{
-		if (GetCharacterMovement()->MovementMode == MOVE_Falling)
-		{
-			FVector CurrentInput = GetCharacterMovement()->GetCurrentAcceleration();
-			
-			if (!CurrentInput.IsNearlyZero())
-			{
-				GetCharacterMovement()->MaxWalkSpeed = 600.0f; 
-			}
-			else
-			{
-				GetCharacterMovement()->MaxWalkSpeed = 300.0f; 
-			}
-		}
-		else if (GetCharacterMovement()->MovementMode == MOVE_Walking)
-		{
-			GetCharacterMovement()->MaxWalkSpeed = 600.0f; 
-		}
-	}
-}
-	
 void AGProjectCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
