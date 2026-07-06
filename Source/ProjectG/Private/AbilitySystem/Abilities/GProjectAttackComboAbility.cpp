@@ -6,6 +6,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
 #include "AbilitySystem/Combo/GProjectComboData.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/GProjectAttackTraceNotifyState.h"
@@ -80,13 +81,6 @@ void UGProjectAttackComboAbility::ActivateAbility(
 	{
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 1);
 	}
-	else if (bDashing)
-	{
-		FGameplayTagContainer DashAbilityTags;
-		DashAbilityTags.AddTag(GProjectGameplayTags::Ability_Movement_Dash);
-		ASC->CancelAbilities(&DashAbilityTags);
-	}
-
 	EventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
 		GProjectGameplayTags::Event_Root,
@@ -116,8 +110,56 @@ void UGProjectAttackComboAbility::EndAbility(
 	EventTask = nullptr;
 	MontageTask = nullptr;
 	ComboData = nullptr;
+	PendingStepSPCost = 0.0f;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+bool UGProjectAttackComboAbility::CheckCost(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (PendingStepSPCost <= 0.0f)
+	{
+		return true;
+	}
+
+	const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	return ASC &&
+		SPCostGameplayEffectClass &&
+		ASC->GetNumericAttribute(UGProjectAttributeSet::GetSPAttribute()) + UE_KINDA_SMALL_NUMBER >= PendingStepSPCost;
+}
+
+void UGProjectAttackComboAbility::ApplyCost(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (!ASC || !SPCostGameplayEffectClass || PendingStepSPCost <= 0.0f)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(GetAvatarActorFromActorInfo());
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(
+		SPCostGameplayEffectClass,
+		1.0f,
+		EffectContext);
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle,
+		GProjectGameplayTags::Data_Resource_SP_Modifier,
+		-PendingStepSPCost);
+	ASC->ApplyGameplayEffectSpecToSelf(
+		*SpecHandle.Data.Get(),
+		ActivationInfo.GetActivationPredictionKey());
 }
 
 void UGProjectAttackComboAbility::OnGameplayEvent(FGameplayEventData Payload)
@@ -196,6 +238,11 @@ void UGProjectAttackComboAbility::StartCombo(EGProjectAttackInput AttackInput)
 		FinishAbility();
 		return;
 	}
+	if (!TryCommitComboStepCost(CurrentComboStepIndex))
+	{
+		FinishAbility();
+		return;
+	}
 
 	HitActorsThisStep.Reset();
 	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
@@ -218,7 +265,6 @@ void UGProjectAttackComboAbility::AddBufferedInput(EGProjectAttackInput AttackIn
 	{
 		return;
 	}
-
 	RemoveExpiredInputs();
 	const int32 BufferLimit = FMath::Max(ComboData->MaxBufferedInputs, 1);
 	while (InputBuffer.Num() >= BufferLimit)
@@ -275,6 +321,12 @@ void UGProjectAttackComboAbility::TryReserveNextSection()
 		if (!ComboData->ComboSteps.IsValidIndex(NextComboStepIndex))
 		{
 			continue;
+		}
+		if (!TryCommitComboStepCost(NextComboStepIndex))
+		{
+			InputBuffer.Reset();
+			bComboWindowOpen = false;
+			return;
 		}
 
 		AnimInstance->Montage_SetNextSection(
@@ -470,6 +522,22 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 		}
 	}
+}
+
+bool UGProjectAttackComboAbility::TryCommitComboStepCost(int32 ComboStepIndex)
+{
+	if (!ComboData || !ComboData->ComboSteps.IsValidIndex(ComboStepIndex))
+	{
+		return false;
+	}
+
+	PendingStepSPCost = ComboData->ComboSteps[ComboStepIndex].StepSPCost;
+	const bool bCommitted = CommitAbilityCost(
+		CurrentSpecHandle,
+		CurrentActorInfo,
+		CurrentActivationInfo);
+	PendingStepSPCost = 0.0f;
+	return bCommitted;
 }
 
 int32 UGProjectAttackComboAbility::FindComboStepIndex(const TArray<EGProjectAttackInput>& InputSequence) const
