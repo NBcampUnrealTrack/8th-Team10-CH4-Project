@@ -43,7 +43,7 @@ protected:
     TObjectPtr<UStaticMeshComponent> HeldMeshComponent;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    FName AttachSocketName = TEXT("hand_r");
+    FName AttachSocketName = TEXT("HandGrip_L");
 
     UFUNCTION()
     void OnRep_HeldItem();

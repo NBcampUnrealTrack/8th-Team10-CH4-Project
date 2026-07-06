@@ -52,6 +52,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_Pickup, "Event.Interaction.Pickup");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_UseItem, "Event.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
 }

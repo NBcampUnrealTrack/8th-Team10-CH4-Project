@@ -57,6 +57,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_HitReact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_Pickup);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_UseItem);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Combat_Damage);
 }

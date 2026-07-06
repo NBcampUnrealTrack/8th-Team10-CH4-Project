@@ -5,6 +5,8 @@
 #include "Item/GItemHolderComponent.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Character.h"
 
 UGProjectPickupAbility::UGProjectPickupAbility()
 {
@@ -29,6 +31,14 @@ void UGProjectPickupAbility::ActivateAbility(
     }
 
     bPickedUp = false;
+
+    if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+    {
+        if (UCharacterMovementComponent* Move = Char->GetCharacterMovement())
+        {
+            Move->DisableMovement();
+        }
+    }
 
     if (!PickupMontage)
     {
@@ -56,6 +66,20 @@ void UGProjectPickupAbility::ActivateAbility(
     MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->ReadyForActivation();
+}
+
+void UGProjectPickupAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+    if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
+    {
+        if (UCharacterMovementComponent* Move = Char->GetCharacterMovement())
+        {
+
+            Move->SetMovementMode(MOVE_Walking);
+        }
+    }
+
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UGProjectPickupAbility::OnPickupEvent(FGameplayEventData Payload)
