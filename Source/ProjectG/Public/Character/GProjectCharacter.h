@@ -14,6 +14,8 @@ class UGProjectAbilitySystemComponent;
 class UGProjectGameplayAbility;
 class UGProjectLockOnComponent;
 class UGProjectComboData;
+class UGProjectItemHolderComponent;
+class UGameplayEffect;
 class USpringArmComponent;
 
 UCLASS()
@@ -27,6 +29,7 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
 	UGProjectLockOnComponent* GetLockOnComponent() const;
+	UGProjectItemHolderComponent* GetItemHolderComponent() const;
 	UGProjectComboData* GetActiveGroundComboData() const;
 	UGProjectComboData* GetActiveAirComboData() const;
 	UGProjectComboData* GetActiveDashComboData() const;
@@ -57,7 +60,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Death")
 	bool IsDead() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Movement|Sprint")
+	void StartSprint();
+
+	UFUNCTION(BlueprintCallable, Category = "Movement|Sprint")
+	void StopSprint();
+
 protected:
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -78,13 +89,29 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
 	float RespawnDelay = 3.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
+	float WalkSpeed = 450.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
+	float SprintSpeed = 750.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
+	float DashingSpeedThreshold = 650.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource|SP")
+	TSubclassOf<UGameplayEffect> SPRegenGameplayEffectClass;
+
 private:
 	void InitAbilityActorInfo();
 	void AddCharacterAbilities();
 	void RefreshMovementStateTags();
+	void SetSprintRequested(bool bRequested);
+	void ApplySPRegenEffect();
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))
 	bool bDead = false;
+
+	bool bSprintRequested = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -94,6 +121,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat|Settings", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGProjectLockOnComponent> LockOnComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Settings", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UGProjectItemHolderComponent> ItemHolderComponent;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UMeshComponent> AttackTraceMesh;
