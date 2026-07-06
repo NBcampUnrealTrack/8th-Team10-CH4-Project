@@ -9,6 +9,8 @@
 
 class UEditableTextBox;
 class UScrollBox;
+class UGProjectChatMessageWidget;
+class UWidget;
 /**
  * 
  */
@@ -18,7 +20,7 @@ class PROJECTG_API UGProjectChatWidget : public UGProjectUserWidget
 	GENERATED_BODY()
 
 public:
-	void AddChatMessage(const FString& SenderName, const FString& Message);
+	void AddChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
 	void OpenChatInput();
 	void CloseChatInput();
@@ -26,6 +28,15 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Chat")
+	TSubclassOf<UGProjectChatMessageWidget> ChatMessageWidgetClass;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UWidget> ChatHistoryPanel;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Chat")
+	float ChatVisibleDuration = 10.0f;
 
 private:
 	UFUNCTION()
@@ -36,5 +47,14 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEditableTextBox> ChatInputTextBox;
+
+	FLinearColor GetPlayerColor(int32 PlayerID) const;
+
+	void RestartHideTimer();
+	void HideChatHistory();
+
+	FTimerHandle HideChatTimerHandle;
+
+	bool bChatInputOpen = false;
 	
 };

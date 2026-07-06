@@ -10,8 +10,9 @@ class AGProjectPlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	FGProjectOnChatMessageReceivedSignature,
+	int32, SenderPlayerID,
 	const FString&, SenderName,
 	const FString&, Message
 );
@@ -35,5 +36,5 @@ public:
 private:
 	void HandlePlayerListChanged();
 
-	void HandleChatMessageReceived(const FString& SenderName, const FString& Message);
+	void HandleChatMessageReceived(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 };

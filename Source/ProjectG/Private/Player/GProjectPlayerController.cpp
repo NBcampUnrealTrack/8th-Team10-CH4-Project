@@ -17,6 +17,8 @@
 #include "Targeting/GProjectLockOnComponent.h"
 #include "UI/HUD/GProjectHUD.h"
 #include "Game/GProjectGameState.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "UI/Widget/GProjectChatWidget.h"
 
 namespace
 {
@@ -39,6 +41,45 @@ void AGProjectPlayerController::SendChatMessage(const FString& Message)
 
 	SanitizedMessage = SanitizedMessage.Left(MaxChatMessageLength);
 	ServerSendChatMessage(SanitizedMessage);
+}
+
+void AGProjectPlayerController::RegisterChatWidget(UGProjectChatWidget* InChatWidget)
+{
+	ChatWidget = InChatWidget;
+}
+
+void AGProjectPlayerController::UnRegisterChatWidget(UGProjectChatWidget* InChatWidget)
+{
+	if (ChatWidget.Get() != InChatWidget)
+	{
+		return;
+	}
+
+	ChatWidget.Reset();
+	bChatOpen = false;
+}
+
+void AGProjectPlayerController::OpenChat()
+{
+	if (bChatOpen || !ChatWidget.IsValid())
+	{
+		return;
+	}
+
+	bChatOpen = true;
+	ChatWidget->OpenChatInput();
+}
+
+void AGProjectPlayerController::CloseChat()
+{
+	bChatOpen = false;
+
+	if (ChatWidget.IsValid())
+	{
+		ChatWidget->CloseChatInput();
+	}
+
+	UWidgetBlueprintLibrary::SetInputMode_GameOnly(this, false);
 }
 
 void AGProjectPlayerController::BeginPlay()
@@ -105,6 +146,11 @@ void AGProjectPlayerController::SetupInputComponent()
 		GProjectInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::JumpReleased);
 	}
 
+	if (ChatAction)
+	{
+		GProjectInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this, &ThisClass::OpenChat);
+	}
+
 	if (!InputConfig)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("InputConfig is not set on %s."), *GetNameSafe(this));
@@ -128,6 +174,11 @@ UGProjectAbilitySystemComponent* AGProjectPlayerController::GetASC()
 
 bool AGProjectPlayerController::IsGameplayInputBlocked()
 {
+	if (bChatOpen)
+	{
+		return true;
+	}
+
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
@@ -341,6 +392,7 @@ void AGProjectPlayerController::ServerSendChatMessage_Implementation(const FStri
 	}
 	
 	const FString SenderName = PS->GetPlayerName();
+	const int32 SenderPlayerID = PS->GetPlayerId();
 
 	AGProjectGameState* GS = GetWorld()->GetGameState<AGProjectGameState>();
 	if (!GS)
@@ -348,7 +400,7 @@ void AGProjectPlayerController::ServerSendChatMessage_Implementation(const FStri
 		return;
 	}
 
-	GS->BroadcastChatMessage(SenderName, SanitizedMessage);
+	GS->BroadcastChatMessage(SenderPlayerID, SenderName, SanitizedMessage);
 	
 }
 

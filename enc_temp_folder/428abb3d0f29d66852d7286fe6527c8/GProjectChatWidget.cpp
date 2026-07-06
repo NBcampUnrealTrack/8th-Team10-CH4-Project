@@ -90,8 +90,6 @@ void UGProjectChatWidget::AddChatMessage(int32 SenderPlayerID, const FString& Se
 		return;
 	}
 
-	MessageWidget->SetMessage(SenderName, Message, GetPlayerColor(SenderPlayerID));
-
 	MessageScrollBox->AddChild(MessageWidget);
 	MessageScrollBox->ScrollToEnd();
 

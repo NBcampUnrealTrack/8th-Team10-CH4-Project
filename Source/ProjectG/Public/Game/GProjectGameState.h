@@ -8,8 +8,9 @@
 
 DECLARE_MULTICAST_DELEGATE(FGProjectPlayerListChangedSignature);
 
-DECLARE_MULTICAST_DELEGATE_TwoParams(
+DECLARE_MULTICAST_DELEGATE_ThreeParams(
 	FGProjectChatMessageReceivedSignature,
+	int32,
 	const FString&,
 	const FString&
 );
@@ -23,7 +24,7 @@ public:
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
-	void BroadcastChatMessage(const FString& SenderName, const FString& Message);
+	void BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
 	FGProjectPlayerListChangedSignature OnPlayerListChanged;
 
@@ -31,5 +32,5 @@ public:
 
 private:
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastReceiveChatMessage(const FString& SenderName, const FString& Message);
+	void MulticastReceiveChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 };

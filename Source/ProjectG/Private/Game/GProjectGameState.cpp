@@ -24,18 +24,18 @@ void AGProjectGameState::RemovePlayerState(APlayerState* InPlayerState)
 	}
 }
 
-void AGProjectGameState::BroadcastChatMessage(const FString& SenderName, const FString& Message)
+void AGProjectGameState::BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
 
-	MulticastReceiveChatMessage(SenderName, Message);
+	MulticastReceiveChatMessage(SenderPlayerID, SenderName, Message);
 }
 
-void AGProjectGameState::MulticastReceiveChatMessage_Implementation(const FString& SenderName, const FString& Message)
+void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {
-	OnChatMessageReceived.Broadcast(SenderName, Message);
+	OnChatMessageReceived.Broadcast(SenderPlayerID, SenderName, Message);
 }
 

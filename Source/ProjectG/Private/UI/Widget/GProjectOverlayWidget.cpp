@@ -130,14 +130,14 @@ void UGProjectOverlayWidget::OnLockOnTargetChanged(AActor* NewTarget)
 	}
 }
 
-void UGProjectOverlayWidget::RefreshChatMessage(FString SenderName, FString Message)
+void UGProjectOverlayWidget::RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {
 	if (!ChatWidget)
 	{
 		return;
 	}
 
-	ChatWidget->AddChatMessage(SenderName, Message);
+	ChatWidget->AddChatMessage(SenderPlayerID, SenderName, Message);
 }
 
 void UGProjectOverlayWidget::UpdateLockOnIndicator()

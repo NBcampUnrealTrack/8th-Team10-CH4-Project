@@ -12,6 +12,7 @@ class UInputAction;
 class UInputMappingContext;
 class UGProjectInputConfig;
 class UGProjectAbilitySystemComponent;
+class UGProjectChatWidget;
 
 UCLASS()
 class PROJECTG_API AGProjectPlayerController : public APlayerController
@@ -23,6 +24,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Chat")
 	void SendChatMessage(const FString& Message);
+
+	void RegisterChatWidget(UGProjectChatWidget* InChatWidget);
+	void UnRegisterChatWidget(UGProjectChatWidget* InChatWidget);
+
+	void CloseChat();
 
 protected:
 	virtual void BeginPlay() override;
@@ -42,6 +48,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UGProjectInputConfig> InputConfig;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ChatAction;
+
 private:
 	UGProjectAbilitySystemComponent* GetASC();
 	bool IsGameplayInputBlocked();
@@ -55,6 +64,10 @@ private:
 	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void SendAttackInputEvent(FGameplayTag InputTag);
+
+	void OpenChat();
+	bool bChatOpen = false;
+	TWeakObjectPtr<UGProjectChatWidget> ChatWidget;
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendAttackInputEvent(FGameplayTag InputTag);

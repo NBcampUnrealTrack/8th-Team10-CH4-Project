@@ -49,7 +49,7 @@ private:
 	void OnLockOnTargetChanged(AActor* NewTarget);
 
 	UFUNCTION()
-	void RefreshChatMessage(FString SenderName, FString Message);
+	void RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
 	void BindLockOnComponent();
 	void UpdateLockOnIndicator();
