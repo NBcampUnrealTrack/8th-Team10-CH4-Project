@@ -88,6 +88,7 @@ void UGProjectOverlayWidgetController::HandlePlayerListChanged()
 void UGProjectOverlayWidgetController::HandleMatchTimeChanged(int32 RemainTime)
 {
 	OnMatchTimeChanged.Broadcast(RemainTime);
+}
 
 void UGProjectOverlayWidgetController::HandleChatMessageReceived(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {

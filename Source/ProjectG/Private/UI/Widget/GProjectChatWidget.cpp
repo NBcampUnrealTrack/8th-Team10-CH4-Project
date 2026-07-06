@@ -45,9 +45,6 @@ void UGProjectChatWidget::NativeConstruct()
 	}
 
 	PC->RegisterChatWidget(this);
-
-
-	UE_LOG(LogTemp, Warning, TEXT("ChatWidget NativeConstruct"));
 }
 
 void UGProjectChatWidget::NativeDestruct()

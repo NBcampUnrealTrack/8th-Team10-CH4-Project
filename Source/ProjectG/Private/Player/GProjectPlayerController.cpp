@@ -174,6 +174,20 @@ UGProjectAbilitySystemComponent* AGProjectPlayerController::GetASC()
 
 bool AGProjectPlayerController::IsGameplayInputBlocked()
 {
+	const AGProjectGameState* GS = GetWorld() ? GetWorld()->GetGameState<AGProjectGameState>() : nullptr;
+
+	if (GS)
+	{
+		const bool bMatchNotPlaying = !GS->IsMatchInProgress();
+
+		const bool bRoundNotPlaying = GS->GetRoundPhase() != ERoundPhase::Playing;
+
+		if (bMatchNotPlaying || bRoundNotPlaying)
+		{
+			return true;
+		}
+	}
+
 	if (bChatOpen)
 	{
 		return true;

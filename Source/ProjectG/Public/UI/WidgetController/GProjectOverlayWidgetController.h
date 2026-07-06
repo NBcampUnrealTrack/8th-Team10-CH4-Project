@@ -36,15 +36,12 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Match")
 	FGProjectOnMatchTimeChangedSignature OnMatchTimeChanged;
 
-private:
-	void HandlePlayerListChanged();
-	void HandleMatchTimeChanged(int32 RemainTime);
-
 	UPROPERTY(BlueprintAssignable, Category = "Chat")
 	FGProjectOnChatMessageReceivedSignature OnChatMessageReceived;
 
 private:
 	void HandlePlayerListChanged();
+	void HandleMatchTimeChanged(int32 RemainTime);
 
 	void HandleChatMessageReceived(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 

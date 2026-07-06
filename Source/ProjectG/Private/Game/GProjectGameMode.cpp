@@ -18,31 +18,177 @@ AGProjectGameMode::AGProjectGameMode()
 	HUDClass = AGProjectHUD::StaticClass();
 }
 
+void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (HasMatchStarted())
+	{
+		return;
+	}
+
+	if (GetNumPlayers() < RequiredPlayers)
+	{
+		return;
+	}
+
+	StartMatch();
+}
+
 void AGProjectGameMode::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	StartMatchTimer();
 }
 
-void AGProjectGameMode::StartMatchTimer()
+void AGProjectGameMode::HandleMatchHasStarted()
 {
+	Super::HandleMatchHasStarted();
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	GS->SetCurrentRound(1);
+
+	StartRound();
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Match Started / State: %s"),
+		*GetMatchState().ToString()
+	);
+}
+
+void AGProjectGameMode::HandleMatchHasEnded()
+{
+	Super::HandleMatchHasEnded();
+
+	GetWorldTimerManager().ClearTimer(
+		MatchTimerHandle
+	);
+
+	GetWorldTimerManager().ClearTimer(
+		RoundTransitionTimerHandle
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Match Ended / State: %s"),
+		*GetMatchState().ToString()
+	);
+
+	// 최종 승자, 결과 UI 로비 이동 등.....
+}
+
+void AGProjectGameMode::StartRound()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
 	if (!GS)
 	{
 		return;
 	}
 
-	GS->SetRemainMatchTime(MatchDuration);
+	GS->SetRoundPhase(ERoundPhase::Playing);
+
+	GS->SetRemainMatchTime(RoundDuration);
+
+	GetWorldTimerManager().ClearTimer(
+		MatchTimerHandle
+	);
 
 	GetWorldTimerManager().SetTimer(
 		MatchTimerHandle,
 		this,
 		&ThisClass::TickMatchTimer,
 		1.0f,
-		true,
-		1.0f
+		true
 	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Round %d Start"),
+		GS->GetCurrentRound()
+	);
+}
+
+void AGProjectGameMode::FinishRound()
+{
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::Playing)
+	{
+		return;
+	}
+
+	GS->SetRoundPhase(ERoundPhase::Intermission);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Round %d Finished"),
+		GS->GetCurrentRound()
+	);
+
+	const bool bLastRound = GS->GetCurrentRound() >= MaxRounds;
+
+	if (bLastRound)
+	{
+		GetWorldTimerManager().SetTimer(
+			RoundTransitionTimerHandle,
+			this,
+			&ThisClass::FinishMatchAfterDelay,
+			RoundTransitionDuration,
+			false
+		);
+
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		RoundTransitionTimerHandle,
+		this,
+		&ThisClass::StartNextRound,
+		RoundTransitionDuration,
+		false
+	);
+}
+
+void AGProjectGameMode::StartNextRound()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	const int32 NextRound = GS->GetCurrentRound() + 1;
+
+	GS->SetCurrentRound(NextRound);
+
+	ResetPlayersForNextRound();
+
+	StartRound();
 }
 
 void AGProjectGameMode::TickMatchTimer()
@@ -50,21 +196,48 @@ void AGProjectGameMode::TickMatchTimer()
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
 	if (!GS) 
 	{
+		GetWorldTimerManager().ClearTimer(
+			MatchTimerHandle
+		);
+
 		return;
 	}
 
-	const int NewTime = GS->GetRemainMatchTime() - 1;
-
-	GS->SetRemainMatchTime(NewTime);
-
-	if (NewTime <= 0)
+	if (!IsMatchInProgress() || GS->GetRoundPhase() != ERoundPhase::Playing)
 	{
-		GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-		HandleMatchTimerExpired();
+		GetWorldTimerManager().ClearTimer(
+			MatchTimerHandle
+		);
+		
+		return;
 	}
+
+	const int32 NewRemainTime = FMath::Max(GS->GetRemainMatchTime() - 1, 0);
+
+	GS->SetRemainMatchTime(NewRemainTime);
+
+	if (NewRemainTime >  0)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(
+		MatchTimerHandle
+	);
+
+	FinishRound();
 }
 
-void AGProjectGameMode::HandleMatchTimerExpired()
+void AGProjectGameMode::FinishMatchAfterDelay()
 {
-	// 추후 승패 판정, UI 표시 등 추가 예정
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	EndMatch();
+}
+
+void AGProjectGameMode::ResetPlayersForNextRound()
+{
 }
