@@ -10,6 +10,12 @@ class AGProjectPlayerState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+	FGProjectOnChatMessageReceivedSignature,
+	FString, SenderName,
+	FString, Message
+);
+
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
 {
@@ -23,6 +29,11 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Player List")
 	FGProjectOnPlayerListChangedSignature OnPlayerListChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Chat")
+	FGProjectOnChatMessageReceivedSignature OnChatMessageReceived;
+
 private:
 	void HandlePlayerListChanged();
+
+	void HandleChatMessageReceived(const FString& SenderName, FString& Message);
 };

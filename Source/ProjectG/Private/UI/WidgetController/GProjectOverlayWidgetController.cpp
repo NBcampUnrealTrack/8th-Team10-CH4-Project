@@ -17,6 +17,11 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 	if (AGProjectGameState* GameState = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
 	{
 		GameState->OnPlayerListChanged.AddUObject(this, &ThisClass::HandlePlayerListChanged);
+
+		GameState->OnChatMessageReceived.AddUObject(
+			this,
+			&ThisClass::HandleChatMessageReceived
+		);
 	}
 }
 
@@ -59,4 +64,12 @@ TArray<AGProjectPlayerState*> UGProjectOverlayWidgetController::GetOrderedPlayer
 void UGProjectOverlayWidgetController::HandlePlayerListChanged()
 {
 	OnPlayerListChanged.Broadcast();
+}
+
+void UGProjectOverlayWidgetController::HandleChatMessageReceived(const FString& SenderName, FString& Message)
+{
+	OnChatMessageReceived.Broadcast(
+		SenderName,
+		Message
+	);
 }
