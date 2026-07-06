@@ -8,6 +8,9 @@
 #include "Player/GProjectPlayerState.h"
 #include "UI/HUD/GProjectHUD.h"
 #include "TimerManager.h"
+#include "EngineUtils.h"
+#include "Item/GProjectItemActorBase.h"
+#include "Item/GProjectItemHolderComponent.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -253,6 +256,9 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		return;
 	}
 
+	TArray<APlayerController*> PlayerControllers;
+	TArray<AGProjectCharacter*> Characters;
+
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
 		APlayerController* PC = It->Get();
@@ -268,6 +274,45 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 			continue;
 		}
 
+		PlayerControllers.Add(PC);
+		Characters.Add(Character);
+	}
+
+	for (AGProjectCharacter* Character : Characters)
+	{
+		if (!Character)
+		{
+			continue;
+		}
+
+		UGProjectItemHolderComponent* ItemHolder = Character->GetItemHolderComponent();
+
+		if (ItemHolder)
+		{
+			ItemHolder->DropHeldItem();
+		}
+	}
+
+	for (TActorIterator<AGProjectItemActorBase> It(World); It; ++It)
+	{
+		AGProjectItemActorBase* Item = *It;
+
+		if (Item)
+		{
+			Item->ResetToSpawnTransform();
+		}
+	}
+
+	for (int32 Index = 0; Index < Characters.Num(); ++Index)
+	{
+		APlayerController* PC = PlayerControllers[Index];
+		AGProjectCharacter* Character = Characters[Index];
+
+		if (!PC || !Character)
+		{
+			continue;
+		}
+
 		AActor* PlayerStart = FindPlayerStart(PC);
 		if (!PlayerStart)
 		{
@@ -275,7 +320,7 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		}
 
 		Character->ResetForNewRound(PlayerStart->GetActorTransform());
-
+		
 		PC->SetControlRotation(PlayerStart->GetActorRotation());
 	}
 }
