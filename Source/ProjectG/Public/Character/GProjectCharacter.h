@@ -27,7 +27,9 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
 	UGProjectLockOnComponent* GetLockOnComponent() const;
-	UGProjectComboData* GetActiveComboData() const;
+	UGProjectComboData* GetActiveGroundComboData() const;
+	UGProjectComboData* GetActiveAirComboData() const;
+	UGProjectComboData* GetActiveDashComboData() const;
 	UMeshComponent* GetAttackTraceMesh() const;
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
@@ -39,7 +41,10 @@ public:
 	void ResetAttackTraceSource();
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
-	void SetActiveComboData(UGProjectComboData* NewComboData);
+	void SetActiveComboData(
+		UGProjectComboData* NewGroundComboData,
+		UGProjectComboData* NewAirComboData,
+		UGProjectComboData* NewDashComboData);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
 	void ResetActiveComboData();
@@ -54,12 +59,19 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Settings")
 	TArray<TSubclassOf<UGProjectGameplayAbility>> StartupAbilities;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Settings")
-	TObjectPtr<UGProjectComboData> DefaultComboData;
+	TObjectPtr<UGProjectComboData> DefaultGroundComboData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Settings")
+	TObjectPtr<UGProjectComboData> DefaultAirComboData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Settings")
+	TObjectPtr<UGProjectComboData> DefaultDashComboData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
 	float RespawnDelay = 3.0f;
@@ -67,6 +79,7 @@ protected:
 private:
 	void InitAbilityActorInfo();
 	void AddCharacterAbilities();
+	void RefreshMovementStateTags();
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))
 	bool bDead = false;
@@ -87,5 +100,11 @@ private:
 	FName AttackTraceEndSocket;
 
 	UPROPERTY(Replicated)
-	TObjectPtr<UGProjectComboData> ActiveComboData;
+	TObjectPtr<UGProjectComboData> ActiveGroundComboData;
+
+	UPROPERTY(Replicated)
+	TObjectPtr<UGProjectComboData> ActiveAirComboData;
+
+	UPROPERTY(Replicated)
+	TObjectPtr<UGProjectComboData> ActiveDashComboData;
 };
