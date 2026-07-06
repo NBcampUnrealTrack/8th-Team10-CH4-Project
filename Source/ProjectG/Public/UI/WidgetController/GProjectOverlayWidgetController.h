@@ -12,8 +12,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FGProjectOnChatMessageReceivedSignature,
-	FString, SenderName,
-	FString, Message
+	const FString&, SenderName,
+	const FString&, Message
 );
 
 UCLASS(BlueprintType, Blueprintable)
@@ -35,5 +35,5 @@ public:
 private:
 	void HandlePlayerListChanged();
 
-	void HandleChatMessageReceived(const FString& SenderName, FString& Message);
+	void HandleChatMessageReceived(const FString& SenderName, const FString& Message);
 };

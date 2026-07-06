@@ -66,7 +66,7 @@ void UGProjectOverlayWidgetController::HandlePlayerListChanged()
 	OnPlayerListChanged.Broadcast();
 }
 
-void UGProjectOverlayWidgetController::HandleChatMessageReceived(const FString& SenderName, FString& Message)
+void UGProjectOverlayWidgetController::HandleChatMessageReceived(const FString& SenderName, const FString& Message)
 {
 	OnChatMessageReceived.Broadcast(
 		SenderName,
