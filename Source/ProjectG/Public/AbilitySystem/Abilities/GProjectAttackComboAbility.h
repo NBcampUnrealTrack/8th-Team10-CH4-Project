@@ -41,11 +41,24 @@ protected:
 		bool bReplicateEndAbility,
 		bool bWasCancelled) override;
 
+	virtual bool CheckCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
+	virtual void ApplyCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo) const override;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
 	TSubclassOf<UGameplayEffect> DamageGameplayEffectClass;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction")
 	TSubclassOf<UGameplayEffect> HitstunGameplayEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cost")
+	TSubclassOf<UGameplayEffect> SPCostGameplayEffectClass;
 
 private:
 	UFUNCTION()
@@ -63,6 +76,7 @@ private:
 	void BeginCurrentStepTrace(FName TraceSocketName);
 	void EndCurrentStepTrace();
 	void ApplyCurrentStepHit();
+	bool TryCommitComboStepCost(int32 ComboStepIndex);
 	
 	int32 FindComboStepIndex(const TArray<EGProjectAttackInput>& InputSequence) const;
 	int32 FindComboStepIndexBySection(FName MontageSection) const;
@@ -88,4 +102,5 @@ private:
 	bool bHasPreviousUnarmedTraceLocation = false;
 	FVector PreviousUnarmedTraceLocation = FVector::ZeroVector;
 	FName CurrentUnarmedTraceSocket = NAME_None;
+	mutable float PendingStepSPCost = 0.0f;
 };

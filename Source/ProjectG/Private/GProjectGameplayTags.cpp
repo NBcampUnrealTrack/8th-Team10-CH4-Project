@@ -7,7 +7,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Movement, "InputTag.Movement");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Movement_Move, "InputTag.Movement.Move");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Movement_Jump, "InputTag.Movement.Jump");
-	UE_DEFINE_GAMEPLAY_TAG(InputTag_Movement_Dash, "InputTag.Movement.Dash");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Movement_Sprint, "InputTag.Movement.Sprint");
 
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat, "InputTag.Combat");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_BasicAttack, "InputTag.Combat.BasicAttack");
@@ -36,7 +36,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Attack, "Ability.Combat.Attack");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_HitReact, "Ability.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Knockdown, "Ability.Combat.Knockdown");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Movement_Dash, "Ability.Movement.Dash");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Movement_Sprint, "Ability.Movement.Sprint");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Skill_Accessory, "Ability.Skill.Accessory");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Targeting_LockOn, "Ability.Targeting.LockOn");
 
@@ -52,4 +52,5 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_Resource_SP_Modifier, "Data.Resource.SP.Modifier");
 }
