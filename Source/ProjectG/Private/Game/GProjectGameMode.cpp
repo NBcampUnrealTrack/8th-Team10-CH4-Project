@@ -58,6 +58,7 @@ void AGProjectGameMode::HandleMatchHasStarted()
 		return;
 	}
 
+	GS->ResetTeamRoundWins();
 	GS->SetCurrentRound(1);
 
 	StartRound();
