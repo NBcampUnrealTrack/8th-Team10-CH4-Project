@@ -86,8 +86,10 @@ void UGProjectPlayerBoxWidget::RefreshHealth()
 
 	if (HPText)
 	{
-		HPText->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), FMath::RoundToInt(Health), FMath::RoundToInt(MaxHealth))));
+		const int32 HealthPercent = FMath::RoundToInt((Health / MaxHealth) * 100.0f);
+		HPText->SetText(FText::FromString(FString::Printf(TEXT("%d"), HealthPercent)));
 	}
+
 }
 
 void UGProjectPlayerBoxWidget::RefreshSP()
