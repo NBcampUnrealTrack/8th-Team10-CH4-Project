@@ -22,6 +22,7 @@
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
+#include "Game/GProjectGameMode.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -281,6 +282,11 @@ void AGProjectCharacter::HandleDeath()
 			&ThisClass::StartDeathDissolve,
 			DissolveDelay,
 			false);
+	}
+
+	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		GM->NotifyPlayerDied(GetPlayerState<AGProjectPlayerState>());
 	}
 }
 
