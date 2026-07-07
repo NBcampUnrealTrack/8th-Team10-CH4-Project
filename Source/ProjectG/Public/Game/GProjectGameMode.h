@@ -49,4 +49,6 @@ protected:
 private:
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
+
+	void AssignTeam(APlayerController* NewPlayer);
 };

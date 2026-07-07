@@ -27,6 +27,8 @@ void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
+	AssignTeam(NewPlayer);
+
 	if (HasMatchStarted())
 	{
 		return;
@@ -80,13 +82,6 @@ void AGProjectGameMode::HandleMatchHasEnded()
 		RoundTransitionTimerHandle
 	);
 
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Match Ended / State: %s"),
-		*GetMatchState().ToString()
-	);
-
 	// 최종 승자, 결과 UI 로비 이동 등.....
 }
 
@@ -118,13 +113,6 @@ void AGProjectGameMode::StartRound()
 		1.0f,
 		true
 	);
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Round %d Start"),
-		GS->GetCurrentRound()
-	);
 }
 
 void AGProjectGameMode::FinishRound()
@@ -142,13 +130,6 @@ void AGProjectGameMode::FinishRound()
 	}
 
 	GS->SetRoundPhase(ERoundPhase::Intermission);
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Round %d Finished"),
-		GS->GetCurrentRound()
-	);
 
 	const bool bLastRound = GS->GetCurrentRound() >= MaxRounds;
 
@@ -323,4 +304,59 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		
 		PC->SetControlRotation(PlayerStart->GetActorRotation());
 	}
+}
+
+void AGProjectGameMode::AssignTeam(APlayerController* NewPlayer)
+{
+	if (!HasAuthority() || !NewPlayer)
+	{
+		return;
+	}
+
+	AGProjectPlayerState* NewPlayerState = NewPlayer->GetPlayerState<AGProjectPlayerState>();
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!NewPlayerState || !GS)
+	{
+		return;
+	}
+
+	if (NewPlayerState->GetTeam() != EGProjectTeam::None)
+	{
+		return;
+	}
+
+	int32 RedTeamCount = 0;
+	int32 BlueTeamCount = 0;
+
+	for (APlayerState* BasePlayerState : GS->PlayerArray)
+	{
+		const AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(BasePlayerState);
+
+		if (!PS)
+		{
+			continue;
+		}
+
+		switch (PS->GetTeam())
+		{
+		case EGProjectTeam::Red:
+			++RedTeamCount;
+			break;
+
+		case EGProjectTeam::Blue:
+			++BlueTeamCount;
+			break;
+
+		default:
+			break;
+		}
+	}
+
+	const EGProjectTeam NewTeam = RedTeamCount <= BlueTeamCount ? EGProjectTeam::Red : EGProjectTeam::Blue;
+
+	NewPlayerState->SetTeam(NewTeam);
+
+	const TCHAR* TeamName = NewTeam == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
 }
