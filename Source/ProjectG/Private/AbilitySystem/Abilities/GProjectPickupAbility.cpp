@@ -1,18 +1,15 @@
 #include "AbilitySystem/Abilities/GProjectPickupAbility.h"
-
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Item/GItemHolderComponent.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/Character.h"
 
 UGProjectPickupAbility::UGProjectPickupAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
     NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
-
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
@@ -68,13 +65,17 @@ void UGProjectPickupAbility::ActivateAbility(
     MontageTask->ReadyForActivation();
 }
 
-void UGProjectPickupAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+void UGProjectPickupAbility::EndAbility(
+    const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo,
+    const FGameplayAbilityActivationInfo ActivationInfo,
+    bool bReplicateEndAbility,
+    bool bWasCancelled)
 {
     if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
     {
         if (UCharacterMovementComponent* Move = Char->GetCharacterMovement())
         {
-
             Move->SetMovementMode(MOVE_Walking);
         }
     }
@@ -93,7 +94,6 @@ void UGProjectPickupAbility::OnMontageFinished()
     {
         DoPickup();
     }
-
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 

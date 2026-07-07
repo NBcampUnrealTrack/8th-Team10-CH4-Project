@@ -7,7 +7,6 @@
 AGItemPickup::AGItemPickup()
 {
     PrimaryActorTick.bCanEverTick = false;
-
     bReplicates = true;
 
     OverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("OverlapSphere"));
@@ -54,10 +53,11 @@ void AGItemPickup::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Oth
 
 bool AGItemPickup::TryPickup(AActor* Picker)
 {
-    UE_LOG(LogTemp, Warning, TEXT("TryPickup: HasAuthority=%d, Picker=%s, Overlapping=%s"),
-        (int32)HasAuthority(),
-        *GetNameSafe(Picker),
-        *GetNameSafe(OverlappingActor));
+    if (!HasAuthority())
+    {
+        return false;
+    }
+
     if (!Picker || Picker != OverlappingActor || !ItemDefinition)
     {
         return false;

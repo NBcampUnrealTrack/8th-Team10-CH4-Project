@@ -7,6 +7,7 @@
 class UGConsumableDefinition;
 class UStaticMeshComponent;
 class UNiagaraSystem;
+class UNiagaraComponent;
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class PROJECTG_API UGItemHolderComponent : public UActorComponent
@@ -24,8 +25,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Item")
     void UseHeldItem();
 
-    UFUNCTION(BlueprintCallable, Category = "Item")
-    bool HasHeldItem() const { return HeldItem != nullptr; }
+    bool HasConsumable() const { return ConsumableItem != nullptr; }
+
+    bool HasEquipment() const { return EquipmentItem != nullptr; }
 
     UFUNCTION(BlueprintCallable, Category = "Item")
     bool TryPickupNearby();
@@ -36,18 +38,50 @@ public:
 protected:
     virtual void BeginPlay() override;
 
-    UPROPERTY(ReplicatedUsing = OnRep_HeldItem, VisibleAnywhere, BlueprintReadOnly, Category = "Item")
-    TObjectPtr<UGConsumableDefinition> HeldItem;
+    UPROPERTY(ReplicatedUsing = OnRep_ConsumableItem, VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<UGConsumableDefinition> ConsumableItem;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
-    TObjectPtr<UStaticMeshComponent> HeldMeshComponent;
+    TObjectPtr<UStaticMeshComponent> ConsumableMeshComponent;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    FName AttachSocketName = TEXT("HandGrip_L");
+    FName ConsumableSocketName = TEXT("HandGrip_L");
+
+    UPROPERTY(ReplicatedUsing = OnRep_EquipmentItem, VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<UGConsumableDefinition> EquipmentItem;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<UStaticMeshComponent> EquipmentMeshComponent;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    FName EquipmentSocketName = TEXT("HandGrip_R");
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<class UNiagaraComponent> BladeFXComponent;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<class UNiagaraSystem> BladeFX;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<class UNiagaraComponent> ShaftFXComponent;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<class UNiagaraSystem> ShaftFX;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    FVector BladeFXScale = FVector(0.3f, 0.3f, 0.3f);
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    FVector ShaftFXScale = FVector(0.3f, 0.3f, 0.3f);
 
     UFUNCTION()
-    void OnRep_HeldItem();
+    void OnRep_ConsumableItem();
+
+    UFUNCTION()
+    void OnRep_EquipmentItem();
 
 private:
-    void RefreshHeldMesh();
+    void RefreshConsumableMesh();
+
+    void RefreshEquipmentMesh();
 };

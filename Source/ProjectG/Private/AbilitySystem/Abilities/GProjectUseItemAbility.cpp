@@ -33,7 +33,7 @@ void UGProjectUseItemAbility::ActivateAbility(
 
     AActor* Avatar = GetAvatarActorFromActorInfo();
     UGItemHolderComponent* Holder = Avatar ? Avatar->FindComponentByClass<UGItemHolderComponent>() : nullptr;
-    if (!Holder || !Holder->HasHeldItem())
+    if (!Holder || !Holder->HasConsumable())
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;

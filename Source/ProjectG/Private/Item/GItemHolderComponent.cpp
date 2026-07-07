@@ -2,6 +2,7 @@
 #include "Item/Consumable/GConsumableDefinition.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystem/Combo/GProjectComboData.h"
 #include "GameplayEffect.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/Character.h"
@@ -9,6 +10,8 @@
 #include "Item/GItemPickup.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
+#include "Character/GProjectCharacter.h"
 
 
 UGItemHolderComponent::UGItemHolderComponent()
@@ -17,15 +20,18 @@ UGItemHolderComponent::UGItemHolderComponent()
 
     SetIsReplicatedByDefault(true);
 
-    HeldMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HeldMesh"));
-    HeldMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ConsumableMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ConsumableMesh"));
+    ConsumableMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    EquipmentMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("EquipmentMesh"));
+    EquipmentMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void UGItemHolderComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(UGItemHolderComponent, HeldItem);
+    DOREPLIFETIME(UGItemHolderComponent, ConsumableItem);
+    DOREPLIFETIME(UGItemHolderComponent, EquipmentItem);
 }
 
 bool UGItemHolderComponent::TryPickupNearby()
@@ -81,14 +87,20 @@ void UGItemHolderComponent::BeginPlay()
     {
         if (USkeletalMeshComponent* CharMesh = OwnerChar->GetMesh())
         {
-            HeldMeshComponent->AttachToComponent(
+            ConsumableMeshComponent->AttachToComponent(
                 CharMesh,
                 FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-                AttachSocketName);
+                ConsumableSocketName);
+
+            EquipmentMeshComponent->AttachToComponent(
+                CharMesh,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                EquipmentSocketName);
         }
     }
 
-    RefreshHeldMesh();
+    RefreshConsumableMesh();
+    RefreshEquipmentMesh();
 }
 
 void UGItemHolderComponent::HoldItem(UGConsumableDefinition* NewItem)
@@ -103,9 +115,16 @@ void UGItemHolderComponent::HoldItem(UGConsumableDefinition* NewItem)
         return;
     }
 
-    HeldItem = NewItem;
-
-    RefreshHeldMesh();
+    if (NewItem->bIsConsumable)
+    {
+        ConsumableItem = NewItem;
+        RefreshConsumableMesh();
+    }
+    else
+    {
+        EquipmentItem = NewItem;
+        RefreshEquipmentMesh();
+    }
 }
 
 void UGItemHolderComponent::UseHeldItem()
@@ -115,7 +134,7 @@ void UGItemHolderComponent::UseHeldItem()
         return;
     }
 
-    if (!HeldItem)
+    if (!ConsumableItem)
     {
         return;
     }
@@ -129,7 +148,7 @@ void UGItemHolderComponent::UseHeldItem()
         return;
     }
 
-    for (const TSubclassOf<UGameplayEffect>& EffectClass : HeldItem->EffectsToApply)
+    for (const TSubclassOf<UGameplayEffect>& EffectClass : ConsumableItem->EffectsToApply)
     {
         if (!EffectClass)
         {
@@ -140,7 +159,7 @@ void UGItemHolderComponent::UseHeldItem()
         Context.AddSourceObject(this);
 
         FGameplayEffectSpecHandle Spec =
-            ASC->MakeOutgoingSpec(EffectClass, HeldItem->EffectLevel, Context);
+            ASC->MakeOutgoingSpec(EffectClass, ConsumableItem->EffectLevel, Context);
 
         if (Spec.IsValid())
         {
@@ -148,27 +167,93 @@ void UGItemHolderComponent::UseHeldItem()
         }
     }
 
-    if (HeldItem->UseEffect)
+    if (ConsumableItem->UseEffect)
     {
-        Multicast_PlayUseEffect(HeldItem->UseEffect);
+        Multicast_PlayUseEffect(ConsumableItem->UseEffect);
     }
 
-    HeldItem = nullptr;
-
-    RefreshHeldMesh();
+    ConsumableItem = nullptr;
+    RefreshConsumableMesh();
 }
 
-void UGItemHolderComponent::OnRep_HeldItem()
+void UGItemHolderComponent::OnRep_ConsumableItem()
 {
-    RefreshHeldMesh();
+    RefreshConsumableMesh();
 }
 
-void UGItemHolderComponent::RefreshHeldMesh()
+void UGItemHolderComponent::OnRep_EquipmentItem()
 {
-    if (!HeldMeshComponent)
+    RefreshEquipmentMesh();
+}
+
+void UGItemHolderComponent::RefreshConsumableMesh()
+{
+    if (!ConsumableMeshComponent)
     {
         return;
     }
+    ConsumableMeshComponent->SetStaticMesh(ConsumableItem ? ConsumableItem->HeldMesh : nullptr);
+}
 
-    HeldMeshComponent->SetStaticMesh(HeldItem ? HeldItem->HeldMesh : nullptr);
+void UGItemHolderComponent::RefreshEquipmentMesh()
+{
+    if (!EquipmentMeshComponent)
+    {
+        return;
+    }
+    EquipmentMeshComponent->SetStaticMesh(EquipmentItem ? EquipmentItem->HeldMesh : nullptr);
+
+    if (AGProjectCharacter* Char = Cast<AGProjectCharacter>(GetOwner()))
+    {
+        if (EquipmentItem)
+        {
+            Char->SetAttackTraceSource(EquipmentMeshComponent, TEXT("TraceStart"), TEXT("TraceEnd"));
+
+            Char->SetActiveComboData(
+                EquipmentItem->WeaponGroundComboData,
+                EquipmentItem->WeaponAirComboData,
+                EquipmentItem->WeaponDashComboData);
+
+            if (BladeFX && !BladeFXComponent)
+            {
+                BladeFXComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+                    BladeFX, EquipmentMeshComponent, TEXT("FX_Blade"),
+                    FVector::ZeroVector, FRotator::ZeroRotator,
+                    EAttachLocation::SnapToTarget, false);
+                if (BladeFXComponent)
+                {
+                    BladeFXComponent->SetWorldScale3D(BladeFXScale);
+                }
+            }
+
+            if (ShaftFX && !ShaftFXComponent)
+            {
+                ShaftFXComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
+                    ShaftFX, EquipmentMeshComponent, TEXT("FX_Shaft"),
+                    FVector::ZeroVector, FRotator::ZeroRotator,
+                    EAttachLocation::SnapToTarget, false);
+                if (ShaftFXComponent)
+                {
+                    ShaftFXComponent->SetWorldScale3D(ShaftFXScale);
+                }
+            }
+        }
+        else
+        {
+            Char->ResetAttackTraceSource();
+
+            Char->ResetActiveComboData();
+
+            if (BladeFXComponent)
+            {
+                BladeFXComponent->DestroyComponent();
+                BladeFXComponent = nullptr;
+            }
+            if (ShaftFXComponent)
+            {
+                ShaftFXComponent->DestroyComponent();
+                ShaftFXComponent = nullptr;
+            }
+        }
+    }
 }
