@@ -10,7 +10,9 @@
 #include "Components/MeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameplayEffect.h"
 #include "GProjectGameplayTags.h"
+#include "Item/GProjectItemHolderComponent.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -51,6 +53,19 @@ AGProjectCharacter::AGProjectCharacter()
 	TopDownCamera->FieldOfView = 60.0f;
 
 	LockOnComponent = CreateDefaultSubobject<UGProjectLockOnComponent>(TEXT("LockOnComponent"));
+	ItemHolderComponent = CreateDefaultSubobject<UGProjectItemHolderComponent>(TEXT("ItemHolderComponent"));
+}
+
+void AGProjectCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AGProjectCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	RefreshMovementStateTags();
 }
 
 UAbilitySystemComponent* AGProjectCharacter::GetAbilitySystemComponent() const
@@ -67,6 +82,11 @@ UGProjectAbilitySystemComponent* AGProjectCharacter::GetGProjectAbilitySystemCom
 UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 {
 	return FindComponentByClass<UGProjectLockOnComponent>();
+}
+
+UGProjectItemHolderComponent* AGProjectCharacter::GetItemHolderComponent() const
+{
+	return FindComponentByClass<UGProjectItemHolderComponent>();
 }
 
 UGProjectComboData* AGProjectCharacter::GetActiveGroundComboData() const
@@ -158,6 +178,7 @@ void AGProjectCharacter::HandleDeath()
 	}
 
 	bDead = true;
+	SetSprintRequested(false);
 
 	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
 	{
@@ -175,12 +196,33 @@ bool AGProjectCharacter::IsDead() const
 	return bDead;
 }
 
+void AGProjectCharacter::StartSprint()
+{
+	SetSprintRequested(true);
+}
+
+void AGProjectCharacter::StopSprint()
+{
+	SetSprintRequested(false);
+}
+
+void AGProjectCharacter::SetSprintRequested(bool bRequested)
+{
+	bSprintRequested = bRequested;
+	if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+	{
+		MovementComponent->MaxWalkSpeed = bSprintRequested ? SprintSpeed : WalkSpeed;
+	}
+	RefreshMovementStateTags();
+}
+
 void AGProjectCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
+	ApplySPRegenEffect();
 }
 
 void AGProjectCharacter::Jump()
@@ -248,6 +290,22 @@ void AGProjectCharacter::InitAbilityActorInfo()
 	RefreshMovementStateTags();
 }
 
+void AGProjectCharacter::ApplySPRegenEffect()
+{
+	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
+	if (!HasAuthority() || !ASC || !SPRegenGameplayEffectClass)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+	EffectContext.AddSourceObject(this);
+	ASC->ApplyGameplayEffectToSelf(
+		SPRegenGameplayEffectClass->GetDefaultObject<UGameplayEffect>(),
+		1.0f,
+		EffectContext);
+}
+
 void AGProjectCharacter::RefreshMovementStateTags()
 {
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
@@ -258,6 +316,11 @@ void AGProjectCharacter::RefreshMovementStateTags()
 
 	const bool bAirborne = GetCharacterMovement()->IsFalling();
 	ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, bAirborne ? 1 : 0);
+
+	const bool bDashing = bSprintRequested &&
+		!bAirborne &&
+		GetVelocity().SizeSquared2D() >= FMath::Square(DashingSpeedThreshold);
+	ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Dashing, bDashing ? 1 : 0);
 	if (!bAirborne)
 	{
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
