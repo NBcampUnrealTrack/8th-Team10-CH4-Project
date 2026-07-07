@@ -52,7 +52,10 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_Pickup, "Event.Interaction.Pickup");
+<<<<<<< Updated upstream
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_UseItem, "Event.Interaction.UseItem");
+=======
+>>>>>>> Stashed changes
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Resource_SP_Modifier, "Data.Resource.SP.Modifier");
