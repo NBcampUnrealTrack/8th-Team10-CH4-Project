@@ -5,18 +5,23 @@
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
 #include "AbilitySystem/Combo/GProjectComboData.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayEffect.h"
 #include "GProjectGameplayTags.h"
 #include "Item/GProjectItemHolderComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "TimerManager.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -60,6 +65,7 @@ void AGProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	RefreshMovementStateTags();
+	UpdateDeathDissolve(DeltaSeconds);
 }
 
 UAbilitySystemComponent* AGProjectCharacter::GetAbilitySystemComponent() const
@@ -240,13 +246,17 @@ void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, u
 
 void AGProjectCharacter::HandleDeath()
 {
-	if (bDead)
+	if (!HasAuthority() || bDead)
 	{
 		return;
 	}
 
 	bDead = true;
 	SetSprintRequested(false);
+	if (LockOnComponent)
+	{
+		LockOnComponent->ClearLockOn();
+	}
 
 	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
 	{
@@ -257,6 +267,112 @@ void AGProjectCharacter::HandleDeath()
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	MulticastPlayDeath();
+	if (DissolveDelay <= 0.0f)
+	{
+		StartDeathDissolve();
+	}
+	else
+	{
+		GetWorldTimerManager().SetTimer(
+			DeathDissolveTimer,
+			this,
+			&ThisClass::StartDeathDissolve,
+			DissolveDelay,
+			false);
+	}
+}
+
+void AGProjectCharacter::MulticastPlayDeath_Implementation()
+{
+	bDead = true;
+
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInstance || !DeathMontage || DeathMontagePlayRate <= 0.0f)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_Play(DeathMontage, DeathMontagePlayRate);
+	AnimInstance->Montage_JumpToSection(DeathFallSection, DeathMontage);
+	AnimInstance->Montage_SetNextSection(DeathFallSection, DeathDownLoopSection, DeathMontage);
+	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, DeathMontage);
+}
+
+void AGProjectCharacter::StartDeathDissolve()
+{
+	if (HasAuthority())
+	{
+		MulticastStartDeathDissolve();
+	}
+}
+
+void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
+{
+	DissolveMaterials.Reset();
+	DissolveElapsed = 0.0f;
+	bDissolving = true;
+
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!CharacterMesh)
+	{
+		FinishDeathDissolve();
+		return;
+	}
+
+	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
+	DissolveMaterials.Reserve(MaterialCount);
+	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+	{
+		if (UMaterialInstanceDynamic* DynamicMaterial = CharacterMesh->CreateDynamicMaterialInstance(MaterialIndex))
+		{
+			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, 0.0f);
+			DissolveMaterials.Add(DynamicMaterial);
+		}
+	}
+}
+
+void AGProjectCharacter::UpdateDeathDissolve(float DeltaSeconds)
+{
+	if (!bDissolving)
+	{
+		return;
+	}
+
+	DissolveElapsed += DeltaSeconds;
+	const float DissolveAlpha = FMath::Clamp(DissolveElapsed / DissolveDuration, 0.0f, 1.0f);
+	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
+	{
+		if (DynamicMaterial)
+		{
+			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, DissolveAlpha);
+		}
+	}
+
+	if (DissolveAlpha >= 1.0f)
+	{
+		FinishDeathDissolve();
+	}
+}
+
+void AGProjectCharacter::FinishDeathDissolve()
+{
+	bDissolving = false;
+	if (GetMesh())
+	{
+		GetMesh()->SetVisibility(false, true);
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (AttachedActor)
+		{
+			AttachedActor->SetActorHiddenInGame(true);
+		}
+	}
 }
 
 bool AGProjectCharacter::IsDead() const
