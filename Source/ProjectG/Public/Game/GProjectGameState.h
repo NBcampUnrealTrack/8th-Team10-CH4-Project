@@ -100,7 +100,7 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamRoundWins)
 	int32 RedTeamRoundWins = 0;
 
-	UPROPERTY(ReplicatedUsing = OnRep_TemmRoundWins)
+	UPROPERTY(ReplicatedUsing = OnRep_TeamRoundWins)
 	int32 BlueTeamRoundWins = 0;
 
 	UFUNCTION()

@@ -9,6 +9,9 @@
 
 
 class APlayerController;
+class AGProjectPlayerState;
+
+enum class EGProjectTeam : uint8;
 
 UCLASS()
 class PROJECTG_API AGProjectGameMode : public AGameMode
@@ -19,6 +22,8 @@ public:
 	AGProjectGameMode();
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+
+	void NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState);
 
 protected:
 	virtual void BeginPlay() override;
@@ -34,6 +39,10 @@ protected:
 
 	void ResetPlayersForNextRound();
 
+	bool IsTeamEliminated(EGProjectTeam Team)const;
+
+	bool HasTeamWonMatch() const;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
 
@@ -41,7 +50,7 @@ protected:
 	int32 RoundDuration = 180;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
-	int32 MaxRounds = 3;
+	int32 RoundsToWin = 2;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	float RoundTransitionDuration = 3.0f;

@@ -138,7 +138,7 @@ void AGProjectGameState::AddTeamRoundWin(EGProjectTeam Winner)
 		LogTemp,
 		Warning,
 		TEXT("Team Score | Red: %d, Blue: %d"),
-		RedTeamRoundWins
+		RedTeamRoundWins,
 		BlueTeamRoundWins
 	);
 }

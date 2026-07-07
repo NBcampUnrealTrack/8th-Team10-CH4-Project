@@ -42,6 +42,60 @@ void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
 	StartMatch();
 }
 
+void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
+{
+	if (!HasAuthority() || !DeadPlayerState)
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	if (!IsMatchInProgress() || GS->GetRoundPhase() != ERoundPhase::Playing)
+	{
+		return;
+	}
+
+	const EGProjectTeam DeadTeam = DeadPlayerState->GetTeam();
+	if (DeadTeam == EGProjectTeam::None)
+	{
+		return;
+	}
+
+	if (!IsTeamEliminated(DeadTeam))
+	{
+		UE_LOG(
+			LogTemp,
+			Warning,
+			TEXT("Player Died, But team still alive | PlayerID = %d"),
+			DeadPlayerState->GetPlayerId()
+		);
+		return;
+	}
+
+	const EGProjectTeam Winner = DeadTeam == EGProjectTeam::Red ? EGProjectTeam::Blue : EGProjectTeam::Red;
+
+	GS->AddTeamRoundWin(Winner);
+
+	const TCHAR* DeadTeamName = DeadTeam == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
+
+	const TCHAR* WinnerTeamName = Winner == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("%s Team Eliminated | Winner is %s Team"),
+		DeadTeamName,
+		WinnerTeamName
+	);
+
+	FinishRound();
+}
+
 void AGProjectGameMode::BeginPlay()
 {
 	Super::BeginPlay();
@@ -81,6 +135,34 @@ void AGProjectGameMode::HandleMatchHasEnded()
 
 	GetWorldTimerManager().ClearTimer(
 		RoundTransitionTimerHandle
+	);
+
+	const AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	if (GS)
+	{
+		if (GS->GetRedTeamRoundWins() >= RoundsToWin)
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("Match Winner is Red Team")
+			);
+		}
+		else if (GS->GetBlueTeamRoundWins() >= RoundsToWin)
+		{
+			UE_LOG(
+				LogTemp,
+				Warning,
+				TEXT("Match Winner is Blue Team")
+			);
+		}
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Match Ended / State: %s"),
+		*GetMatchState().ToString()
 	);
 
 	// 최종 승자, 결과 UI 로비 이동 등.....
@@ -130,11 +212,13 @@ void AGProjectGameMode::FinishRound()
 		return;
 	}
 
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
 	GS->SetRoundPhase(ERoundPhase::Intermission);
 
-	const bool bLastRound = GS->GetCurrentRound() >= MaxRounds;
+	const bool bMatchWon = HasTeamWonMatch();
 
-	if (bLastRound)
+	if (bMatchWon)
 	{
 		GetWorldTimerManager().SetTimer(
 			RoundTransitionTimerHandle,
@@ -305,6 +389,52 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		
 		PC->SetControlRotation(PlayerStart->GetActorRotation());
 	}
+}
+
+bool AGProjectGameMode::IsTeamEliminated(EGProjectTeam Team) const
+{
+	if (!GetWorld() || Team == EGProjectTeam::None)
+	{
+		return false;
+	}
+
+	bool bFoundTeamMember = false;
+
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC)
+		{
+			continue;
+		}
+
+		AGProjectPlayerState* PS = PC->GetPlayerState<AGProjectPlayerState>();
+		if (!PS || PS->GetTeam() != Team)
+		{
+			continue;
+		}
+
+		bFoundTeamMember = true;
+
+		const AGProjectCharacter* Character = Cast<AGProjectCharacter>(PC->GetPawn());
+		if (Character && !Character->IsDead())
+		{
+			return false;
+		}
+	}
+
+	return bFoundTeamMember;
+}
+
+bool AGProjectGameMode::HasTeamWonMatch() const
+{
+	const AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return false;
+	}
+
+	return (GS->GetRedTeamRoundWins() >= RoundsToWin || GS->GetBlueTeamRoundWins() >= RoundsToWin);
 }
 
 void AGProjectGameMode::AssignTeam(APlayerController* NewPlayer)
