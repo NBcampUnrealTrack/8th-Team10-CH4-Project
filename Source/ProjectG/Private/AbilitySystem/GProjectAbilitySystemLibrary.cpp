@@ -80,6 +80,7 @@ void UGProjectAbilitySystemLibrary::ApplyHitstunEffect(
 
 	FGameplayTagContainer AbilitiesToCancel;
 	AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_Attack);
+	AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Movement_Sprint);
 	TargetASC->CancelAbilities(&AbilitiesToCancel);
 	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
