@@ -28,7 +28,10 @@ protected:
 	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPanelWidget> PlayerBoxContainer;
+	TObjectPtr<UPanelWidget> RedTeamContainer;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UPanelWidget> BlueTeamContainer;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player List")
 	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;

@@ -65,12 +65,14 @@ void UGProjectOverlayWidget::NativeDestruct()
 void UGProjectOverlayWidget::RefreshPlayerBoxes()
 {
 	UGProjectOverlayWidgetController* OverlayController = Cast<UGProjectOverlayWidgetController>(WidgetController);
-	if (!OverlayController || !PlayerBoxContainer || !PlayerBoxWidgetClass)
+	if (!OverlayController || !RedTeamContainer || !BlueTeamContainer || !PlayerBoxWidgetClass)
 	{
 		return;
 	}
 
-	PlayerBoxContainer->ClearChildren();
+	RedTeamContainer->ClearChildren();
+	BlueTeamContainer->ClearChildren();
+
 	PlayerBoxControllers.Reset();
 
 	for (AGProjectPlayerState* CurrentPlayerState : OverlayController->GetOrderedPlayerStates())
@@ -79,7 +81,23 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		{
 			continue;
 		}
+		UPanelWidget* TargetContainer = nullptr;
 
+		switch (CurrentPlayerState->GetTeam())
+		{
+		case EGProjectTeam::Red:
+			TargetContainer = RedTeamContainer;
+			break;
+
+		case EGProjectTeam::Blue:
+			TargetContainer = BlueTeamContainer;
+			break;
+
+		case EGProjectTeam::None:
+		default:
+			continue;
+		}
+		
 		UGProjectPlayerBoxWidgetController* BoxController = NewObject<UGProjectPlayerBoxWidgetController>(this);
 		const FGProjectWidgetControllerParams Params(
 			GetOwningPlayer(),
