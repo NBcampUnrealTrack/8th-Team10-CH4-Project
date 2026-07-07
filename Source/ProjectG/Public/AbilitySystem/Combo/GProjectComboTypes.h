@@ -33,4 +33,7 @@ struct FGProjectComboStep
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
 	FGProjectDamageEffectParams DamageParams;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cost", meta = (ClampMin = "0.0"))
+	float StepSPCost = 0.0f;
 };
