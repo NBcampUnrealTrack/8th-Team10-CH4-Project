@@ -10,7 +10,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Movement);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Movement_Move);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Movement_Jump);
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Movement_Dash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Movement_Sprint);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_BasicAttack);
@@ -40,7 +40,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Attack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_HitReact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Knockdown);
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Movement_Dash);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Movement_Sprint);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Skill_Accessory);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Targeting_LockOn);
 
@@ -60,4 +60,5 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_UseItem);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Combat_Damage);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Resource_SP_Modifier);
 }
