@@ -9,6 +9,8 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
+#include "Components/VerticalBox.h"
+#include "Components/HorizontalBox.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "UI/Widget/GProjectPlayerBoxWidget.h"
@@ -115,7 +117,10 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		}
 
 		PlayerBox->SetWidgetController(BoxController);
-		PlayerBoxContainer->AddChild(PlayerBox);
+
+		PlayerBox->ApplyTeamStyle(CurrentPlayerState->GetTeam());
+
+		TargetContainer->AddChild(PlayerBox);
 		BoxController->BroadcastInitialValues();
 		PlayerBoxControllers.Add(BoxController);
 	}

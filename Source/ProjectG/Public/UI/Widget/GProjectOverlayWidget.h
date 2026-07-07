@@ -15,6 +15,8 @@ class UGProjectChatWidget;
 class UImage;
 class UPanelWidget;
 class UGProjectMatchTimerWidget;
+class UVerticalBox;
+class UHorizontalBox;
 
 
 UCLASS()
@@ -28,10 +30,10 @@ protected:
 	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPanelWidget> RedTeamContainer;
+	TObjectPtr<UHorizontalBox> RedTeamContainer;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UPanelWidget> BlueTeamContainer;
+	TObjectPtr<UHorizontalBox> BlueTeamContainer;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player List")
 	TSubclassOf<UGProjectPlayerBoxWidget> PlayerBoxWidgetClass;

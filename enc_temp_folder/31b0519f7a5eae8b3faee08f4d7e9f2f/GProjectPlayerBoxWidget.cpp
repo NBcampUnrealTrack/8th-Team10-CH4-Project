@@ -89,11 +89,11 @@ void UGProjectPlayerBoxWidget::ApplyTeamStyle(EGProjectTeam NewTeam)
 	switch (NewTeam)
 	{
 	case EGProjectTeam::Red:
-		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(255, 110, 120, 255)));
+		PlayerFrame->SetBrushColor(FLinearColor(0.8f, 0.05f, 0.05f, 1.0f));
 		break;
 
 	case EGProjectTeam::Blue:
-		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(120, 190, 255, 255)));
+		PlayerFrame->SetBrushColor(FLinearColor(0.05f, 0.2f, 0.9f, 1.0f));
 		break;
 
 	default:

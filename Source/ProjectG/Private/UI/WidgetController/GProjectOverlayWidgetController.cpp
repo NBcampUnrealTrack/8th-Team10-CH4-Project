@@ -19,14 +19,14 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 
 	if (AGProjectGameState* GameState = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
 	{
+		GameState->OnPlayerListChanged.RemoveAll(this);
+
 		GameState->OnMatchTimeChanged.AddUObject(this, &ThisClass::HandleMatchTimeChanged);
 		GameState->OnPlayerListChanged.AddUObject(this, &ThisClass::HandlePlayerListChanged);
-
-		GameState->OnChatMessageReceived.AddUObject(
-			this,
-			&ThisClass::HandleChatMessageReceived
-		);
+		GameState->OnChatMessageReceived.AddUObject(this, &ThisClass::HandleChatMessageReceived);
 	}
+
+	BindTeamCallbacks();
 }
 
 void UGProjectOverlayWidgetController::BroadcastInitialValues()
@@ -82,6 +82,8 @@ TArray<AGProjectPlayerState*> UGProjectOverlayWidgetController::GetOrderedPlayer
 
 void UGProjectOverlayWidgetController::HandlePlayerListChanged()
 {
+	BindTeamCallbacks();
+	
 	OnPlayerListChanged.Broadcast();
 }
 
@@ -98,4 +100,37 @@ void UGProjectOverlayWidgetController::HandleChatMessageReceived(int32 SenderPla
 		Message
 	);
 
+}
+
+void UGProjectOverlayWidgetController::BindTeamCallbacks()
+{
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = PlayerController->GetWorld()->GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	for (APlayerState* BasePlayerState : GS->PlayerArray)
+	{
+		AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(BasePlayerState);
+		if (!PS)
+		{
+			continue;
+		}
+
+		PS->OnTeamChanged.RemoveAll(this);
+		PS->OnTeamChanged.AddUObject(this, &ThisClass::HandlePlayerTeamChanged);
+	}
+}
+
+void UGProjectOverlayWidgetController::HandlePlayerTeamChanged(EGProjectTeam NewTeam)
+{
+	(void)NewTeam;
+
+	OnPlayerListChanged.Broadcast();
 }
