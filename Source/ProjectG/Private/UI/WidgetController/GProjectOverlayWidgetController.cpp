@@ -24,6 +24,7 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 		GameState->OnMatchTimeChanged.AddUObject(this, &ThisClass::HandleMatchTimeChanged);
 		GameState->OnPlayerListChanged.AddUObject(this, &ThisClass::HandlePlayerListChanged);
 		GameState->OnChatMessageReceived.AddUObject(this, &ThisClass::HandleChatMessageReceived);
+		GameState->OnRoundPhaseChanged.AddUObject(this, &ThisClass::HandleRoundPhaseChanged);
 	}
 
 	BindTeamCallbacks();
@@ -41,6 +42,8 @@ void UGProjectOverlayWidgetController::BroadcastInitialValues()
 	if (AGProjectGameState* GS = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
 	{
 		OnMatchTimeChanged.Broadcast(GS->GetRemainMatchTime());
+
+		OnRoundPhaseUIChanged.Broadcast(GS->GetRoundPhase(), GS->GetCurrentRound());
 	}
 }
 
@@ -133,4 +136,20 @@ void UGProjectOverlayWidgetController::HandlePlayerTeamChanged(EGProjectTeam New
 	(void)NewTeam;
 
 	OnPlayerListChanged.Broadcast();
+}
+
+void UGProjectOverlayWidgetController::HandleRoundPhaseChanged(ERoundPhase NewPhase)
+{
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	const AGProjectGameState* GS = PlayerController->GetWorld()->GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	OnRoundPhaseUIChanged.Broadcast(NewPhase, GS->GetCurrentRound());
 }

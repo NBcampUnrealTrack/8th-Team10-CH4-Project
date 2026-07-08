@@ -214,22 +214,22 @@ void AGProjectGameMode::FinishRound()
 
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
 
-	GS->SetRoundPhase(ERoundPhase::Intermission);
-
-	const bool bMatchWon = HasTeamWonMatch();
-
-	if (bMatchWon)
+	if (HasTeamWonMatch())
 	{
+		GS->SetRoundPhase(ERoundPhase::Finished);
+
 		GetWorldTimerManager().SetTimer(
-			RoundTransitionTimerHandle,
-			this,
-			&ThisClass::FinishMatchAfterDelay,
-			RoundTransitionDuration,
+			RoundTransitionTimerHandle, 
+			this, 
+			&ThisClass::FinishMatchAfterDelay, 
+			RoundTransitionDuration, 
 			false
 		);
 
 		return;
 	}
+
+	GS->SetRoundPhase(ERoundPhase::Intermission);
 
 	GetWorldTimerManager().SetTimer(
 		RoundTransitionTimerHandle,

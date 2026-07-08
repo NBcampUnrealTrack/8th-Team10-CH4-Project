@@ -12,11 +12,15 @@ class UGProjectOverlayWidgetController;
 class UGProjectPlayerBoxWidget;
 class UGProjectPlayerBoxWidgetController;
 class UGProjectChatWidget;
+class UGProjectRoundTransitionWidget;
+class UGProjectMatchResultWidget;
 class UImage;
 class UPanelWidget;
 class UGProjectMatchTimerWidget;
 class UVerticalBox;
 class UHorizontalBox;
+
+enum class ERoundPhase : uint8;
 
 
 UCLASS()
@@ -50,6 +54,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectChatWidget> ChatWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectRoundTransitionWidget> RoundTransitionWidget;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectMatchResultWidget> MatchResultWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
@@ -65,6 +75,8 @@ private:
 
 	void BindLockOnComponent();
 	void UpdateLockOnIndicator();
+
+	void HandleRoundPhaseUIChanged(ERoundPhase NewPhase, int32 CurrentRound);
 
 	UPROPERTY()
 	TArray<TObjectPtr<UGProjectPlayerBoxWidgetController>> PlayerBoxControllers;

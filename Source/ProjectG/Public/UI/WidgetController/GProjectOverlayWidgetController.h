@@ -7,7 +7,9 @@
 #include "GProjectOverlayWidgetController.generated.h"
 
 class AGProjectPlayerState;
+
 enum class EGProjectTeam : uint8;
+enum class ERoundPhase : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnMatchTimeChangedSignature, int32, RemainTime);
@@ -17,6 +19,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	int32, SenderPlayerID,
 	const FString&, SenderName,
 	const FString&, Message
+);
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(
+	FGProjectRoundPhaseUIChangedSignature,
+	ERoundPhase,
+	int32
 );
 
 UCLASS(BlueprintType, Blueprintable)
@@ -40,6 +48,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Chat")
 	FGProjectOnChatMessageReceivedSignature OnChatMessageReceived;
 
+	FGProjectRoundPhaseUIChangedSignature OnRoundPhaseUIChanged;
+
 private:
 	void HandlePlayerListChanged();
 	void HandleMatchTimeChanged(int32 RemainTime);
@@ -48,5 +58,7 @@ private:
 
 	void BindTeamCallbacks();
 	void HandlePlayerTeamChanged(EGProjectTeam NewTeam);
+
+	void HandleRoundPhaseChanged(ERoundPhase NewPhase);
 
 };

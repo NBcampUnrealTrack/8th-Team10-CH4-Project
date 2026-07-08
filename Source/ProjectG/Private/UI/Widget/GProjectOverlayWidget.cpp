@@ -19,6 +19,9 @@
 #include "UI/WidgetController/GProjectWidgetController.h"
 #include "UI/Widget/GProjectMatchTimerWidget.h"
 #include "UI/Widget/GProjectChatWidget.h"
+#include "Game/GProjectGameState.h"
+#include "UI/Widget/GProjectRoundTransitionWidget.h"
+#include "UI/Widget/GProjectMatchResultWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -43,7 +46,8 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	OverlayController->OnChatMessageReceived.RemoveDynamic(this, &ThisClass::RefreshChatMessage);
 	OverlayController->OnChatMessageReceived.AddDynamic(this, &ThisClass::RefreshChatMessage);
 
-
+	OverlayController->OnRoundPhaseUIChanged.RemoveAll(this);
+	OverlayController->OnRoundPhaseUIChanged.AddUObject(this, &ThisClass::HandleRoundPhaseUIChanged);
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -207,4 +211,95 @@ void UGProjectOverlayWidget::UpdateLockOnIndicator()
 	CanvasSlot->SetPosition(WidgetPosition);
 	CanvasSlot->SetAlignment(FVector2D(0.5f));
 	LockOnIndicator->SetVisibility(ESlateVisibility::HitTestInvisible);
+}
+
+void UGProjectOverlayWidget::HandleRoundPhaseUIChanged(ERoundPhase NewPhase,int32 CurrentRound)
+{
+	switch (NewPhase)
+	{
+	case ERoundPhase::Intermission:
+	{
+		if (MatchResultWidget)
+		{
+			MatchResultWidget->HideResult();
+		}
+
+		if (RoundTransitionWidget)
+		{
+			RoundTransitionWidget->ShowNextRound(
+				CurrentRound + 1
+			);
+		}
+
+		break;
+	}
+
+	case ERoundPhase::Finished:
+	{
+		if (RoundTransitionWidget)
+		{
+			RoundTransitionWidget->HideTransition();
+		}
+
+		if (!MatchResultWidget ||
+			!GetOwningPlayer())
+		{
+			break;
+		}
+
+		AGProjectGameState* GameState =
+			GetOwningPlayer()
+			->GetWorld()
+			->GetGameState<AGProjectGameState>();
+
+		AGProjectPlayerState* LocalPlayerState =
+			GetOwningPlayer()
+			->GetPlayerState<AGProjectPlayerState>();
+
+		if (!GameState || !LocalPlayerState)
+		{
+			break;
+		}
+
+		const int32 RedTeamWins =
+			GameState->GetRedTeamRoundWins();
+
+		const int32 BlueTeamWins =
+			GameState->GetBlueTeamRoundWins();
+
+		const EGProjectTeam WinningTeam =
+			RedTeamWins > BlueTeamWins
+			? EGProjectTeam::Red
+			: EGProjectTeam::Blue;
+
+		const bool bLocalPlayerWon =
+			LocalPlayerState->GetTeam() ==
+			WinningTeam;
+
+		MatchResultWidget->ShowResult(
+			bLocalPlayerWon,
+			RedTeamWins,
+			BlueTeamWins
+		);
+
+		break;
+	}
+
+	case ERoundPhase::Waiting:
+	case ERoundPhase::Playing:
+	default:
+	{
+		if (RoundTransitionWidget)
+		{
+			RoundTransitionWidget->HideTransition();
+		}
+
+		if (MatchResultWidget)
+		{
+			MatchResultWidget->HideResult();
+		}
+
+		break;
+	}
+	}
 }

@@ -13,7 +13,8 @@ enum class ERoundPhase : uint8
 {
 	Waiting,
 	Playing,
-	Intermission
+	Intermission,
+	Finished
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(
