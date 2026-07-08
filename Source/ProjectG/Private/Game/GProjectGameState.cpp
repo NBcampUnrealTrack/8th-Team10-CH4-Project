@@ -3,6 +3,8 @@
 #include "Game/GProjectGameState.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Player/GProjectPlayerState.h"
+
 void AGProjectGameState::AddPlayerState(APlayerState* InPlayerState)
 {
 	const int32 PreviousPlayerCount = PlayerArray.Num();
@@ -34,6 +36,10 @@ void AGProjectGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectGameState, CurrentRound);
 
 	DOREPLIFETIME(AGProjectGameState, RoundPhase);
+
+	DOREPLIFETIME(AGProjectGameState, RedTeamRoundWins);
+
+	DOREPLIFETIME(AGProjectGameState, BlueTeamRoundWins);
 }
 
 void AGProjectGameState::SetRemainMatchTime(int32 Time)
@@ -56,6 +62,11 @@ void AGProjectGameState::OnRep_CurrentRound()
 void AGProjectGameState::OnRep_RoundPhase()
 {
 	OnRoundPhaseChanged.Broadcast(RoundPhase);
+}
+
+void AGProjectGameState::OnRep_TeamRoundWins()
+{
+	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
 }
 
 void AGProjectGameState::BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
@@ -98,6 +109,51 @@ void AGProjectGameState::SetRoundPhase(ERoundPhase NewPhase)
 ERoundPhase AGProjectGameState::GetRoundPhase() const
 {
 	return RoundPhase;
+}
+
+void AGProjectGameState::AddTeamRoundWin(EGProjectTeam Winner)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	switch (Winner)
+	{
+	case EGProjectTeam::Red:
+		++RedTeamRoundWins;
+		break;
+
+	case EGProjectTeam::Blue:
+		++BlueTeamRoundWins;
+		break;
+
+	default:
+		return;
+	}
+
+	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Team Score | Red: %d, Blue: %d"),
+		RedTeamRoundWins,
+		BlueTeamRoundWins
+	);
+}
+
+void AGProjectGameState::ResetTeamRoundWins()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	RedTeamRoundWins = 0;
+	BlueTeamRoundWins = 0;
+
+	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
 }
 
 void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)

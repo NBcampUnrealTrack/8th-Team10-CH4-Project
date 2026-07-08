@@ -2,6 +2,8 @@
 
 #include "UI/Widget/GProjectPlayerBoxWidget.h"
 
+#include "Player/GProjectPlayerState.h"
+#include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -75,6 +77,28 @@ void UGProjectPlayerBoxWidget::SetMaxSP(float NewMaxSP)
 {
 	MaxSP = FMath::Max(NewMaxSP, 1.0f);
 	RefreshSP();
+}
+
+void UGProjectPlayerBoxWidget::ApplyTeamStyle(EGProjectTeam NewTeam)
+{
+	if (!PlayerFrame)
+	{
+		return;
+	}
+
+	switch (NewTeam)
+	{
+	case EGProjectTeam::Red:
+		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(255, 110, 120, 255)));
+		break;
+
+	case EGProjectTeam::Blue:
+		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(120, 190, 255, 255)));
+		break;
+
+	default:
+		break;
+	}
 }
 
 void UGProjectPlayerBoxWidget::RefreshHealth()

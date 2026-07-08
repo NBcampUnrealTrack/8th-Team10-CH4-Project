@@ -6,12 +6,15 @@
 #include "GameFramework/GameState.h"
 #include "GProjectGameState.generated.h"
 
+enum class EGProjectTeam : uint8;
+
 UENUM(BlueprintType)
 enum class ERoundPhase : uint8
 {
 	Waiting,
 	Playing,
-	Intermission
+	Intermission,
+	Finished
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(
@@ -32,6 +35,12 @@ DECLARE_MULTICAST_DELEGATE_ThreeParams(
 	int32,
 	const FString&,
 	const FString&
+);
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(
+	FGProjectTeamRoundWinsChangedSignature,
+	int32,
+	int32
 );
 
 UCLASS()
@@ -56,6 +65,12 @@ public:
 	void SetRoundPhase(ERoundPhase NewPhase);
 	ERoundPhase GetRoundPhase() const;
 
+	void AddTeamRoundWin(EGProjectTeam Winner);
+	void ResetTeamRoundWins();
+
+	int32 GetRedTeamRoundWins() const { return RedTeamRoundWins; }
+	int32 GetBlueTeamRoundWins() const { return BlueTeamRoundWins; }
+
 	FGProjectMatchTimeChangedSignature OnMatchTimeChanged;
 
 	FGProjectPlayerListChangedSignature OnPlayerListChanged;
@@ -64,6 +79,8 @@ public:
 
 	FGProjectCurrentRoundChangedSignature OnCurrentRoundChanged;
 	FGProjectRoundPhaseChangedSignature OnRoundPhaseChanged;
+
+	FGProjectTeamRoundWinsChangedSignature OnTeamRoundWinsChanged;
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_RemainMatchTime)
@@ -81,9 +98,18 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_RoundPhase)
 	ERoundPhase RoundPhase = ERoundPhase::Waiting;
 
+	UPROPERTY(ReplicatedUsing = OnRep_TeamRoundWins)
+	int32 RedTeamRoundWins = 0;
+
+	UPROPERTY(ReplicatedUsing = OnRep_TeamRoundWins)
+	int32 BlueTeamRoundWins = 0;
+
 	UFUNCTION()
 	void OnRep_CurrentRound();
 
 	UFUNCTION()
 	void OnRep_RoundPhase();
+
+	UFUNCTION()
+	void OnRep_TeamRoundWins();
 };
