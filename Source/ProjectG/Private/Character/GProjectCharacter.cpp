@@ -163,11 +163,26 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 		Movement->ClearAccumulatedForces();
 	}
 
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
 
-	TeleportTo(SpawnTransform.GetLocation(), SpawnTransform.Rotator(), false, true);
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+
+	TeleportTo(
+		SpawnTransform.GetLocation(),
+		SpawnTransform.Rotator(),
+		false,
+		true
+	);
 
 	bDead = false;
+
+	SetActorHiddenInGame(false);
+
+	MulticastResetRoundVisuals();
 
 	if (ASC && AttributeSet)
 	{
@@ -192,6 +207,7 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 	RefreshMovementStateTags();
 
 	ForceNetUpdate();
+
 }
 
 void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
@@ -377,6 +393,49 @@ void AGProjectCharacter::FinishDeathDissolve()
 		if (AttachedActor)
 		{
 			AttachedActor->SetActorHiddenInGame(true);
+		}
+	}
+}
+
+void AGProjectCharacter::MulticastResetRoundVisuals_Implementation()
+{
+	SetActorHiddenInGame(false);
+
+	TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
+	GetComponents<USkeletalMeshComponent>(
+		SkeletalMeshComponents
+	);
+
+	for (USkeletalMeshComponent* MeshComponent :
+		SkeletalMeshComponents)
+	{
+		if (!MeshComponent)
+		{
+			continue;
+		}
+
+		MeshComponent->SetHiddenInGame(
+			false,
+			true
+		);
+
+		MeshComponent->SetVisibility(
+			true,
+			true
+		);
+
+		MeshComponent->SetComponentTickEnabled(
+			true
+		);
+
+		MeshComponent->SetSimulatePhysics(
+			false
+		);
+
+		if (UAnimInstance* AnimInstance =
+			MeshComponent->GetAnimInstance())
+		{
+			AnimInstance->StopAllMontages(0.0f);
 		}
 	}
 }

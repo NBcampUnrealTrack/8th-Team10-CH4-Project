@@ -19,7 +19,7 @@ public class ProjectG : ModuleRules
 			"GameplayTasks",
 			"UMG",
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
 			"SlateCore"
 		});
 

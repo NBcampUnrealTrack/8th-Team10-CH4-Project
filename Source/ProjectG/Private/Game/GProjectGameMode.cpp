@@ -12,6 +12,9 @@
 #include "Item/GProjectItemActorBase.h"
 #include "Item/GProjectItemHolderComponent.h"
 
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
 AGProjectGameMode::AGProjectGameMode()
 {
 	bDelayedStart = true;
@@ -116,13 +119,6 @@ void AGProjectGameMode::HandleMatchHasStarted()
 	GS->SetCurrentRound(1);
 
 	StartRound();
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Match Started / State: %s"),
-		*GetMatchState().ToString()
-	);
 }
 
 void AGProjectGameMode::HandleMatchHasEnded()
@@ -135,34 +131,6 @@ void AGProjectGameMode::HandleMatchHasEnded()
 
 	GetWorldTimerManager().ClearTimer(
 		RoundTransitionTimerHandle
-	);
-
-	const AGProjectGameState* GS = GetGameState<AGProjectGameState>();
-	if (GS)
-	{
-		if (GS->GetRedTeamRoundWins() >= RoundsToWin)
-		{
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("Match Winner is Red Team")
-			);
-		}
-		else if (GS->GetBlueTeamRoundWins() >= RoundsToWin)
-		{
-			UE_LOG(
-				LogTemp,
-				Warning,
-				TEXT("Match Winner is Blue Team")
-			);
-		}
-	}
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("Match Ended / State: %s"),
-		*GetMatchState().ToString()
 	);
 
 	// 최종 승자, 결과 UI 로비 이동 등.....
@@ -325,8 +293,12 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 	TArray<APlayerController*> PlayerControllers;
 	TArray<AGProjectCharacter*> Characters;
 
+	int32 ControllerCount = 0;
+
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
+		++ControllerCount;
+
 		APlayerController* PC = It->Get();
 
 		if (!PC)
@@ -334,7 +306,14 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 			continue;
 		}
 
-		AGProjectCharacter* Character = Cast<AGProjectCharacter>(PC->GetPawn());
+		APawn* Pawn = PC->GetPawn();
+		if (!Pawn)
+		{
+			continue;
+		}
+
+		AGProjectCharacter* Character =	Cast<AGProjectCharacter>(Pawn);
+
 		if (!Character)
 		{
 			continue;
@@ -344,6 +323,7 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		Characters.Add(Character);
 	}
 
+	// 플레이어가 들고 있는 아이템 내려놓기
 	for (AGProjectCharacter* Character : Characters)
 	{
 		if (!Character)
@@ -359,20 +339,26 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		}
 	}
 
+	int32 ResetItemCount = 0;
+
 	for (TActorIterator<AGProjectItemActorBase> It(World); It; ++It)
 	{
 		AGProjectItemActorBase* Item = *It;
 
-		if (Item)
+		if (!Item)
 		{
-			Item->ResetToSpawnTransform();
+			continue;
 		}
+
+		Item->ResetToSpawnTransform();
+		++ResetItemCount;
 	}
 
 	for (int32 Index = 0; Index < Characters.Num(); ++Index)
 	{
-		APlayerController* PC = PlayerControllers[Index];
-		AGProjectCharacter* Character = Characters[Index];
+		APlayerController* PC = PlayerControllers.IsValidIndex(Index) ? PlayerControllers[Index] : nullptr;
+
+		AGProjectCharacter* Character = Characters.IsValidIndex(Index) ? Characters[Index] : nullptr;
 
 		if (!PC || !Character)
 		{
@@ -380,15 +366,21 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		}
 
 		AActor* PlayerStart = FindPlayerStart(PC);
+
 		if (!PlayerStart)
 		{
 			continue;
 		}
 
-		Character->ResetForNewRound(PlayerStart->GetActorTransform());
-		
-		PC->SetControlRotation(PlayerStart->GetActorRotation());
+		Character->ResetForNewRound(
+			PlayerStart->GetActorTransform()
+		);
+
+		PC->SetControlRotation(
+			PlayerStart->GetActorRotation()
+		);
 	}
+
 }
 
 bool AGProjectGameMode::IsTeamEliminated(EGProjectTeam Team) const

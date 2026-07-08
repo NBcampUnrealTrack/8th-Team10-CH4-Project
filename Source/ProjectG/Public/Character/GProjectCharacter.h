@@ -39,6 +39,7 @@ public:
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
 
+	UFUNCTION(BlueprintCallable, Category = "Round")
 	void ResetForNewRound(const FTransform& SpawnTransform);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
@@ -139,6 +140,9 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastStartDeathDissolve();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastResetRoundVisuals();
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))
 	bool bDead = false;
