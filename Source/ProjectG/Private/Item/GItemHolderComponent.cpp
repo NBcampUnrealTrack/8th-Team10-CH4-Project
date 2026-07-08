@@ -202,18 +202,26 @@ void UGItemHolderComponent::RefreshEquipmentMesh()
         return;
     }
     EquipmentMeshComponent->SetStaticMesh(EquipmentItem ? EquipmentItem->HeldMesh : nullptr);
-
+    if (EquipmentItem)
+    {
+        if (ACharacter* OwnerChar = Cast<ACharacter>(GetOwner()))
+        {
+            EquipmentMeshComponent->AttachToComponent(
+                OwnerChar->GetMesh(),
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                EquipmentSocketName);
+        }
+    }
     if (AGProjectCharacter* Char = Cast<AGProjectCharacter>(GetOwner()))
     {
         if (EquipmentItem)
         {
             Char->SetAttackTraceSource(EquipmentMeshComponent, TEXT("TraceStart"), TEXT("TraceEnd"));
-
+            Char->SetCombatStyle(EGProjectCombatStyle::Spear);
             Char->SetActiveComboData(
                 EquipmentItem->WeaponGroundComboData,
                 EquipmentItem->WeaponAirComboData,
                 EquipmentItem->WeaponDashComboData);
-
             if (BladeFX && !BladeFXComponent)
             {
                 BladeFXComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
@@ -225,7 +233,6 @@ void UGItemHolderComponent::RefreshEquipmentMesh()
                     BladeFXComponent->SetWorldScale3D(BladeFXScale);
                 }
             }
-
             if (ShaftFX && !ShaftFXComponent)
             {
                 ShaftFXComponent = UNiagaraFunctionLibrary::SpawnSystemAttached(
@@ -241,9 +248,8 @@ void UGItemHolderComponent::RefreshEquipmentMesh()
         else
         {
             Char->ResetAttackTraceSource();
-
+            Char->SetCombatStyle(EGProjectCombatStyle::Unarmed);
             Char->ResetActiveComboData();
-
             if (BladeFXComponent)
             {
                 BladeFXComponent->DestroyComponent();
