@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "Net/UnrealNetwork.h"
 
 AGProjectPlayerState::AGProjectPlayerState()
 {
@@ -30,3 +31,32 @@ UGProjectAttributeSet* AGProjectPlayerState::GetAttributeSet() const
 {
 	return AttributeSet;
 }
+
+void AGProjectPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(
+		AGProjectPlayerState,
+		Team
+	);
+}
+
+void AGProjectPlayerState::SetTeam(EGProjectTeam NewTeam)
+{
+	if (!HasAuthority() || Team == NewTeam) {
+		return;
+	}
+
+	Team = NewTeam;
+	
+	OnTeamChanged.Broadcast(Team);
+
+	ForceNetUpdate();
+}
+
+void AGProjectPlayerState::OnRep_Team()
+{
+	OnTeamChanged.Broadcast(Team);
+}
+

@@ -20,7 +20,8 @@ public class ProjectG : ModuleRules
 			"UMG",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils"
-        });
+			"SlateCore"
+		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

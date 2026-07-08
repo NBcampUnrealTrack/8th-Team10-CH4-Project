@@ -39,6 +39,8 @@ public:
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
 
+	void ResetForNewRound(const FTransform& SpawnTransform);
+
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
 	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
 
