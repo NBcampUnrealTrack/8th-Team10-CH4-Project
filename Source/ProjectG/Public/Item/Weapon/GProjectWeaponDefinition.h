@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Item/GProjectItemDefinition.h"
+#include "Item/Weapon/GProjectCombatStyle.h"
 #include "GProjectWeaponDefinition.generated.h"
 
 class UGProjectComboData;
@@ -15,6 +16,9 @@ class PROJECTG_API UGProjectWeaponDefinition : public UGProjectItemDefinition
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Sword;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSoftObjectPtr<UStaticMesh> HeldMesh;
 
