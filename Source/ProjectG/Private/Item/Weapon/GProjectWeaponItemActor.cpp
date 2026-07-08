@@ -36,6 +36,7 @@ void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character)
 		WeaponDefinition->GroundComboData,
 		WeaponDefinition->AirComboData,
 		WeaponDefinition->DashComboData);
+	Character->SetCombatStyle(WeaponDefinition->CombatStyle);
 	Character->SetAttackTraceSource(
 		ItemMesh,
 		WeaponDefinition->TraceStartSocketName,
@@ -48,6 +49,7 @@ void AGProjectWeaponItemActor::HandleUnequipped(AGProjectCharacter* Character)
 	{
 		Character->ResetActiveComboData();
 		Character->ResetAttackTraceSource();
+		Character->SetCombatStyle(EGProjectCombatStyle::Unarmed);
 	}
 
 	Super::HandleUnequipped(Character);
