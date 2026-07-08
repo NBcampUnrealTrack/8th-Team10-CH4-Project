@@ -1,3 +1,4 @@
+
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
@@ -48,6 +49,12 @@ void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FN
 	SessionSettings.bShouldAdvertise = true;
 	SessionSettings.bUsesPresence = true;
 	SessionSettings.bAllowJoinViaPresence = true;
+
+	SessionSettings.Set(
+		FName(TEXT("MaxPlayersCustom")),
+		MaxPublicConnections,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
 
 	SessionSettings.Set(
 		FName(TEXT("MAPNAME")),
@@ -221,4 +228,34 @@ void UGProjectSessionSubsystem::Deinitialize()
 	SessionInterface.Reset();
 
 	Super::Deinitialize();
+}
+
+bool UGProjectSessionSubsystem::GetSessionPlayerCounts(
+	int32 SessionIndex,
+	int32& OutCurrentPlayers,
+	int32& OutMaxPlayers
+) const
+{
+	if (!SessionSearch.IsValid() || !SessionSearch->SearchResults.IsValidIndex(SessionIndex))
+	{
+		return false;
+	}
+
+	const FOnlineSessionSearchResult& Result = SessionSearch->SearchResults[SessionIndex];
+
+	int32 MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
+
+	int32 FoundMaxPlayers = 0;
+	if (Result.Session.SessionSettings.Get(FName(TEXT("MaxPlayersCustom")), FoundMaxPlayers))
+	{
+		MaxPlayers = FoundMaxPlayers;
+	}
+
+	const int32 OpenConnections = Result.Session.NumOpenPublicConnections;
+	const int32 CurrentPlayers = MaxPlayers - OpenConnections;
+
+	OutCurrentPlayers = CurrentPlayers;
+	OutMaxPlayers = MaxPlayers;
+
+	return true;
 }

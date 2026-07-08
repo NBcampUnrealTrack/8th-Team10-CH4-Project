@@ -69,3 +69,9 @@ void AGProjectLobbyGameMode::StartGame()
 	FString TravelURL = BattleMapPath + TEXT("?listen");
 	World->ServerTravel(TravelURL);
 }
+
+int32 AGProjectLobbyGameMode::GetRequiredPlayers() const
+{
+	return RequiredPlayers;
+}
+

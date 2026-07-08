@@ -29,6 +29,8 @@ public:
 
 	virtual void Deinitialize() override;
 
+	bool GetSessionPlayerCounts(int32 SessionIndex, int32& OutCurrentPlayers, int32& OutMaxPlayers) const;
+
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FGProjectOnCreateSessionComplete OnCreateSessionCompleteEvent;
 

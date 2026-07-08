@@ -7,7 +7,9 @@
 #include "GProjectMenuWidget.generated.h"
 
 class UButton;
+class UScrollBox;
 class UEditableText;
+class UGProjectSessionRowWidget;
 
 UCLASS()
 class PROJECTG_API UGProjectMenuWidget : public UUserWidget
@@ -32,14 +34,22 @@ protected:
 	UFUNCTION()
 	void OnFindSessionsCompleteUpdateUI(const TArray<FString>& SessionNames, bool bWasSuccessful);
 
+	UFUNCTION()
+	void HandleSessionRowClicked(int32 SessionIndex);
+
 private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = USTitleWidget, Meta = (AllowPrivateAccess, BindWidget))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USTitleWidget", Meta = (AllowPrivateAccess, BindWidget))
 	TObjectPtr<UButton> HostButton;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = USTitleWidget, Meta = (AllowPrivateAccess, BindWidget))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USTitleWidget", Meta = (AllowPrivateAccess, BindWidget))
 	TObjectPtr<UButton> JoinButton;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = USTitleWidget, Meta = (AllowPrivateAccess, BindWidget))
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USTitleWidget", Meta = (AllowPrivateAccess, BindWidget))
 	TObjectPtr<UButton> ExitButton;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", Meta = (AllowPrivateAccess, BindWidget))
+	TObjectPtr<UScrollBox> SessionListScrollBox;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UGProjectSessionRowWidget> SessionRowWidgetClass;
 };

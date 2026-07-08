@@ -3,8 +3,11 @@
 
 #include "UI/Widget/Lobby/GProjectMenuWidget.h"
 #include "Subsystem/GProjectSessionSubsystem.h"
+#include "UI/Widget/Lobby/GProjectSessionRowWidget.h"
+#include "Game/Lobby/GProjectLobbyGameMode.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
+#include "Components/ScrollBox.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -18,22 +21,40 @@ void UGProjectMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	JoinButton.Get()->OnClicked.AddDynamic(this, &ThisClass::OnJoinButtonClicked);
-	ExitButton.Get()->OnClicked.AddDynamic(this, &ThisClass::OnExitButtonClicked);
-    HostButton.Get()->OnClicked.AddDynamic(this, &ThisClass::OnHostButtonClicked);
+	JoinButton->OnClicked.AddDynamic(this, &ThisClass::OnJoinButtonClicked);
+	ExitButton->OnClicked.AddDynamic(this, &ThisClass::OnExitButtonClicked);
+	HostButton->OnClicked.AddDynamic(this, &ThisClass::OnHostButtonClicked);
 }
 
 void UGProjectMenuWidget::OnHostButtonClicked()
 {
-    if (UGameInstance* GameInstance = GetGameInstance())
-    {
-        UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
-        if (Subsystem)
-        {
-            // 4인 제한, 'MyAwesomeRoom' 이름으로 방 생성 시작
-            Subsystem->CreateGameSession(4, FName("MyAwesomeRoom"));
-        }
-    }
+	int32 TargetMaxPlayers = 2;
+
+	if (UWorld* World = GetWorld())
+	{
+		if (AWorldSettings* WorldSettings = World->GetWorldSettings())
+		{
+			if (UClass* GameModeClass = WorldSettings->DefaultGameMode)
+			{
+				if (const AGProjectLobbyGameMode* DefaultGM =
+					Cast<AGProjectLobbyGameMode>(GameModeClass->GetDefaultObject()))
+				{
+					TargetMaxPlayers = DefaultGM->GetRequiredPlayers();
+				}
+			}
+		}
+	}
+
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		UGProjectSessionSubsystem* Subsystem =
+			GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
+
+		if (Subsystem)
+		{
+			Subsystem->CreateGameSession(TargetMaxPlayers, FName("LobbyMap"));
+		}
+	}
 }
 
 void UGProjectMenuWidget::OnJoinButtonClicked()
@@ -57,15 +78,48 @@ void UGProjectMenuWidget::OnExitButtonClicked()
 
 void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(const TArray<FString>& SessionNames, bool bWasSuccessful)
 {
-    if (bWasSuccessful && SessionNames.Num() > 0)
-    {
-        if (UGameInstance* GameInstance = GetGameInstance())
-        {
-            UGProjectSessionSubsystem* SessionSubsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
-            if (SessionSubsystem)
-            {
-                SessionSubsystem->JoinGameSession(0);
-            }
-        }
-    }
+	if (!SessionListScrollBox || !SessionRowWidgetClass) return;
+
+	SessionListScrollBox->ClearChildren();
+
+	if (bWasSuccessful && SessionNames.Num() > 0)
+	{
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
+			if (Subsystem)
+			{
+				for (int32 i = 0; i < SessionNames.Num(); ++i)
+				{
+					UGProjectSessionRowWidget* RowWidget = CreateWidget<UGProjectSessionRowWidget>(this, SessionRowWidgetClass);
+					if (!RowWidget) continue;
+
+					FString RoomName = SessionNames[i];
+					int32 CurrentPlayers = 1;
+					int32 MaxPlayers = 2;
+
+					Subsystem->GetSessionPlayerCounts(i, CurrentPlayers, MaxPlayers);
+
+					RowWidget->SetupSessionRow(i, RoomName, CurrentPlayers, MaxPlayers);
+
+					RowWidget->OnSessionRowClicked.RemoveDynamic(this, &ThisClass::HandleSessionRowClicked);
+					RowWidget->OnSessionRowClicked.AddDynamic(this, &ThisClass::HandleSessionRowClicked);
+
+					SessionListScrollBox->AddChild(RowWidget);
+				}
+			}
+		}
+	}
+}
+
+void UGProjectMenuWidget::HandleSessionRowClicked(int32 SessionIndex)
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		UGProjectSessionSubsystem* SessionSubsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
+		if (SessionSubsystem)
+		{
+			SessionSubsystem->JoinGameSession(SessionIndex);
+		}
+	}
 }
