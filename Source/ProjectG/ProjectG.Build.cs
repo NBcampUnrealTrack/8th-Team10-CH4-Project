@@ -18,6 +18,9 @@ public class ProjectG : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"UMG",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"SlateCore",
 			"Niagara"
 		});
 

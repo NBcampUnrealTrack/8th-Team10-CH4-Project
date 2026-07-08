@@ -20,7 +20,9 @@
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
+#include "Game/GProjectGameMode.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -125,6 +127,97 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 	return AttackTraceEndSocket;
 }
 
+void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
+
+	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
+
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+
+	UGProjectAttributeSet* AttributeSet = PS ? PS->GetAttributeSet() : nullptr;
+
+	if (ASC)
+	{
+		ASC->CancelAllAbilities();
+
+		FGameplayTagContainer EffectTagsToRemove;
+
+		EffectTagsToRemove.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
+
+		ASC->RemoveActiveEffectsWithGrantedTags(EffectTagsToRemove);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Character_Dead, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, 0);
+	}
+
+	if (LockOnComponent)
+	{
+		LockOnComponent->ClearLockOn();
+	}
+
+	StopJumping();
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->ClearAccumulatedForces();
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+
+	TeleportTo(
+		SpawnTransform.GetLocation(),
+		SpawnTransform.Rotator(),
+		false,
+		true
+	);
+
+	bDead = false;
+
+	MulticastResetDeathState();
+
+	SetActorHiddenInGame(false);
+
+	if (ASC && AttributeSet)
+	{
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetHealthAttribute(),
+			AttributeSet->GetMaxHealth()
+		);
+
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetSPAttribute(),
+			AttributeSet->GetMaxSP()
+		);
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+
+	RefreshMovementStateTags();
+
+	ForceNetUpdate();
+}
+
 EGProjectCombatStyle AGProjectCharacter::GetCombatStyle() const
 {
 	return CombatStyle;
@@ -136,6 +229,7 @@ void AGProjectCharacter::SetCombatStyle(EGProjectCombatStyle NewCombatStyle)
 	{
 		CombatStyle = NewCombatStyle;
 	}
+
 }
 
 void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
@@ -227,6 +321,11 @@ void AGProjectCharacter::HandleDeath()
 			&ThisClass::StartDeathDissolve,
 			DissolveDelay,
 			false);
+	}
+
+	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		GM->NotifyPlayerDied(GetPlayerState<AGProjectPlayerState>());
 	}
 }
 
@@ -457,3 +556,57 @@ void AGProjectCharacter::AddCharacterAbilities()
 		ASC->GiveAbility(AbilitySpec);
 	}
 }
+
+void AGProjectCharacter::MulticastResetDeathState_Implementation()
+{
+	bDead = false;
+
+
+	bDissolving = false;
+	DissolveElapsed = 0.0f;
+
+	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
+	{
+		if (DynamicMaterial)
+		{
+			DynamicMaterial->SetScalarParameterValue(
+				DissolveParameterName,
+				0.0f
+			);
+		}
+	}
+
+	DissolveMaterials.Reset();
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetHiddenInGame(false, true);
+		CharacterMesh->SetVisibility(true, true);
+		CharacterMesh->SetComponentTickEnabled(true);
+		CharacterMesh->SetSimulatePhysics(false);
+
+		if (UAnimInstance* AnimInstance =
+			CharacterMesh->GetAnimInstance())
+		{
+			if (DeathMontage)
+			{
+				AnimInstance->Montage_Stop(
+					0.0f,
+					DeathMontage
+				);
+			}
+		}
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (AttachedActor)
+		{
+			AttachedActor->SetActorHiddenInGame(false);
+		}
+	}
+}
+
