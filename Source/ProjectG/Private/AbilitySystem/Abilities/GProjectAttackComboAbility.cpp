@@ -407,6 +407,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			? Character->GetMesh()
 			: Character->GetAttackTraceMesh();
 	}
+
 	if (!TraceMesh || !GetWorld())
 	{
 		return;
