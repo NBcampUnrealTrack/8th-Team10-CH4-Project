@@ -23,6 +23,16 @@ AGProjectItemActorBase::AGProjectItemActorBase()
 	ItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+void AGProjectItemActorBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		InitialSpawnTransform = GetActorTransform();
+	}
+}
+
 void AGProjectItemActorBase::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
@@ -59,6 +69,33 @@ void AGProjectItemActorBase::SetPickupEnabled(bool bEnabled)
 	PickupCollision->SetCollisionEnabled(
 		bEnabled ? ECollisionEnabled::QueryOnly : ECollisionEnabled::NoCollision);
 	ItemMesh->SetVisibility(true, true);
+}
+
+void AGProjectItemActorBase::ResetToSpawnTransform()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+
+	SetOwner(nullptr);
+
+	SetActorTransform(
+		InitialSpawnTransform,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics
+	);
+
+	ApplyDefinitionMesh();
+
+	SetPickupEnabled(true);
+
+	SetActorHiddenInGame(false);
+
+	ForceNetUpdate();
 }
 
 void AGProjectItemActorBase::ApplyDefinitionMesh()

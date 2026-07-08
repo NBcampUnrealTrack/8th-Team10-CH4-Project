@@ -34,7 +34,11 @@ public:
 
 	void SetPickupEnabled(bool bEnabled);
 
+	void ResetToSpawnTransform();
+
 protected:
+	virtual void BeginPlay() override;
+
 	void ApplyDefinitionMesh();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
@@ -48,4 +52,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0.0"))
 	float MaxPickupDistance = 250.0f;
+
+private:
+	FTransform InitialSpawnTransform = FTransform::Identity;
 };

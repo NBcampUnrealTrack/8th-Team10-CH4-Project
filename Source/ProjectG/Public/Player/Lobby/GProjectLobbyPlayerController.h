@@ -1,0 +1,45 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "GProjectLobbyPlayerController.generated.h"
+
+class UUserWidget;
+
+UCLASS()
+class PROJECTG_API AGProjectLobbyPlayerController : public APlayerController
+{
+	GENERATED_BODY()
+
+public:
+	virtual void BeginPlay() override;
+
+	UFUNCTION(Client, Reliable)
+	void ClientUpdatePlayerCount(int32 CurrentPlayers, int32 RequiredPlayers);
+
+private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UUserWidget> MenuWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<UUserWidget> LobbyWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UUserWidget> CurrentWidgetInstance;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UUserWidget> LobbyWidgetInstance;
+
+	int32 PendingCurrentPlayers = 0;
+	int32 PendingRequiredPlayers = 0;
+	bool bHasPendingUpdate = false;
+
+private:
+	void ShowMenuUI();
+	void ShowLobbyUI();
+	void ClearCurrentWidget();
+
+	void ApplyPlayerCountToLobbyWidget(int32 CurrentPlayers, int32 RequiredPlayers);
+};
