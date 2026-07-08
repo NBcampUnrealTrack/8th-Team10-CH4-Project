@@ -10,6 +10,9 @@ class UImage;
 class UProgressBar;
 class UTextBlock;
 class UTexture2D;
+class UBorder;
+
+enum class EGProjectTeam : uint8;
 
 UCLASS()
 class PROJECTG_API UGProjectPlayerBoxWidget : public UGProjectUserWidget
@@ -35,6 +38,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "PlayerBox")
 	void SetMaxSP(float NewMaxSP);
 
+	void ApplyTeamStyle(EGProjectTeam NewTeam);
+
 protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeWidgetControllerSet() override;
@@ -56,6 +61,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> SPText;
+
+	UPROPERTY(meta = (BIndWidget))
+	TObjectPtr<UBorder> PlayerFrame;
 
 private:
 	void RefreshHealth();

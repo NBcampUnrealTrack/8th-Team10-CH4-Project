@@ -16,9 +16,70 @@
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "UI/HUD/GProjectHUD.h"
+#include "Game/GProjectGameState.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "UI/Widget/GProjectChatWidget.h"
+
+namespace
+{
+	constexpr int32 MaxChatMessageLength = 120;
+}
 
 AGProjectPlayerController::AGProjectPlayerController()
 {
+}
+
+void AGProjectPlayerController::SendChatMessage(const FString& Message)
+{
+	FString SanitizedMessage = Message;
+	SanitizedMessage.TrimStartAndEndInline();
+
+	if (SanitizedMessage.IsEmpty())
+	{
+		return;
+	}
+
+	SanitizedMessage = SanitizedMessage.Left(MaxChatMessageLength);
+	ServerSendChatMessage(SanitizedMessage);
+}
+
+void AGProjectPlayerController::RegisterChatWidget(UGProjectChatWidget* InChatWidget)
+{
+	ChatWidget = InChatWidget;
+}
+
+void AGProjectPlayerController::UnRegisterChatWidget(UGProjectChatWidget* InChatWidget)
+{
+	if (ChatWidget.Get() != InChatWidget)
+	{
+		return;
+	}
+
+	ChatWidget.Reset();
+	bChatOpen = false;
+}
+
+void AGProjectPlayerController::OpenChat()
+{
+	if (bChatOpen || !ChatWidget.IsValid())
+	{
+		return;
+	}
+
+	bChatOpen = true;
+	ChatWidget->OpenChatInput();
+}
+
+void AGProjectPlayerController::CloseChat()
+{
+	bChatOpen = false;
+
+	if (ChatWidget.IsValid())
+	{
+		ChatWidget->CloseChatInput();
+	}
+
+	UWidgetBlueprintLibrary::SetInputMode_GameOnly(this, false);
 }
 
 void AGProjectPlayerController::BeginPlay()
@@ -85,6 +146,11 @@ void AGProjectPlayerController::SetupInputComponent()
 		GProjectInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ThisClass::JumpReleased);
 	}
 
+	if (ChatAction)
+	{
+		GProjectInputComponent->BindAction(ChatAction, ETriggerEvent::Started, this, &ThisClass::OpenChat);
+	}
+
 	if (!InputConfig)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("InputConfig is not set on %s."), *GetNameSafe(this));
@@ -108,6 +174,25 @@ UGProjectAbilitySystemComponent* AGProjectPlayerController::GetASC()
 
 bool AGProjectPlayerController::IsGameplayInputBlocked()
 {
+	const AGProjectGameState* GS = GetWorld() ? GetWorld()->GetGameState<AGProjectGameState>() : nullptr;
+
+	if (GS)
+	{
+		const bool bMatchNotPlaying = !GS->IsMatchInProgress();
+
+		const bool bRoundNotPlaying = GS->GetRoundPhase() != ERoundPhase::Playing;
+
+		if (bMatchNotPlaying || bRoundNotPlaying)
+		{
+			return true;
+		}
+	}
+
+	if (bChatOpen)
+	{
+		return true;
+	}
+
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
@@ -300,6 +385,37 @@ void AGProjectPlayerController::SendAttackInputEvent(FGameplayTag InputTag)
 	{
 		ServerSendAttackInputEvent(InputTag);
 	}
+}
+
+void AGProjectPlayerController::ServerSendChatMessage_Implementation(const FString& Message)
+{
+	FString SanitizedMessage = Message;
+	SanitizedMessage.TrimStartAndEndInline();
+	SanitizedMessage = SanitizedMessage.Left(MaxChatMessageLength);
+
+	if (SanitizedMessage.IsEmpty())
+	{
+		return;
+	}
+
+	const AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+
+	if (!PS) 
+	{
+		return;
+	}
+	
+	const FString SenderName = PS->GetPlayerName();
+	const int32 SenderPlayerID = PS->GetPlayerId();
+
+	AGProjectGameState* GS = GetWorld()->GetGameState<AGProjectGameState>();
+	if (!GS)
+	{
+		return;
+	}
+
+	GS->BroadcastChatMessage(SenderPlayerID, SenderName, SanitizedMessage);
+	
 }
 
 void AGProjectPlayerController::ServerSendAttackInputEvent_Implementation(FGameplayTag InputTag)
