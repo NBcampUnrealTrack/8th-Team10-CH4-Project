@@ -8,7 +8,6 @@
 class UGameplayEffect;
 class UStaticMesh;
 class UNiagaraSystem;
-class UGProjectComboData;
 
 UCLASS()
 class PROJECTG_API UGConsumableDefinition : public UGItemDefinition
@@ -27,17 +26,5 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
     TObjectPtr<UNiagaraSystem> UseEffect;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    bool bIsConsumable = true;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-    TObjectPtr<class UGProjectComboData> WeaponGroundComboData;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-    TObjectPtr<class UGProjectComboData> WeaponAirComboData;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
-    TObjectPtr<class UGProjectComboData> WeaponDashComboData;
 
 };
