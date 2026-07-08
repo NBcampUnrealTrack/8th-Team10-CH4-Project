@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
+#include "Item/Weapon/GProjectCombatStyle.h"
 #include "GProjectCharacter.generated.h"
 
 class UAbilitySystemComponent;
@@ -41,6 +42,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Round")
 	void ResetForNewRound(const FTransform& SpawnTransform);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Style")
+	EGProjectCombatStyle GetCombatStyle() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Style")
+	void SetCombatStyle(EGProjectCombatStyle NewCombatStyle);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
 	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
@@ -181,4 +188,7 @@ private:
 
 	UPROPERTY(Replicated)
 	TObjectPtr<UGProjectComboData> ActiveDashComboData;
+
+	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
+	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;
 };

@@ -36,6 +36,13 @@ AGProjectCharacter::AGProjectCharacter()
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->AirControl = 0.95f; 
+		GetCharacterMovement()->FallingLateralFriction = 0.5f; 
+		GetCharacterMovement()->AirControlBoostMultiplier = 1.0f;
+	}
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -209,6 +216,19 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 	RefreshMovementStateTags();
 
 	ForceNetUpdate();
+}
+
+EGProjectCombatStyle AGProjectCharacter::GetCombatStyle() const
+{
+	return CombatStyle;
+}
+
+void AGProjectCharacter::SetCombatStyle(EGProjectCombatStyle NewCombatStyle)
+{
+	if (HasAuthority())
+	{
+		CombatStyle = NewCombatStyle;
+	}
 
 }
 
@@ -255,6 +275,7 @@ void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectCharacter, ActiveGroundComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveAirComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveDashComboData);
+	DOREPLIFETIME(AGProjectCharacter, CombatStyle);
 }
 
 void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
@@ -525,6 +546,7 @@ void AGProjectCharacter::AddCharacterAbilities()
 			}
 		}
 
+
 		if (bAlreadyGranted)
 		{
 			continue;
@@ -537,14 +559,12 @@ void AGProjectCharacter::AddCharacterAbilities()
 
 void AGProjectCharacter::MulticastResetDeathState_Implementation()
 {
-	// 서버와 모든 클라이언트에서 사망 상태 해제
 	bDead = false;
 
-	// 진행 중이던 디졸브를 반드시 정지
+
 	bDissolving = false;
 	DissolveElapsed = 0.0f;
 
-	// 동적 머티리얼의 디졸브 값을 원래대로 복구
 	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
 	{
 		if (DynamicMaterial)
@@ -578,7 +598,6 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 		}
 	}
 
-	// FinishDeathDissolve에서 숨겼던 부착 액터도 복구
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);
 
@@ -589,17 +608,5 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 			AttachedActor->SetActorHiddenInGame(false);
 		}
 	}
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT(
-			"Reset Death State | Character: %s | "
-			"Dead: %d | Dissolving: %d | MeshVisible: %d"
-		),
-		*GetName(),
-		bDead,
-		bDissolving,
-		GetMesh() ? GetMesh()->IsVisible() : false
-	);
 }
+
