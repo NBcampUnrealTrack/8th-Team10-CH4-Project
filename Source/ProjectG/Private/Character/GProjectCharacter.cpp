@@ -125,6 +125,19 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 	return AttackTraceEndSocket;
 }
 
+EGProjectCombatStyle AGProjectCharacter::GetCombatStyle() const
+{
+	return CombatStyle;
+}
+
+void AGProjectCharacter::SetCombatStyle(EGProjectCombatStyle NewCombatStyle)
+{
+	if (HasAuthority())
+	{
+		CombatStyle = NewCombatStyle;
+	}
+}
+
 void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
 {
 	AttackTraceMesh = InTraceMesh;
@@ -168,6 +181,7 @@ void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectCharacter, ActiveGroundComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveAirComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveDashComboData);
+	DOREPLIFETIME(AGProjectCharacter, CombatStyle);
 }
 
 void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)

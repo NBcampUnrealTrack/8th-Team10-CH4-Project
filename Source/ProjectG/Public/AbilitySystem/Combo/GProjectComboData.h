@@ -27,9 +27,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Buffer", meta = (ClampMin = "1"))
 	int32 MaxBufferedInputs = 8;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace")
-	EGProjectAttackTraceType TraceType = EGProjectAttackTraceType::Unarmed;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trace", meta = (ClampMin = "0.0"))
 	float TraceRadius = 20.0f;
 
