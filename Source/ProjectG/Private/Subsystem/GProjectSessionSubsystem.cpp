@@ -84,7 +84,7 @@ void UGProjectSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool 
 	{
 		UGameplayStatics::OpenLevel(
 			GetWorld(),
-			FName("/Game/Developers/JW/Map/LobbyMap"),
+			FName("/Game/Level/LobbyMap"),
 			true,
 			"listen"
 		);
