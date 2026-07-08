@@ -14,6 +14,7 @@ class UGProjectPlayerBoxWidgetController;
 class UGProjectChatWidget;
 class UGProjectRoundTransitionWidget;
 class UGProjectMatchResultWidget;
+class UGProjectMatchHeaderWidget;
 class UImage;
 class UPanelWidget;
 class UGProjectMatchTimerWidget;
@@ -60,13 +61,12 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectMatchResultWidget> MatchResultWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectMatchHeaderWidget> MatchHeaderWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
-
-	UFUNCTION()
-
-	void RefreshMatchTimer(int32 RemainTime);
 
 	void OnLockOnTargetChanged(AActor* NewTarget);
 
@@ -77,6 +77,11 @@ private:
 	void UpdateLockOnIndicator();
 
 	void HandleRoundPhaseUIChanged(ERoundPhase NewPhase, int32 CurrentRound);
+
+	void HandleTeamScoreUIChanged(int32 RedTeamWins, int32 BlueTeamWins);
+
+	UFUNCTION()
+	void HandleRemainTimeChanged(int32 RemainTime);
 
 	UPROPERTY()
 	TArray<TObjectPtr<UGProjectPlayerBoxWidgetController>> PlayerBoxControllers;

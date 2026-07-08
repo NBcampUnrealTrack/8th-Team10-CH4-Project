@@ -22,6 +22,7 @@
 #include "Game/GProjectGameState.h"
 #include "UI/Widget/GProjectRoundTransitionWidget.h"
 #include "UI/Widget/GProjectMatchResultWidget.h"
+#include "UI/Widget/GProjectMatchHeaderWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -38,8 +39,8 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	OverlayController->OnPlayerListChanged.AddDynamic(this, &ThisClass::RefreshPlayerBoxes);
 	RefreshPlayerBoxes();
 
-	OverlayController->OnMatchTimeChanged.RemoveDynamic(this, &ThisClass::RefreshMatchTimer);
-	OverlayController->OnMatchTimeChanged.AddDynamic(this, &ThisClass::RefreshMatchTimer);
+	OverlayController->OnMatchTimeChanged.RemoveDynamic(this, &ThisClass::HandleRemainTimeChanged);
+	OverlayController->OnMatchTimeChanged.AddDynamic(this, &ThisClass::HandleRemainTimeChanged);
 
 	BindLockOnComponent();
 
@@ -48,6 +49,10 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 
 	OverlayController->OnRoundPhaseUIChanged.RemoveAll(this);
 	OverlayController->OnRoundPhaseUIChanged.AddUObject(this, &ThisClass::HandleRoundPhaseUIChanged);
+
+	OverlayController->OnTeamScoreUIChanged.RemoveAll(this);
+
+	OverlayController->OnTeamScoreUIChanged.AddUObject(this, &ThisClass::HandleTeamScoreUIChanged);
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -127,14 +132,6 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		TargetContainer->AddChild(PlayerBox);
 		BoxController->BroadcastInitialValues();
 		PlayerBoxControllers.Add(BoxController);
-	}
-}
-
-void UGProjectOverlayWidget::RefreshMatchTimer(int32 RemainTime)
-{
-	if (MatchTimerWidget)
-	{
-		MatchTimerWidget->SetRemainTime(RemainTime);
 	}
 }
 
@@ -302,4 +299,32 @@ void UGProjectOverlayWidget::HandleRoundPhaseUIChanged(ERoundPhase NewPhase,int3
 		break;
 	}
 	}
+}
+
+void UGProjectOverlayWidget::HandleTeamScoreUIChanged(
+	int32 RedTeamWins,
+	int32 BlueTeamWins)
+{
+	if (!MatchHeaderWidget)
+	{
+		return;
+	}
+
+	MatchHeaderWidget->SetTeamScore(
+		RedTeamWins,
+		BlueTeamWins
+	);
+}
+
+void UGProjectOverlayWidget::HandleRemainTimeChanged(
+	int32 RemainTime)
+{
+	if (!MatchHeaderWidget)
+	{
+		return;
+	}
+
+	MatchHeaderWidget->SetRemainTime(
+		RemainTime
+	);
 }

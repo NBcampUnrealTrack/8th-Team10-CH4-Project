@@ -59,3 +59,4 @@ void AGProjectPlayerState::OnRep_Team()
 {
 	OnTeamChanged.Broadcast(Team);
 }
+

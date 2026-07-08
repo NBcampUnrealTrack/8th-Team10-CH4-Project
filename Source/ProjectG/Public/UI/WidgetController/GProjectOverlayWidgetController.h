@@ -27,6 +27,12 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(
+	FGProjectTeamScoreUIChangedSignature,
+	int32,
+	int32
+);
+
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
 {
@@ -50,6 +56,8 @@ public:
 
 	FGProjectRoundPhaseUIChangedSignature OnRoundPhaseUIChanged;
 
+	FGProjectTeamScoreUIChangedSignature OnTeamScoreUIChanged;
+
 private:
 	void HandlePlayerListChanged();
 	void HandleMatchTimeChanged(int32 RemainTime);
@@ -61,4 +69,5 @@ private:
 
 	void HandleRoundPhaseChanged(ERoundPhase NewPhase);
 
+	void HandleTeamRoundWinsChanged(int32 RedTeamWins, int32 BlueTeamWins);
 };

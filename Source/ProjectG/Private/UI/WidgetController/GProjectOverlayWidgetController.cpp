@@ -6,6 +6,7 @@
 #include "Game/GProjectGameState.h"
 #include "GameFramework/PlayerController.h"
 #include "Player/GProjectPlayerState.h"
+#include "UI/Widget/GProjectMatchHeaderWidget.h"
 
 void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 {
@@ -20,11 +21,13 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 	if (AGProjectGameState* GameState = PlayerController->GetWorld()->GetGameState<AGProjectGameState>())
 	{
 		GameState->OnPlayerListChanged.RemoveAll(this);
+		GameState->OnTeamRoundWinsChanged.RemoveAll(this);
 
 		GameState->OnMatchTimeChanged.AddUObject(this, &ThisClass::HandleMatchTimeChanged);
 		GameState->OnPlayerListChanged.AddUObject(this, &ThisClass::HandlePlayerListChanged);
 		GameState->OnChatMessageReceived.AddUObject(this, &ThisClass::HandleChatMessageReceived);
 		GameState->OnRoundPhaseChanged.AddUObject(this, &ThisClass::HandleRoundPhaseChanged);
+		GameState->OnTeamRoundWinsChanged.AddUObject(this, &ThisClass::HandleTeamRoundWinsChanged);
 	}
 
 	BindTeamCallbacks();
@@ -44,6 +47,8 @@ void UGProjectOverlayWidgetController::BroadcastInitialValues()
 		OnMatchTimeChanged.Broadcast(GS->GetRemainMatchTime());
 
 		OnRoundPhaseUIChanged.Broadcast(GS->GetRoundPhase(), GS->GetCurrentRound());
+
+		OnTeamScoreUIChanged.Broadcast(GS->GetRedTeamRoundWins(), GS->GetBlueTeamRoundWins());
 	}
 }
 
@@ -152,4 +157,12 @@ void UGProjectOverlayWidgetController::HandleRoundPhaseChanged(ERoundPhase NewPh
 	}
 
 	OnRoundPhaseUIChanged.Broadcast(NewPhase, GS->GetCurrentRound());
+}
+
+void UGProjectOverlayWidgetController::HandleTeamRoundWinsChanged(int32 RedTeamWins, int32 BlueTeamWins)
+{
+	OnTeamScoreUIChanged.Broadcast(
+		RedTeamWins,
+		BlueTeamWins
+	);
 }
