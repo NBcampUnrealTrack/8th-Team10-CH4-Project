@@ -142,7 +142,7 @@ private:
 	void MulticastStartDeathDissolve();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastResetRoundVisuals();
+	void MulticastResetDeathState();
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))
 	bool bDead = false;

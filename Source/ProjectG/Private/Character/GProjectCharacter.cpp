@@ -127,6 +127,8 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 		return;
 	}
 
+	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
+
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
 
 	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
@@ -180,9 +182,9 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 
 	bDead = false;
 
-	SetActorHiddenInGame(false);
+	MulticastResetDeathState();
 
-	MulticastResetRoundVisuals();
+	SetActorHiddenInGame(false);
 
 	if (ASC && AttributeSet)
 	{
@@ -397,49 +399,6 @@ void AGProjectCharacter::FinishDeathDissolve()
 	}
 }
 
-void AGProjectCharacter::MulticastResetRoundVisuals_Implementation()
-{
-	SetActorHiddenInGame(false);
-
-	TArray<USkeletalMeshComponent*> SkeletalMeshComponents;
-	GetComponents<USkeletalMeshComponent>(
-		SkeletalMeshComponents
-	);
-
-	for (USkeletalMeshComponent* MeshComponent :
-		SkeletalMeshComponents)
-	{
-		if (!MeshComponent)
-		{
-			continue;
-		}
-
-		MeshComponent->SetHiddenInGame(
-			false,
-			true
-		);
-
-		MeshComponent->SetVisibility(
-			true,
-			true
-		);
-
-		MeshComponent->SetComponentTickEnabled(
-			true
-		);
-
-		MeshComponent->SetSimulatePhysics(
-			false
-		);
-
-		if (UAnimInstance* AnimInstance =
-			MeshComponent->GetAnimInstance())
-		{
-			AnimInstance->StopAllMontages(0.0f);
-		}
-	}
-}
-
 bool AGProjectCharacter::IsDead() const
 {
 	return bDead;
@@ -574,4 +533,73 @@ void AGProjectCharacter::AddCharacterAbilities()
 		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1);
 		ASC->GiveAbility(AbilitySpec);
 	}
+}
+
+void AGProjectCharacter::MulticastResetDeathState_Implementation()
+{
+	// 서버와 모든 클라이언트에서 사망 상태 해제
+	bDead = false;
+
+	// 진행 중이던 디졸브를 반드시 정지
+	bDissolving = false;
+	DissolveElapsed = 0.0f;
+
+	// 동적 머티리얼의 디졸브 값을 원래대로 복구
+	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
+	{
+		if (DynamicMaterial)
+		{
+			DynamicMaterial->SetScalarParameterValue(
+				DissolveParameterName,
+				0.0f
+			);
+		}
+	}
+
+	DissolveMaterials.Reset();
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetHiddenInGame(false, true);
+		CharacterMesh->SetVisibility(true, true);
+		CharacterMesh->SetComponentTickEnabled(true);
+		CharacterMesh->SetSimulatePhysics(false);
+
+		if (UAnimInstance* AnimInstance =
+			CharacterMesh->GetAnimInstance())
+		{
+			if (DeathMontage)
+			{
+				AnimInstance->Montage_Stop(
+					0.0f,
+					DeathMontage
+				);
+			}
+		}
+	}
+
+	// FinishDeathDissolve에서 숨겼던 부착 액터도 복구
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (AttachedActor)
+		{
+			AttachedActor->SetActorHiddenInGame(false);
+		}
+	}
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT(
+			"Reset Death State | Character: %s | "
+			"Dead: %d | Dissolving: %d | MeshVisible: %d"
+		),
+		*GetName(),
+		bDead,
+		bDissolving,
+		GetMesh() ? GetMesh()->IsVisible() : false
+	);
 }
