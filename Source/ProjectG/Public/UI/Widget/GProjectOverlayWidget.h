@@ -73,6 +73,7 @@ private:
 	UFUNCTION()
 	void RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
+	UFUNCTION()
 	void BindLockOnComponent();
 	void UpdateLockOnIndicator();
 
