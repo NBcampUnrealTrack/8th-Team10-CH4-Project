@@ -27,6 +27,14 @@ void UGProjectPickupAbility::ActivateAbility(
         return;
     }
 
+    AActor* Avatar = GetAvatarActorFromActorInfo();
+    UGItemHolderComponent* Holder = Avatar ? Avatar->FindComponentByClass<UGItemHolderComponent>() : nullptr;
+    if (!Holder || !Holder->HasNearbyPickup())
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        return;
+    }
+
     bPickedUp = false;
 
     if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
