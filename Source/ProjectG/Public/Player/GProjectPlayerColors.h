@@ -10,7 +10,7 @@ namespace GProjectPlayerColors
 		{
 			FLinearColor(1.0f, 1.0f, 0.0f),
 			FLinearColor(1.0f, 1.0f, 1.0f),
-			FLinearColor(0.0f, 0.0f, 0.0f),
+			FLinearColor(0.8f, 0.0f, 0.5f),
 			FLinearColor(0.0f, 1.0f, 1.0f)
 		};
 

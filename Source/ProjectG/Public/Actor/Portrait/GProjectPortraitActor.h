@@ -13,6 +13,8 @@ class UPointLightComponent;
 class UTextureRenderTarget2D;
 class UMaterialInstanceDynamic;
 class AGProjectCharacter;
+class AGProjectPlayerState;
+class AGProjectPortraitActor;
 
 UCLASS()
 class PROJECTG_API AGProjectPortraitActor : public AActor

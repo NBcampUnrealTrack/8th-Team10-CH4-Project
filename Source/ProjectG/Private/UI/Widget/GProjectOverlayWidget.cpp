@@ -125,14 +125,15 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		BoxController->SetWidgetControllerParams(Params);
 		BoxController->BindCallbacksToDependencies();
 
-		UGProjectPlayerBoxWidget* PlayerBox = CreateWidget<UGProjectPlayerBoxWidget>(
-			GetOwningPlayer(), PlayerBoxWidgetClass);
+		UGProjectPlayerBoxWidget* PlayerBox = CreateWidget<UGProjectPlayerBoxWidget>(GetOwningPlayer(), PlayerBoxWidgetClass);
 		if (!PlayerBox)
 		{
 			continue;
 		}
 
 		PlayerBox->SetWidgetController(BoxController);
+
+		PlayerBox->SetupPortrait(CurrentPlayerState);
 
 		PlayerBox->ApplyTeamStyle(CurrentPlayerState->GetTeam());
 

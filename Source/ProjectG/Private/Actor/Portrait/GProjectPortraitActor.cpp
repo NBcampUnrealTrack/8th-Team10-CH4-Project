@@ -10,6 +10,7 @@
 #include "Components/PointLightComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Materials/MaterialInstance.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "TimerManager.h"
 
@@ -22,50 +23,31 @@ AGProjectPortraitActor::AGProjectPortraitActor()
 	bReplicates = false;
 	SetActorEnableCollision(false);
 
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(
-		TEXT("SceneRoot")
-	);
+	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
 
-	PortraitMesh = CreateDefaultSubobject<USkeletalMeshComponent>(
-		TEXT("PortraitMesh")
-	);
+	PortraitMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PortraitMesh"));
 	PortraitMesh->SetupAttachment(SceneRoot);
-	PortraitMesh->SetCollisionEnabled(
-		ECollisionEnabled::NoCollision
-	);
+	PortraitMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	PortraitMesh->SetGenerateOverlapEvents(false);
 
-	PortraitCapture =
-		CreateDefaultSubobject<USceneCaptureComponent2D>(
-			TEXT("PortraitCapture")
-		);
+	PortraitCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("PortraitCapture"));
 	PortraitCapture->SetupAttachment(SceneRoot);
 
 	PortraitCapture->bCaptureEveryFrame = false;
 	PortraitCapture->bCaptureOnMovement = false;
 
 	PortraitCapture->FOVAngle = 30.0f;
-	PortraitCapture->CaptureSource =
-		ESceneCaptureSource::SCS_FinalColorLDR;
+	PortraitCapture->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
 
-	PortraitCapture->PrimitiveRenderMode =
-		ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+	PortraitCapture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
 
-	PortraitCapture->SetRelativeLocation(
-		FVector(180.0f, 0.0f, 155.0f)
-	);
-	PortraitCapture->SetRelativeRotation(
-		FRotator(0.0f, 180.0f, 0.0f)
-	);
+	PortraitCapture->SetRelativeLocation(FVector(180.0f, 0.0f, 155.0f));
+	PortraitCapture->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 
-	PortraitLight = CreateDefaultSubobject<UPointLightComponent>(
-		TEXT("PortraitLight")
-	);
+	PortraitLight = CreateDefaultSubobject<UPointLightComponent>(TEXT("PortraitLight"));
 	PortraitLight->SetupAttachment(SceneRoot);
-	PortraitLight->SetRelativeLocation(
-		FVector(100.0f, -100.0f, 200.0f)
-	);
+	PortraitLight->SetRelativeLocation(FVector(100.0f, -100.0f, 200.0f));
 	PortraitLight->SetIntensity(4000.0f);
 	PortraitLight->SetAttenuationRadius(500.0f);
 	PortraitLight->SetCastShadows(false);
@@ -80,66 +62,66 @@ void AGProjectPortraitActor::InitializePortrait(
 		return;
 	}
 
-	USkeletalMeshComponent* SourceMesh =
-		SourceCharacter->GetMesh();
+	USkeletalMeshComponent* SourceMesh = SourceCharacter->GetMesh();
 
-	if (!SourceMesh ||
-		!SourceMesh->GetSkeletalMeshAsset())
+	if (!SourceMesh || !SourceMesh->GetSkeletalMeshAsset())
 	{
 		return;
 	}
 
-	PortraitMesh->SetSkeletalMeshAsset(
-		SourceMesh->GetSkeletalMeshAsset()
-	);
+	PortraitMesh->SetSkeletalMeshAsset(SourceMesh->GetSkeletalMeshAsset());
 
-	const FLinearColor PlayerColor =
-		GProjectPlayerColors::GetColor(
-			PlayerColorIndex
-		);
+	const FLinearColor PlayerColor = GProjectPlayerColors::GetColor(PlayerColorIndex);
 
 	PortraitMaterials.Reset();
 
-	const int32 MaterialCount =
-		SourceMesh->GetNumMaterials();
+	const int32 MaterialCount = SourceMesh->GetNumMaterials();
 
-	for (int32 MaterialIndex = 0;
-		MaterialIndex < MaterialCount;
-		++MaterialIndex)
+	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
 	{
-		UMaterialInterface* SourceMaterial =
-			SourceMesh->GetMaterial(MaterialIndex);
+		UMaterialInterface* SourceMaterial = SourceMesh->GetMaterial(MaterialIndex);
 
 		if (!SourceMaterial)
 		{
 			continue;
 		}
 
-		UMaterialInstanceDynamic* PortraitMID =
-			UMaterialInstanceDynamic::Create(
-				SourceMaterial,
-				this
+		UMaterialInterface* ValidParentMaterial = SourceMaterial;
+
+		while (UMaterialInstanceDynamic* SourceMID = Cast<UMaterialInstanceDynamic>(ValidParentMaterial))
+		{
+			ValidParentMaterial = SourceMID->Parent.Get();
+			if (!ValidParentMaterial)
+			{
+				break;
+			}
+		}
+
+		if (!ValidParentMaterial)
+		{
+			UE_LOG(
+				LogTemp,
+				Error,
+				TEXT(
+					"[Portrait] No valid material parent: Slot=%d"
+				),
+				MaterialIndex
 			);
 
+			continue;
+		}
+
+		UMaterialInstanceDynamic* PortraitMID = UMaterialInstanceDynamic::Create(ValidParentMaterial, this);
 		if (!PortraitMID)
 		{
 			continue;
 		}
 
-		PortraitMID->SetVectorParameterValue(
-			PlayerColorParameterName,
-			PlayerColor
-		);
+		PortraitMID->SetVectorParameterValue(PlayerColorParameterName, PlayerColor);
 
-		PortraitMID->SetScalarParameterValue(
-			DissolveParameterName,
-			0.0f
-		);
+		PortraitMID->SetScalarParameterValue(DissolveParameterName, 0.0f);
 
-		PortraitMesh->SetMaterial(
-			MaterialIndex,
-			PortraitMID
-		);
+		PortraitMesh->SetMaterial(MaterialIndex, PortraitMID);
 
 		PortraitMaterials.Add(PortraitMID);
 	}
@@ -163,15 +145,9 @@ void AGProjectPortraitActor::InitializePortrait(
 	PortraitCapture->TextureTarget = RenderTarget;
 
 	PortraitCapture->ClearShowOnlyComponents();
-	PortraitCapture->ShowOnlyActorComponents(
-		this,
-		true
-	);
+	PortraitCapture->ShowOnlyActorComponents(this, true);
 
-	GetWorldTimerManager().SetTimerForNextTick(
-		this,
-		&ThisClass::CapturePortrait
-	);
+	GetWorldTimerManager().SetTimerForNextTick(this, &ThisClass::CapturePortrait);
 }
 
 void AGProjectPortraitActor::CapturePortrait()

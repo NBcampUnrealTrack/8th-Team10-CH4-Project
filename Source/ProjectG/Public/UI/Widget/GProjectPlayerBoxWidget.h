@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/GProjectUserWidget.h"
+#include "TImerManager.h"
 #include "GProjectPlayerBoxWidget.generated.h"
 
 class UImage;
@@ -11,6 +12,9 @@ class UProgressBar;
 class UTextBlock;
 class UTexture2D;
 class UBorder;
+class AGProjectCharacter;
+class AGProjectPlayerState;
+class AGProjectPortraitActor;
 
 enum class EGProjectTeam : uint8;
 
@@ -40,9 +44,13 @@ public:
 
 	void ApplyTeamStyle(EGProjectTeam NewTeam);
 
+	void SetupPortrait(AGProjectPlayerState* InPlayerState);
+
 protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeWidgetControllerSet() override;
+
+	virtual void NativeDestruct() override;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NameText;
@@ -65,12 +73,27 @@ protected:
 	UPROPERTY(meta = (BIndWidget))
 	TObjectPtr<UBorder> PlayerFrame;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> PortraitImage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Portrait")
+	TSubclassOf<AGProjectPortraitActor> PortraitActorClass;
+
 private:
 	void RefreshHealth();
 	void RefreshSP();
+	void TrySetupPortrait();
 
 	float Health = 0.0f;
 	float MaxHealth = 1.0f;
 	float SP = 0.0f;
 	float MaxSP = 1.0f;
+
+	TWeakObjectPtr<AGProjectPlayerState>
+		PortraitPlayerState;
+
+	FTimerHandle PortraitRetryTimerHandle;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AGProjectPortraitActor> PortraitActor;
 };
