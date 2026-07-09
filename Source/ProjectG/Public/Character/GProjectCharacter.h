@@ -40,6 +40,8 @@ public:
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
 
+	void ApplyPlayerColor(int32 ColorIndex);
+
 	UFUNCTION(BlueprintCallable, Category = "Round")
 	void ResetForNewRound(const FTransform& SpawnTransform);
 
@@ -191,4 +193,7 @@ private:
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
 	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> PlayerColorMaterials;
 };

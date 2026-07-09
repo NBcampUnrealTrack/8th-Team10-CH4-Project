@@ -32,6 +32,14 @@ void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
 
 	AssignTeam(NewPlayer);
 
+	AGProjectPlayerState* PS = NewPlayer->GetPlayerState<AGProjectPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	AssignPlayerColor(PS);
+
 	if (HasMatchStarted())
 	{
 		return;
@@ -83,18 +91,6 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 	const EGProjectTeam Winner = DeadTeam == EGProjectTeam::Red ? EGProjectTeam::Blue : EGProjectTeam::Red;
 
 	GS->AddTeamRoundWin(Winner);
-
-	const TCHAR* DeadTeamName = DeadTeam == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
-
-	const TCHAR* WinnerTeamName = Winner == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("%s Team Eliminated | Winner is %s Team"),
-		DeadTeamName,
-		WinnerTeamName
-	);
 
 	FinishRound();
 }
@@ -427,6 +423,47 @@ bool AGProjectGameMode::HasTeamWonMatch() const
 	}
 
 	return (GS->GetRedTeamRoundWins() >= RoundsToWin || GS->GetBlueTeamRoundWins() >= RoundsToWin);
+}
+
+void AGProjectGameMode::AssignPlayerColor(AGProjectPlayerState* PS)
+{
+	if (!PS)
+	{
+		return;
+	}
+
+	TSet<int32> UsedColorIndices;
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	
+	if (GS)
+	{
+		for (APlayerState* BasePS : GS->PlayerArray)
+		{
+			const AGProjectPlayerState* OtherPS = Cast<AGProjectPlayerState>(BasePS);
+
+			if (!OtherPS || OtherPS == PS)
+			{
+				continue;
+			}
+
+			const int32 ColorIndex = OtherPS->GetPlayerColorIndex();
+
+			if (ColorIndex != INDEX_NONE)
+			{
+				UsedColorIndices.Add(ColorIndex);
+			}
+		}
+	}
+
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		if (!UsedColorIndices.Contains(Index))
+		{
+			PS->SetPlayerColorIndex(Index);
+			return;
+		}
+	}
 }
 
 void AGProjectGameMode::AssignTeam(APlayerController* NewPlayer)

@@ -127,6 +127,47 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 	return AttackTraceEndSocket;
 }
 
+void AGProjectCharacter::ApplyPlayerColor(int32 ColorIndex)
+{
+	static const TArray<FLinearColor> PlayerColors =
+	{
+		FLinearColor(0.0f, 1.0f, 0.0f),
+		FLinearColor(1.0f, 1.0f, 0.0f),
+		FLinearColor(1.0f, 1.0f, 1.0f),
+		FLinearColor(0.0f, 0.0f, 0.0f)
+	};
+
+	if (!PlayerColors.IsValidIndex(ColorIndex))
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!CharacterMesh)
+	{
+		return;
+	}
+
+	const FLinearColor PlayerColor = PlayerColors[ColorIndex];
+
+	PlayerColorMaterials.Reset();
+
+	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
+
+	for (int32 Index = 0; Index < MaterialCount; ++Index)
+	{
+		UMaterialInstanceDynamic* MID = CharacterMesh->CreateDynamicMaterialInstance(Index);
+		if (!MID)
+		{
+			continue;
+		}
+
+		MID->SetVectorParameterValue(TEXT("PlayerColor"), PlayerColor);
+
+		PlayerColorMaterials.Add(MID);
+	}
+}
+
 void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 {
 	if (!HasAuthority())
@@ -452,6 +493,11 @@ void AGProjectCharacter::PossessedBy(AController* NewController)
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
 	ApplySPRegenEffect();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::OnRep_PlayerState()
@@ -459,6 +505,11 @@ void AGProjectCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitAbilityActorInfo();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::InitAbilityActorInfo()

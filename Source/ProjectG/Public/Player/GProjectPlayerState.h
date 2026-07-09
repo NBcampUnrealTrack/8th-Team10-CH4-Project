@@ -44,6 +44,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Team")
 	EGProjectTeam GetTeam() const { return Team; }
 
+	int32 GetPlayerColorIndex() const { return PlayerColorIndex; }
+
+	void SetPlayerColorIndex(int32 NewColorIndex);
+
 	FGProjectTeamChangedSignature OnTeamChanged;
 
 protected:
@@ -53,9 +57,15 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability System")
 	TObjectPtr<UGProjectAttributeSet> AttributeSet;
 
+	UFUNCTION()
+	void OnRep_PlayerColorIndex();
+
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_Team)
 	EGProjectTeam Team = EGProjectTeam::None;
+
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerColorIndex, VisibleInstanceOnly, Category = "Player|Color")
+	int32 PlayerColorIndex = INDEX_NONE;
 
 	UFUNCTION()
 	void OnRep_Team();
