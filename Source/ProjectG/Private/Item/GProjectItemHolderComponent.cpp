@@ -63,6 +63,26 @@ void UGProjectItemHolderComponent::DropHeldItem()
 	ServerDropHeldItem();
 }
 
+bool UGProjectItemHolderComponent::HasNearbyPickup()
+{
+	AGProjectCharacter* Character = GetOwnerCharacter();
+	if (!Character)
+	{
+		return false;
+	}
+	TArray<AActor*> OverlappingItems;
+	Character->GetOverlappingActors(OverlappingItems, AGProjectItemActorBase::StaticClass());
+	for (AActor* OverlappingActor : OverlappingItems)
+	{
+		AGProjectItemActorBase* Item = Cast<AGProjectItemActorBase>(OverlappingActor);
+		if (Item && !Item->GetOwner())
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void UGProjectItemHolderComponent::ServerTryPickupNearby_Implementation()
 {
 	TryPickupNearbyInternal();

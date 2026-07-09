@@ -197,7 +197,8 @@ bool AGProjectPlayerController::IsGameplayInputBlocked()
 	{
 		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun) ||
-			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Knockdown);
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Knockdown) ||
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Interaction_Pickup);
 	}
 
 	return false;

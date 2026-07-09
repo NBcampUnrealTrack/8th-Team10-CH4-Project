@@ -36,6 +36,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Hitstun);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Targeting_LockOn);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Interaction_Pickup);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Attack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_HitReact);

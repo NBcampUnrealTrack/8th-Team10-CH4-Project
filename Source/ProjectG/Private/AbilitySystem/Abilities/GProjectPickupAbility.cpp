@@ -13,6 +13,7 @@ UGProjectPickupAbility::UGProjectPickupAbility()
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+    ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Interaction_Pickup);
 }
 
 void UGProjectPickupAbility::ActivateAbility(
@@ -44,7 +45,6 @@ void UGProjectPickupAbility::ActivateAbility(
             Move->DisableMovement();
         }
     }
-
     if (!PickupMontage)
     {
         DoPickup();
