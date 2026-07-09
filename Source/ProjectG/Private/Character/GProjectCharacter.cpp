@@ -23,6 +23,7 @@
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
 #include "Game/GProjectGameMode.h"
+#include "Player/GProjectPlayerColors.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -129,26 +130,13 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 
 void AGProjectCharacter::ApplyPlayerColor(int32 ColorIndex)
 {
-	static const TArray<FLinearColor> PlayerColors =
-	{
-		FLinearColor(0.0f, 1.0f, 0.0f),
-		FLinearColor(1.0f, 1.0f, 0.0f),
-		FLinearColor(1.0f, 1.0f, 1.0f),
-		FLinearColor(0.0f, 0.0f, 0.0f)
-	};
-
-	if (!PlayerColors.IsValidIndex(ColorIndex))
-	{
-		return;
-	}
-
 	USkeletalMeshComponent* CharacterMesh = GetMesh();
 	if (!CharacterMesh)
 	{
 		return;
 	}
 
-	const FLinearColor PlayerColor = PlayerColors[ColorIndex];
+	const FLinearColor PlayerColor = GProjectPlayerColors::GetColor(ColorIndex);
 
 	PlayerColorMaterials.Reset();
 

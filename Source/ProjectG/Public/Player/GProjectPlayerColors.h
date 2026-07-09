@@ -9,7 +9,7 @@ namespace GProjectPlayerColors
 		static const FLinearColor Colors[] =
 		{
 			FLinearColor(1.0f, 1.0f, 0.0f),
-			FLiearColor(1.0f, 1.0f, 1.0f),
+			FLinearColor(1.0f, 1.0f, 1.0f),
 			FLinearColor(0.0f, 0.0f, 0.0f),
 			FLinearColor(0.0f, 1.0f, 1.0f)
 		};
