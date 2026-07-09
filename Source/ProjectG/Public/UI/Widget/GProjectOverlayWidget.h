@@ -67,13 +67,13 @@ protected:
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
-
+	
+	UFUNCTION()
 	void OnLockOnTargetChanged(AActor* NewTarget);
 
 	UFUNCTION()
 	void RefreshChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message);
 
-	UFUNCTION()
 	void BindLockOnComponent();
 	void UpdateLockOnIndicator();
 
