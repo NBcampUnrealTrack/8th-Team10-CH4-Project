@@ -25,6 +25,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Camera_Look);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_Interact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_UseItem);
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Invulnerable);
@@ -55,6 +56,8 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_End);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_HitReact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Knockdown);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_Pickup);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_UseItem);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Combat_Damage);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Resource_SP_Modifier);

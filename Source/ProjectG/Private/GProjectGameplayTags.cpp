@@ -22,6 +22,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Camera_Look, "InputTag.Camera.Look");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction, "InputTag.Interaction");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction_Interact, "InputTag.Interaction.Interact");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction_UseItem, "InputTag.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Dead, "State.Character.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Invulnerable, "State.Character.Invulnerable");
@@ -50,6 +51,8 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_End, "Event.Combat.Attack.Trace.End");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_Pickup, "Event.Interaction.Pickup");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_UseItem, "Event.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Resource_SP_Modifier, "Data.Resource.SP.Modifier");

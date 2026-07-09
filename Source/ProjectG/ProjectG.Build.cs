@@ -17,7 +17,11 @@ public class ProjectG : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
-			"UMG"
+			"UMG",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"SlateCore",
+			"Niagara"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });

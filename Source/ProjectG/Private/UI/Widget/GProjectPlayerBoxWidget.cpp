@@ -2,6 +2,8 @@
 
 #include "UI/Widget/GProjectPlayerBoxWidget.h"
 
+#include "Player/GProjectPlayerState.h"
+#include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -77,6 +79,28 @@ void UGProjectPlayerBoxWidget::SetMaxSP(float NewMaxSP)
 	RefreshSP();
 }
 
+void UGProjectPlayerBoxWidget::ApplyTeamStyle(EGProjectTeam NewTeam)
+{
+	if (!PlayerFrame)
+	{
+		return;
+	}
+
+	switch (NewTeam)
+	{
+	case EGProjectTeam::Red:
+		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(255, 110, 120, 255)));
+		break;
+
+	case EGProjectTeam::Blue:
+		PlayerFrame->SetBrushColor(FLinearColor::FromSRGBColor(FColor(120, 190, 255, 255)));
+		break;
+
+	default:
+		break;
+	}
+}
+
 void UGProjectPlayerBoxWidget::RefreshHealth()
 {
 	if (HPBar)
@@ -86,8 +110,10 @@ void UGProjectPlayerBoxWidget::RefreshHealth()
 
 	if (HPText)
 	{
-		HPText->SetText(FText::FromString(FString::Printf(TEXT("%d / %d"), FMath::RoundToInt(Health), FMath::RoundToInt(MaxHealth))));
+		const int32 HealthPercent = FMath::RoundToInt((Health / MaxHealth) * 100.0f);
+		HPText->SetText(FText::FromString(FString::Printf(TEXT("%d"), HealthPercent)));
 	}
+
 }
 
 void UGProjectPlayerBoxWidget::RefreshSP()

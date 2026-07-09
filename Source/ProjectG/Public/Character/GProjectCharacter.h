@@ -5,10 +5,13 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
+#include "Item/Weapon/GProjectCombatStyle.h"
 #include "GProjectCharacter.generated.h"
 
 class UAbilitySystemComponent;
+class UAnimMontage;
 class UCameraComponent;
+class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
 class UGProjectGameplayAbility;
@@ -36,6 +39,15 @@ public:
 	UMeshComponent* GetAttackTraceMesh() const;
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Round")
+	void ResetForNewRound(const FTransform& SpawnTransform);
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Style")
+	EGProjectCombatStyle GetCombatStyle() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Combat|Style")
+	void SetCombatStyle(EGProjectCombatStyle NewCombatStyle);
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
 	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
@@ -87,6 +99,27 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death")
 	float RespawnDelay = 3.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
+	TObjectPtr<UAnimMontage> DeathMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation", meta = (ClampMin = "0.1"))
+	float DeathMontagePlayRate = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
+	FName DeathFallSection = TEXT("Fall");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
+	FName DeathDownLoopSection = TEXT("DownLoop");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.0"))
+	float DissolveDelay = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.01"))
+	float DissolveDuration = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
+	FName DissolveParameterName = TEXT("DissolveAmount");
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -105,11 +138,29 @@ private:
 	void RefreshMovementStateTags();
 	void SetSprintRequested(bool bRequested);
 	void ApplySPRegenEffect();
+	void StartDeathDissolve();
+	void UpdateDeathDissolve(float DeltaSeconds);
+	void FinishDeathDissolve();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayDeath();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStartDeathDissolve();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastResetDeathState();
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))
 	bool bDead = false;
 
 	bool bSprintRequested = false;
+	bool bDissolving = false;
+	float DissolveElapsed = 0.0f;
+	FTimerHandle DeathDissolveTimer;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -137,4 +188,7 @@ private:
 
 	UPROPERTY(Replicated)
 	TObjectPtr<UGProjectComboData> ActiveDashComboData;
+
+	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
+	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;
 };

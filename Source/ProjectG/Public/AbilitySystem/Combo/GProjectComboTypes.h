@@ -13,13 +13,6 @@ enum class EGProjectAttackInput : uint8
 	Strong
 };
 
-UENUM(BlueprintType)
-enum class EGProjectAttackTraceType : uint8
-{
-	Unarmed,
-	Weapon
-};
-
 USTRUCT(BlueprintType)
 struct FGProjectComboStep
 {

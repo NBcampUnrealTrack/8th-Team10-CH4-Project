@@ -1,0 +1,26 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#include "World/GProjectKillVolume.h"
+
+#include "Character/GProjectCharacter.h"
+
+AGProjectKillVolume::AGProjectKillVolume()
+{
+	OnActorBeginOverlap.AddDynamic(this, &ThisClass::HandleActorBeginOverlap);
+}
+
+void AGProjectKillVolume::HandleActorBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AGProjectCharacter* Character = Cast<AGProjectCharacter>(OtherActor);
+	if (!Character || Character->IsDead())
+	{
+		return;
+	}
+
+	Character->HandleDeath();
+}

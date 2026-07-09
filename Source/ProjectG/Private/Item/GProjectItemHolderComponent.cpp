@@ -97,7 +97,6 @@ void UGProjectItemHolderComponent::TryPickupNearbyInternal()
 			ClosestItem = Item;
 		}
 	}
-
 	PickupItemInternal(ClosestItem);
 }
 

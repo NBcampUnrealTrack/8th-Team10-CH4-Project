@@ -5,17 +5,24 @@
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
 #include "AbilitySystem/Combo/GProjectComboData.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayEffect.h"
 #include "GProjectGameplayTags.h"
 #include "Item/GProjectItemHolderComponent.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "AbilitySystem/GProjectAttributeSet.h"
+#include "TimerManager.h"
+#include "Game/GProjectGameMode.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -29,6 +36,13 @@ AGProjectCharacter::AGProjectCharacter()
 	GetCharacterMovement()->SetIsReplicated(true);
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 720.0f, 0.0f);
+	
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->AirControl = 0.95f; 
+		GetCharacterMovement()->FallingLateralFriction = 0.5f; 
+		GetCharacterMovement()->AirControlBoostMultiplier = 1.0f;
+	}
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());
@@ -59,6 +73,7 @@ void AGProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	RefreshMovementStateTags();
+	UpdateDeathDissolve(DeltaSeconds);
 }
 
 UAbilitySystemComponent* AGProjectCharacter::GetAbilitySystemComponent() const
@@ -112,6 +127,111 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 	return AttackTraceEndSocket;
 }
 
+void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
+
+	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
+
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+
+	UGProjectAttributeSet* AttributeSet = PS ? PS->GetAttributeSet() : nullptr;
+
+	if (ASC)
+	{
+		ASC->CancelAllAbilities();
+
+		FGameplayTagContainer EffectTagsToRemove;
+
+		EffectTagsToRemove.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
+
+		ASC->RemoveActiveEffectsWithGrantedTags(EffectTagsToRemove);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Character_Dead, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, 0);
+	}
+
+	if (LockOnComponent)
+	{
+		LockOnComponent->ClearLockOn();
+	}
+
+	StopJumping();
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->StopMovementImmediately();
+		Movement->ClearAccumulatedForces();
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+
+	GetCapsuleComponent()->SetCollisionEnabled(
+		ECollisionEnabled::NoCollision
+	);
+
+	TeleportTo(
+		SpawnTransform.GetLocation(),
+		SpawnTransform.Rotator(),
+		false,
+		true
+	);
+
+	bDead = false;
+
+	MulticastResetDeathState();
+
+	SetActorHiddenInGame(false);
+
+	if (ASC && AttributeSet)
+	{
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetHealthAttribute(),
+			AttributeSet->GetMaxHealth()
+		);
+
+		ASC->SetNumericAttributeBase(
+			UGProjectAttributeSet::GetSPAttribute(),
+			AttributeSet->GetMaxSP()
+		);
+	}
+
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+
+	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		Movement->SetMovementMode(MOVE_Walking);
+	}
+
+	RefreshMovementStateTags();
+
+	ForceNetUpdate();
+}
+
+EGProjectCombatStyle AGProjectCharacter::GetCombatStyle() const
+{
+	return CombatStyle;
+}
+
+void AGProjectCharacter::SetCombatStyle(EGProjectCombatStyle NewCombatStyle)
+{
+	if (HasAuthority())
+	{
+		CombatStyle = NewCombatStyle;
+	}
+
+}
+
 void AGProjectCharacter::SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket)
 {
 	AttackTraceMesh = InTraceMesh;
@@ -155,6 +275,7 @@ void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectCharacter, ActiveGroundComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveAirComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveDashComboData);
+	DOREPLIFETIME(AGProjectCharacter, CombatStyle);
 }
 
 void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
@@ -165,13 +286,17 @@ void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, u
 
 void AGProjectCharacter::HandleDeath()
 {
-	if (bDead)
+	if (!HasAuthority() || bDead)
 	{
 		return;
 	}
 
 	bDead = true;
 	SetSprintRequested(false);
+	if (LockOnComponent)
+	{
+		LockOnComponent->ClearLockOn();
+	}
 
 	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
 	{
@@ -182,6 +307,117 @@ void AGProjectCharacter::HandleDeath()
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	MulticastPlayDeath();
+	if (DissolveDelay <= 0.0f)
+	{
+		StartDeathDissolve();
+	}
+	else
+	{
+		GetWorldTimerManager().SetTimer(
+			DeathDissolveTimer,
+			this,
+			&ThisClass::StartDeathDissolve,
+			DissolveDelay,
+			false);
+	}
+
+	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
+	{
+		GM->NotifyPlayerDied(GetPlayerState<AGProjectPlayerState>());
+	}
+}
+
+void AGProjectCharacter::MulticastPlayDeath_Implementation()
+{
+	bDead = true;
+
+	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInstance || !DeathMontage || DeathMontagePlayRate <= 0.0f)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_Play(DeathMontage, DeathMontagePlayRate);
+	AnimInstance->Montage_JumpToSection(DeathFallSection, DeathMontage);
+	AnimInstance->Montage_SetNextSection(DeathFallSection, DeathDownLoopSection, DeathMontage);
+	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, DeathMontage);
+}
+
+void AGProjectCharacter::StartDeathDissolve()
+{
+	if (HasAuthority())
+	{
+		MulticastStartDeathDissolve();
+	}
+}
+
+void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
+{
+	DissolveMaterials.Reset();
+	DissolveElapsed = 0.0f;
+	bDissolving = true;
+
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!CharacterMesh)
+	{
+		FinishDeathDissolve();
+		return;
+	}
+
+	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
+	DissolveMaterials.Reserve(MaterialCount);
+	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
+	{
+		if (UMaterialInstanceDynamic* DynamicMaterial = CharacterMesh->CreateDynamicMaterialInstance(MaterialIndex))
+		{
+			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, 0.0f);
+			DissolveMaterials.Add(DynamicMaterial);
+		}
+	}
+}
+
+void AGProjectCharacter::UpdateDeathDissolve(float DeltaSeconds)
+{
+	if (!bDissolving)
+	{
+		return;
+	}
+
+	DissolveElapsed += DeltaSeconds;
+	const float DissolveAlpha = FMath::Clamp(DissolveElapsed / DissolveDuration, 0.0f, 1.0f);
+	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
+	{
+		if (DynamicMaterial)
+		{
+			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, DissolveAlpha);
+		}
+	}
+
+	if (DissolveAlpha >= 1.0f)
+	{
+		FinishDeathDissolve();
+	}
+}
+
+void AGProjectCharacter::FinishDeathDissolve()
+{
+	bDissolving = false;
+	if (GetMesh())
+	{
+		GetMesh()->SetVisibility(false, true);
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (AttachedActor)
+		{
+			AttachedActor->SetActorHiddenInGame(true);
+		}
+	}
 }
 
 bool AGProjectCharacter::IsDead() const
@@ -310,6 +546,7 @@ void AGProjectCharacter::AddCharacterAbilities()
 			}
 		}
 
+
 		if (bAlreadyGranted)
 		{
 			continue;
@@ -319,3 +556,57 @@ void AGProjectCharacter::AddCharacterAbilities()
 		ASC->GiveAbility(AbilitySpec);
 	}
 }
+
+void AGProjectCharacter::MulticastResetDeathState_Implementation()
+{
+	bDead = false;
+
+
+	bDissolving = false;
+	DissolveElapsed = 0.0f;
+
+	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
+	{
+		if (DynamicMaterial)
+		{
+			DynamicMaterial->SetScalarParameterValue(
+				DissolveParameterName,
+				0.0f
+			);
+		}
+	}
+
+	DissolveMaterials.Reset();
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetHiddenInGame(false, true);
+		CharacterMesh->SetVisibility(true, true);
+		CharacterMesh->SetComponentTickEnabled(true);
+		CharacterMesh->SetSimulatePhysics(false);
+
+		if (UAnimInstance* AnimInstance =
+			CharacterMesh->GetAnimInstance())
+		{
+			if (DeathMontage)
+			{
+				AnimInstance->Montage_Stop(
+					0.0f,
+					DeathMontage
+				);
+			}
+		}
+	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+
+	for (AActor* AttachedActor : AttachedActors)
+	{
+		if (AttachedActor)
+		{
+			AttachedActor->SetActorHiddenInGame(false);
+		}
+	}
+}
+
