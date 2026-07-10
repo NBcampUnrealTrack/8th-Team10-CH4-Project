@@ -12,7 +12,6 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "Actor/Portrait/GProjectPortraitActor.h"
-#include "Actor/Portrait/GProjectPortraitActor.h"
 #include "TimerManager.h"
 
 void UGProjectPlayerBoxWidget::NativePreConstruct()
@@ -21,6 +20,11 @@ void UGProjectPlayerBoxWidget::NativePreConstruct()
 
 	RefreshHealth();
 	RefreshSP();
+	
+	if (HPBar_Yellow && HPBar)
+	{
+		HPBar_Yellow->SetPercent(HPBar->GetPercent());
+	}
 }
 
 void UGProjectPlayerBoxWidget::NativeWidgetControllerSet()
@@ -72,6 +76,37 @@ void UGProjectPlayerBoxWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void UGProjectPlayerBoxWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+	
+	if (!HPBar_Yellow || !HPBar)
+	{
+		return;
+	}
+	
+	if (HPDelayTimer > 0.0f)
+	{
+		HPDelayTimer -= InDeltaTime;
+	}
+	
+	else
+	{
+		const float CurrentYellowPercent = HPBar_Yellow->GetPercent();
+		const float TargetPercent = HPBar->GetPercent();
+		
+		if (FMath::IsNearlyEqual(CurrentYellowPercent, TargetPercent, 0.001f))
+		{
+			HPBar_Yellow->SetPercent(TargetPercent);
+		}
+		else
+		{
+			const float NewPercent = FMath::FInterpTo(CurrentYellowPercent, TargetPercent, InDeltaTime, HPInterpSpeed);
+			HPBar_Yellow->SetPercent(NewPercent);
+		}
+	}
+}
+
 void UGProjectPlayerBoxWidget::SetPlayerName(const FText& NewName)
 {
 	if (NameText)
@@ -92,6 +127,8 @@ void UGProjectPlayerBoxWidget::SetHealth(float NewHealth)
 {
 	Health = NewHealth;
 	RefreshHealth();
+	
+	HPDelayTimer = HPDelayTime;
 }
 
 void UGProjectPlayerBoxWidget::SetMaxHealth(float NewMaxHealth)

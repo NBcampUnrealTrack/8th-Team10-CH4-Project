@@ -49,9 +49,10 @@ public:
 protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeWidgetControllerSet() override;
-
 	virtual void NativeDestruct() override;
 
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NameText;
 
@@ -60,6 +61,9 @@ protected:
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UProgressBar> HPBar;
+	
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UProgressBar> HPBar_Yellow;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UProgressBar> SPBar;
@@ -78,6 +82,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Portrait")
 	TSubclassOf<AGProjectPortraitActor> PortraitActorClass;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerBox|HP Delay")
+	float HPDelayTime = 0.5f; 
+
+	UPROPERTY(EditDefaultsOnly, Category = "PlayerBox|HP Delay")
+	float HPInterpSpeed = 3.0f; 
 
 private:
 	void RefreshHealth();
@@ -88,6 +98,8 @@ private:
 	float MaxHealth = 1.0f;
 	float SP = 0.0f;
 	float MaxSP = 1.0f;
+	
+	float HPDelayTimer = 0.0f;
 
 	TWeakObjectPtr<AGProjectPlayerState>
 		PortraitPlayerState;
