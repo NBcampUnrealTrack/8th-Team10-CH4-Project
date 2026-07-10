@@ -11,16 +11,26 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GProjectGameplayTags.h"
 #include "Net/UnrealNetwork.h"
+#include "Components/WidgetComponent.h"
 
 UGProjectLockOnComponent::UGProjectLockOnComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	SetIsReplicatedByDefault(true);
+
+	LockOnWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("LockOnWidget"));
+	LockOnWidgetComp->SetVisibility(false);
+	LockOnWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
 }
 
 void UGProjectLockOnComponent::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (LockOnWidgetComp && LockOnWidgetClass)
+	{
+		LockOnWidgetComp->SetWidgetClass(LockOnWidgetClass);
+	}
 
 	if (const ACharacter* Character = Cast<ACharacter>(GetOwner()))
 	{
@@ -198,6 +208,7 @@ void UGProjectLockOnComponent::SetCurrentTarget(AActor* NewTarget)
 	CurrentTarget = NewTarget;
 	ApplyLockOnState();
 	OnLockOnTargetChanged.Broadcast(CurrentTarget);
+	UpdateLockOnWidget();
 
 	if (AActor* OwnerActor = GetOwner())
 	{
@@ -209,6 +220,7 @@ void UGProjectLockOnComponent::OnRep_CurrentTarget()
 {
 	ApplyLockOnState();
 	OnLockOnTargetChanged.Broadcast(CurrentTarget);
+	UpdateLockOnWidget();
 }
 
 void UGProjectLockOnComponent::ApplyLockOnState()
@@ -243,4 +255,40 @@ void UGProjectLockOnComponent::UpdateOwnerRotation(float DeltaTime) const
 		DeltaTime,
 		RotationInterpSpeed);
 	OwnerActor->SetActorRotation(NewRotation);
+}
+
+void UGProjectLockOnComponent::UpdateLockOnWidget()
+{
+	if (!LockOnWidgetComp)
+	{
+		return;
+	}
+
+	const ACharacter* Character = Cast<ACharacter>(GetOwner());
+	if (!Character || !Character->IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (CurrentTarget)
+	{
+		if (const ACharacter* TargetCharacter = Cast<ACharacter>(CurrentTarget))
+		{
+			if (USkeletalMeshComponent* TargetMesh = TargetCharacter->GetMesh())
+			{
+				LockOnWidgetComp->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+
+				LockOnWidgetComp->AttachToComponent(TargetMesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("pelvis"));
+				LockOnWidgetComp->SetVisibility(true);
+			}
+		}
+	}
+	else
+	{
+		LockOnWidgetComp->SetVisibility(false);
+		if (Character->GetRootComponent())
+		{
+			LockOnWidgetComp->AttachToComponent(Character->GetRootComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+		}
+	}
 }
