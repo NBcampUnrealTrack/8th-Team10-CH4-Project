@@ -75,6 +75,13 @@ void UGProjectOverlayWidget::NativeDestruct()
 
 void UGProjectOverlayWidget::RefreshPlayerBoxes()
 {
+
+	UWorld* World = GetWorld();
+	if (!World || World->bIsTearingDown)
+	{
+		return;
+	}
+
 	UGProjectOverlayWidgetController* OverlayController = Cast<UGProjectOverlayWidgetController>(WidgetController);
 	if (!OverlayController || !RedTeamContainer || !BlueTeamContainer || !PlayerBoxWidgetClass)
 	{
@@ -118,8 +125,7 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		BoxController->SetWidgetControllerParams(Params);
 		BoxController->BindCallbacksToDependencies();
 
-		UGProjectPlayerBoxWidget* PlayerBox = CreateWidget<UGProjectPlayerBoxWidget>(
-			GetOwningPlayer(), PlayerBoxWidgetClass);
+		UGProjectPlayerBoxWidget* PlayerBox = CreateWidget<UGProjectPlayerBoxWidget>(GetOwningPlayer(), PlayerBoxWidgetClass);
 		if (!PlayerBox)
 		{
 			continue;
@@ -127,9 +133,25 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 
 		PlayerBox->SetWidgetController(BoxController);
 
+		PlayerBox->SetupPortrait(CurrentPlayerState);
+
 		PlayerBox->ApplyTeamStyle(CurrentPlayerState->GetTeam());
 
-		TargetContainer->AddChild(PlayerBox);
+		switch (CurrentPlayerState->GetTeam())
+		{
+		case EGProjectTeam::Red:
+			RedTeamContainer->InsertChildAt(0, PlayerBox);
+			break;
+
+		case EGProjectTeam::Blue:
+			BlueTeamContainer->AddChild(PlayerBox);
+			break;
+
+		case EGProjectTeam::None:
+		default:
+			break;
+		}
+
 		BoxController->BroadcastInitialValues();
 		PlayerBoxControllers.Add(BoxController);
 	}

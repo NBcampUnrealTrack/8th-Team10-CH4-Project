@@ -37,6 +37,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item")
 	AGProjectItemActorBase* GetHeldItem() const { return HeldItem; }
 
+	bool HasNearbyPickup();
+
 private:
 	UFUNCTION(Server, Reliable)
 	void ServerTryPickupNearby();

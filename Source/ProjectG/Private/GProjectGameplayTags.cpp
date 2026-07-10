@@ -33,6 +33,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Hitstun, "State.Combat.Hitstun");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Knockdown, "State.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(State_Targeting_LockOn, "State.Targeting.LockOn");
+	UE_DEFINE_GAMEPLAY_TAG(State_Interaction_Pickup, "State.Interaction.Pickup");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Attack, "Ability.Combat.Attack");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_HitReact, "Ability.Combat.HitReact");

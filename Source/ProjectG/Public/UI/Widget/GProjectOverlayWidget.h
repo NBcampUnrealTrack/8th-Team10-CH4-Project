@@ -67,7 +67,8 @@ protected:
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
-
+	
+	UFUNCTION()
 	void OnLockOnTargetChanged(AActor* NewTarget);
 
 	UFUNCTION()

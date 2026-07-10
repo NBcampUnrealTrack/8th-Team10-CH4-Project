@@ -23,6 +23,7 @@
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
 #include "Game/GProjectGameMode.h"
+#include "Player/GProjectPlayerColors.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -125,6 +126,34 @@ FName AGProjectCharacter::GetAttackTraceStartSocketName() const
 FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 {
 	return AttackTraceEndSocket;
+}
+
+void AGProjectCharacter::ApplyPlayerColor(int32 ColorIndex)
+{
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!CharacterMesh)
+	{
+		return;
+	}
+
+	const FLinearColor PlayerColor = GProjectPlayerColors::GetColor(ColorIndex);
+
+	PlayerColorMaterials.Reset();
+
+	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
+
+	for (int32 Index = 0; Index < MaterialCount; ++Index)
+	{
+		UMaterialInstanceDynamic* MID = CharacterMesh->CreateDynamicMaterialInstance(Index);
+		if (!MID)
+		{
+			continue;
+		}
+
+		MID->SetVectorParameterValue(TEXT("PlayerColor"), PlayerColor);
+
+		PlayerColorMaterials.Add(MID);
+	}
 }
 
 void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
@@ -461,6 +490,11 @@ void AGProjectCharacter::PossessedBy(AController* NewController)
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
 	ApplySPRegenEffect();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::OnRep_PlayerState()
@@ -468,6 +502,11 @@ void AGProjectCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitAbilityActorInfo();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::InitAbilityActorInfo()

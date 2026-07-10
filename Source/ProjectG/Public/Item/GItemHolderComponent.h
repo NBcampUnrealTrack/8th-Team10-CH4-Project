@@ -30,6 +30,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Item")
     bool TryPickupNearby();
 
+    bool HasNearbyPickup() const;
+
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_PlayUseEffect(UNiagaraSystem* Effect);
 
