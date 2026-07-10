@@ -3,6 +3,7 @@
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/UserWidget.h"
 
 UGProjectSessionSubsystem::UGProjectSessionSubsystem()
 {
@@ -41,6 +42,8 @@ void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FN
 			)
 		);
 
+			ShowLoading();
+
 	FOnlineSessionSettings SessionSettings;
 	SessionSettings.bIsLANMatch = Subsystem->GetSubsystemName() == "NULL";
 	SessionSettings.NumPublicConnections = MaxPublicConnections;
@@ -67,6 +70,7 @@ void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FN
 		!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionSettings))
 	{
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+		HideLoading();
 		OnCreateSessionCompleteEvent.Broadcast(false);
 	}
 }
@@ -82,12 +86,18 @@ void UGProjectSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool 
 
 	if (bWasSuccessful)
 	{
+		ShowLoading();
+
 		UGameplayStatics::OpenLevel(
 			GetWorld(),
-			FName("/Game/Level/LobbyMap"),
+			LobbyMapPath,
 			true,
 			"listen"
 		);
+	}
+	else
+	{
+		HideLoading();
 	}
 }
 
@@ -111,6 +121,8 @@ void UGProjectSessionSubsystem::FindGameSessions()
 		FOnFindSessionsCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnFindSessionsComplete)
 	);
 
+	ShowLoading();
+
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->MaxSearchResults = 10000;
 	SessionSearch->bIsLanQuery = (IOnlineSubsystem::Get()->GetSubsystemName() == "NULL");
@@ -121,6 +133,7 @@ void UGProjectSessionSubsystem::FindGameSessions()
 	if (!SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SessionSearch.ToSharedRef()))
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		HideLoading();
 		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
 	}
 }
@@ -153,6 +166,7 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 			DisplayNames.Add(FString::Printf(TEXT("%s's Room (%s)"), *OwnerName, *MapName));
 		}
 	}
+	HideLoading();
 
 	OnFindSessionsCompleteEvent.Broadcast(DisplayNames, bWasSuccessful);
 }
@@ -182,11 +196,13 @@ void UGProjectSessionSubsystem::JoinGameSession(int32 SessionIndex)
 	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
 		FOnJoinSessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnJoinSessionComplete)
 	);
+	ShowLoading();
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionSearch->SearchResults[SessionIndex]))
 	{
 		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
+		HideLoading();
 		OnJoinSessionCompleteEvent.Broadcast(false);
 	}
 }
@@ -206,12 +222,14 @@ void UGProjectSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoin
 			APlayerController* PC = GetWorld()->GetFirstPlayerController();
 			if (PC)
 			{
+				ShowLoading();
 				PC->ClientTravel(ConnectInfo, ETravelType::TRAVEL_Absolute);
 				OnJoinSessionCompleteEvent.Broadcast(true);
 				return;
 			}
 		}
 	}
+	HideLoading();
 	OnJoinSessionCompleteEvent.Broadcast(false);
 }
 
@@ -258,4 +276,63 @@ bool UGProjectSessionSubsystem::GetSessionPlayerCounts(
 	OutMaxPlayers = MaxPlayers;
 
 	return true;
+}
+
+void UGProjectSessionSubsystem::ShowLoading()
+{
+	if (IsLoadingVisible()) return;
+
+	LoadLoadingWidgetClassIfNeeded();
+	if (!LoadingWidgetClass) return;
+
+	APlayerController* PC = GetOwningPlayerController();
+	if (!PC) return;
+
+	LoadingWidgetInstance = CreateWidget<UUserWidget>(PC, LoadingWidgetClass);
+	if (LoadingWidgetInstance)
+	{
+		LoadingWidgetInstance->AddToViewport(5);
+
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(LoadingWidgetInstance->GetCachedWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+		PC->SetInputMode(InputMode);
+		PC->SetShowMouseCursor(true);
+	}
+}
+
+void UGProjectSessionSubsystem::HideLoading()
+{
+	if (!LoadingWidgetInstance) return;
+
+	LoadingWidgetInstance->RemoveFromParent();
+	LoadingWidgetInstance = nullptr;
+
+	if (APlayerController* PC = GetOwningPlayerController())
+	{
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+		PC->SetShowMouseCursor(true);
+	}
+}
+
+bool UGProjectSessionSubsystem::IsLoadingVisible() const
+{
+	return LoadingWidgetInstance && LoadingWidgetInstance->IsInViewport();
+}
+
+void UGProjectSessionSubsystem::LoadLoadingWidgetClassIfNeeded()
+{
+	if (!LoadingWidgetClass)
+	{
+		FSoftClassPath LoadingWidgetClassPath(TEXT("/Game/Main/BP/Widget/UserWidget/Lobby/WBP_LoadingScreenWidget.WBP_LoadingScreenWidget_C"));
+		LoadingWidgetClass = LoadingWidgetClassPath.TryLoadClass<UUserWidget>();
+	}
+}
+
+APlayerController* UGProjectSessionSubsystem::GetOwningPlayerController() const
+{
+	UWorld* World = GetWorld();
+	return World ? World->GetFirstPlayerController() : nullptr;
 }
