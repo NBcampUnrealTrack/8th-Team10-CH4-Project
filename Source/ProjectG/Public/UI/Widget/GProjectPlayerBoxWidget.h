@@ -46,6 +46,8 @@ public:
 
 	void SetupPortrait(AGProjectPlayerState* InPlayerState);
 
+	void SetDeathMarkVisible(bool bVisible);
+
 protected:
 	virtual void NativePreConstruct() override;
 	virtual void NativeWidgetControllerSet() override;
@@ -78,6 +80,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Portrait")
 	TSubclassOf<AGProjectPortraitActor> PortraitActorClass;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UImage> DeathMark;
 
 private:
 	void RefreshHealth();
