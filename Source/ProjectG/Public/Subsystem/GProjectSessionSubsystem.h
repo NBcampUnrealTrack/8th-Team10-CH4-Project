@@ -40,6 +40,15 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FGProjectOnJoinSessionComplete OnJoinSessionCompleteEvent;
 
+	UFUNCTION(BlueprintCallable, Category = "Loading")
+	void ShowLoading();
+
+	UFUNCTION(BlueprintCallable, Category = "Loading")
+	void HideLoading();
+
+	UFUNCTION(BlueprintCallable, Category = "Loading")
+	bool IsLoadingVisible() const;
+
 protected:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnFindSessionsComplete(bool bWasSuccessful);
@@ -52,4 +61,15 @@ private:
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
 	FDelegateHandle FindSessionsCompleteDelegateHandle;
 	FDelegateHandle JoinSessionCompleteDelegateHandle;
+
+	FName LobbyMapPath = TEXT("/Game/Level/LobbyMap");
+
+	UPROPERTY()
+	TSubclassOf<UUserWidget> LoadingWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> LoadingWidgetInstance;
+
+	void LoadLoadingWidgetClassIfNeeded();
+	APlayerController* GetOwningPlayerController() const;
 };
