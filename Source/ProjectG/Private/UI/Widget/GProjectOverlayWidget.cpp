@@ -23,6 +23,7 @@
 #include "UI/Widget/GProjectRoundTransitionWidget.h"
 #include "UI/Widget/GProjectMatchResultWidget.h"
 #include "UI/Widget/GProjectMatchHeaderWidget.h"
+#include "UI/Widget/GProjectKillFeedWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -51,8 +52,10 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 	OverlayController->OnRoundPhaseUIChanged.AddUObject(this, &ThisClass::HandleRoundPhaseUIChanged);
 
 	OverlayController->OnTeamScoreUIChanged.RemoveAll(this);
-
 	OverlayController->OnTeamScoreUIChanged.AddUObject(this, &ThisClass::HandleTeamScoreUIChanged);
+
+	OverlayController->OnKillFeedReceived.RemoveAll(this);
+	OverlayController->OnKillFeedReceived.AddUObject(this, &ThisClass::HandleKillFeedReceived);
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -63,6 +66,14 @@ void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 
 void UGProjectOverlayWidget::NativeDestruct()
 {
+	if (UGProjectOverlayWidgetController*
+		OverlayController = Cast<UGProjectOverlayWidgetController>(WidgetController))
+	{
+		OverlayController->OnKillFeedReceived.RemoveAll(this);
+	}
+
+	PlayerBoxesByPlayerId.Reset();
+
 	if (BoundLockOnComponent)
 	{
 		BoundLockOnComponent->OnLockOnTargetChanged.RemoveDynamic(
@@ -87,10 +98,10 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 	{
 		return;
 	}
-
 	RedTeamContainer->ClearChildren();
 	BlueTeamContainer->ClearChildren();
 
+	PlayerBoxesByPlayerId.Reset();
 	PlayerBoxControllers.Reset();
 
 	for (AGProjectPlayerState* CurrentPlayerState : OverlayController->GetOrderedPlayerStates())
@@ -136,6 +147,8 @@ void UGProjectOverlayWidget::RefreshPlayerBoxes()
 		PlayerBox->SetupPortrait(CurrentPlayerState);
 
 		PlayerBox->ApplyTeamStyle(CurrentPlayerState->GetTeam());
+
+		PlayerBoxesByPlayerId.Add(CurrentPlayerState->GetPlayerId(),PlayerBox);
 
 		switch (CurrentPlayerState->GetTeam())
 		{
@@ -349,4 +362,36 @@ void UGProjectOverlayWidget::HandleRemainTimeChanged(
 	MatchHeaderWidget->SetRemainTime(
 		RemainTime
 	);
+}
+
+void UGProjectOverlayWidget::HandleKillFeedReceived(
+	const int32 KillerPlayerId,
+	const FString& KillerName,
+	const int32 KillerColorIndex,
+	const int32 VictimPlayerId,
+	const FString& VictimName,
+	const int32 VictimColorIndex)
+{
+	(void)KillerPlayerId;
+
+	if (TObjectPtr<UGProjectPlayerBoxWidget>*
+		FoundPlayerBox = PlayerBoxesByPlayerId.Find(VictimPlayerId))
+	{
+		UGProjectPlayerBoxWidget* PlayerBox = FoundPlayerBox->Get();
+
+		if (IsValid(PlayerBox))
+		{
+			PlayerBox->SetDeathMarkVisible(true);
+		}
+	}
+	
+	if (KillFeedWidget)
+	{
+		KillFeedWidget->AddKillFeedEntry(
+			KillerName,
+			KillerColorIndex,
+			VictimName,
+			VictimColorIndex
+		);
+	}
 }

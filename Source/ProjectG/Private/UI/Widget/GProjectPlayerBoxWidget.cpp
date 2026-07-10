@@ -18,6 +18,7 @@ void UGProjectPlayerBoxWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
+	SetDeathMarkVisible(false);
 	RefreshHealth();
 	RefreshSP();
 	
@@ -127,6 +128,11 @@ void UGProjectPlayerBoxWidget::SetHealth(float NewHealth)
 {
 	Health = NewHealth;
 	RefreshHealth();
+
+	if (Health > KINDA_SMALL_NUMBER)
+	{
+		SetDeathMarkVisible(Health <= KINDA_SMALL_NUMBER);
+	}
 	
 	HPDelayTimer = HPDelayTime;
 }
@@ -188,6 +194,20 @@ void UGProjectPlayerBoxWidget::SetupPortrait(
 			true
 		);
 	}
+}
+
+void UGProjectPlayerBoxWidget::SetDeathMarkVisible(const bool bVisible)
+{
+	if (!DeathMark)
+	{
+		return;
+	}
+
+	DeathMark->SetVisibility(
+		bVisible
+		? ESlateVisibility::HitTestInvisible
+		: ESlateVisibility::Collapsed
+	);
 }
 
 void UGProjectPlayerBoxWidget::TrySetupPortrait()

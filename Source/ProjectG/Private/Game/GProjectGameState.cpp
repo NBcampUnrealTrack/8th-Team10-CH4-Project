@@ -156,6 +156,52 @@ void AGProjectGameState::ResetTeamRoundWins()
 	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
 }
 
+void AGProjectGameState::BroadcastKillFeed(AGProjectPlayerState* KillerPlayerState, AGProjectPlayerState* VictimPlayerState)
+{
+	if (!HasAuthority() || !VictimPlayerState)
+	{
+		return;
+	}
+
+	const bool bValidKiller = KillerPlayerState && KillerPlayerState != VictimPlayerState;
+
+	const int32 KillerPlayerId =
+		bValidKiller ? KillerPlayerState->GetPlayerId() : INDEX_NONE;
+
+	const FString KillerName =
+		bValidKiller ? KillerPlayerState->GetPlayerName() : TEXT("Environment");
+
+	const int32 KillerColorIndex =
+		bValidKiller ? KillerPlayerState->GetPlayerColorIndex() : INDEX_NONE;
+
+	MulticastReceiveKillFeed(
+		KillerPlayerId,
+		KillerName,
+		KillerColorIndex,
+		VictimPlayerState->GetPlayerId(),
+		VictimPlayerState->GetPlayerName(),
+		VictimPlayerState->GetPlayerColorIndex()
+	);
+}
+
+void AGProjectGameState::MulticastReceiveKillFeed_Implementation(
+	const int32 KillerPlayerId,
+	const FString& KillerName,
+	const int32 KillerColorIndex,
+	const int32 VictimPlayerId,
+	const FString& VictimName,
+	const int32 VictimColorIndex)
+{
+	OnKillFeedReceived.Broadcast(
+		KillerPlayerId,
+		KillerName,
+		KillerColorIndex,
+		VictimPlayerId,
+		VictimName,
+		VictimColorIndex
+	);
+}
+
 void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {
 	OnChatMessageReceived.Broadcast(SenderPlayerID, SenderName, Message);
