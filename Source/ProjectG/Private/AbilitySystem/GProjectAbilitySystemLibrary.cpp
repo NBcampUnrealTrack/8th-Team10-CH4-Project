@@ -182,6 +182,39 @@ void UGProjectAbilitySystemLibrary::SetKnockbackDirection(FGProjectDamageEffectP
 	DamageEffectParams.KnockbackForce = KnockbackDirection * FinalMagnitude;
 }
 
+bool UGProjectAbilitySystemLibrary::IsActorInFrontArc(
+	const AActor* Defender,
+	const AActor* Attacker,
+	float ArcAngleDegrees)
+{
+	if (!Defender || !Attacker || ArcAngleDegrees <= 0.0f)
+	{
+		return false;
+	}
+
+	if (ArcAngleDegrees >= 360.0f)
+	{
+		return true;
+	}
+
+	FVector DefenderForward = Defender->GetActorForwardVector();
+	DefenderForward.Z = 0.0f;
+	DefenderForward.Normalize();
+
+	FVector DirectionToAttacker = Attacker->GetActorLocation() - Defender->GetActorLocation();
+	DirectionToAttacker.Z = 0.0f;
+	DirectionToAttacker.Normalize();
+
+	if (DefenderForward.IsNearlyZero() || DirectionToAttacker.IsNearlyZero())
+	{
+		return false;
+	}
+
+	const float HalfAngleDegrees = FMath::Clamp(ArcAngleDegrees * 0.5f, 0.0f, 180.0f);
+	const float DotThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDegrees));
+	return FVector::DotProduct(DefenderForward, DirectionToAttacker) >= DotThreshold;
+}
+
 void UGProjectAbilitySystemLibrary::GetLivePlayersWithinRadius(
 	const UObject* WorldContextObject,
 	TArray<AActor*>& OutOverlappingActors,

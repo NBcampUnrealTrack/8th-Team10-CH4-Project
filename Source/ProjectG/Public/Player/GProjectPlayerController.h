@@ -64,10 +64,22 @@ private:
 	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
 	void SendAttackInputEvent(FGameplayTag InputTag);
+	void HandleAttackInputPressed(FGameplayTag InputTag);
+	void FlushPendingAttackInput();
+	void ClearPendingAttackInput();
+	void TryStartParryInput();
 
 	void OpenChat();
 	bool bChatOpen = false;
 	TWeakObjectPtr<UGProjectChatWidget> ChatWidget;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Parry", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float ParryChordWindow = 0.08f;
+
+	bool bBasicAttackHeld = false;
+	bool bStrongAttackHeld = false;
+	FGameplayTag PendingAttackInputTag;
+	FTimerHandle PendingAttackInputTimer;
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendAttackInputEvent(FGameplayTag InputTag);

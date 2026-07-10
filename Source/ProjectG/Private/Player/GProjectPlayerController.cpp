@@ -198,6 +198,7 @@ bool AGProjectPlayerController::IsGameplayInputBlocked()
 		return ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Dead) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Knockdown) ||
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Parrying) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Interaction_Pickup);
 	}
 
@@ -296,7 +297,7 @@ void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) ||
 		InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
 	{
-		SendAttackInputEvent(InputTag);
+		HandleAttackInputPressed(InputTag);
 		return;
 	}
 
@@ -317,6 +318,18 @@ void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 				LockOnComponent->ClearLockOn();
 			}
 		}
+		return;
+	}
+
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack))
+	{
+		bBasicAttackHeld = false;
+		return;
+	}
+
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
+	{
+		bStrongAttackHeld = false;
 		return;
 	}
 
@@ -351,6 +364,73 @@ void AGProjectPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 	if (UGProjectAbilitySystemComponent* ASC = GetASC())
 	{
 		ASC->AbilityInputTagHeld(InputTag);
+	}
+}
+
+void AGProjectPlayerController::HandleAttackInputPressed(FGameplayTag InputTag)
+{
+	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack))
+	{
+		bBasicAttackHeld = true;
+	}
+	else if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
+	{
+		bStrongAttackHeld = true;
+	}
+	else
+	{
+		return;
+	}
+
+	const bool bOppositePending =
+		(PendingAttackInputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) &&
+			InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack)) ||
+		(PendingAttackInputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack) &&
+			InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack));
+
+	if (bOppositePending && bBasicAttackHeld && bStrongAttackHeld)
+	{
+		TryStartParryInput();
+		return;
+	}
+
+	if (PendingAttackInputTag.IsValid())
+	{
+		return;
+	}
+
+	PendingAttackInputTag = InputTag;
+	GetWorldTimerManager().SetTimer(
+		PendingAttackInputTimer,
+		this,
+		&ThisClass::FlushPendingAttackInput,
+		ParryChordWindow,
+		false);
+}
+
+void AGProjectPlayerController::FlushPendingAttackInput()
+{
+	if (PendingAttackInputTag.IsValid())
+	{
+		const FGameplayTag AttackInputTag = PendingAttackInputTag;
+		ClearPendingAttackInput();
+		SendAttackInputEvent(AttackInputTag);
+	}
+}
+
+void AGProjectPlayerController::ClearPendingAttackInput()
+{
+	GetWorldTimerManager().ClearTimer(PendingAttackInputTimer);
+	PendingAttackInputTag = FGameplayTag();
+}
+
+void AGProjectPlayerController::TryStartParryInput()
+{
+	ClearPendingAttackInput();
+
+	if (UGProjectAbilitySystemComponent* ASC = GetASC())
+	{
+		ASC->AbilityInputTagPressed(GProjectGameplayTags::InputTag_Combat_Parry);
 	}
 }
 

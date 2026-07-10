@@ -23,6 +23,11 @@ UGProjectHitReactAbility::UGProjectHitReactAbility()
 	Trigger.TriggerTag = GProjectGameplayTags::Event_Combat_HitReact;
 	Trigger.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
 	AbilityTriggers.Add(Trigger);
+
+	FAbilityTriggerData ParriedTrigger;
+	ParriedTrigger.TriggerTag = GProjectGameplayTags::Event_Combat_React_Parried;
+	ParriedTrigger.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
+	AbilityTriggers.Add(ParriedTrigger);
 }
 
 void UGProjectHitReactAbility::ActivateAbility(
@@ -51,6 +56,11 @@ void UGProjectHitReactAbility::ActivateAbility(
 
 FName UGProjectHitReactAbility::DetermineHitSection(const FGameplayEventData* TriggerEventData) const
 {
+	if (TriggerEventData && TriggerEventData->EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_React_Parried))
+	{
+		return ParriedSection;
+	}
+
 	const AActor* TargetActor = GetAvatarActorFromActorInfo();
 	const AActor* Attacker = TriggerEventData ? TriggerEventData->Instigator.Get() : nullptr;
 	if (!TargetActor || !Attacker)
