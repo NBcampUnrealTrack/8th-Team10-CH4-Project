@@ -356,6 +356,7 @@ void AGProjectCharacter::StartDeathDissolve()
 void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
 {
 	DissolveMaterials.Reset();
+	OriginalDeathMaterials.Reset();
 	DissolveElapsed = 0.0f;
 	bDissolving = true;
 
@@ -368,8 +369,16 @@ void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
 
 	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
 	DissolveMaterials.Reserve(MaterialCount);
+	OriginalDeathMaterials.Reserve(MaterialCount);
 	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
 	{
+		OriginalDeathMaterials.Add(CharacterMesh->GetMaterial(MaterialIndex));
+
+		if (DeathDissolveMaterials.IsValidIndex(MaterialIndex) && DeathDissolveMaterials[MaterialIndex])
+		{
+			CharacterMesh->SetMaterial(MaterialIndex, DeathDissolveMaterials[MaterialIndex]);
+		}
+
 		if (UMaterialInstanceDynamic* DynamicMaterial = CharacterMesh->CreateDynamicMaterialInstance(MaterialIndex))
 		{
 			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, 0.0f);
@@ -580,6 +589,14 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 
 	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 	{
+		for (int32 MaterialIndex = 0; MaterialIndex < OriginalDeathMaterials.Num(); ++MaterialIndex)
+		{
+			if (OriginalDeathMaterials[MaterialIndex])
+			{
+				CharacterMesh->SetMaterial(MaterialIndex, OriginalDeathMaterials[MaterialIndex]);
+			}
+		}
+
 		CharacterMesh->SetHiddenInGame(false, true);
 		CharacterMesh->SetVisibility(true, true);
 		CharacterMesh->SetComponentTickEnabled(true);
@@ -597,6 +614,8 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 			}
 		}
 	}
+
+	OriginalDeathMaterials.Reset();
 
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);

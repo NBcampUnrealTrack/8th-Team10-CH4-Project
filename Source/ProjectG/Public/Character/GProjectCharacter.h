@@ -11,6 +11,7 @@
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
+class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
@@ -120,6 +121,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
 	FName DissolveParameterName = TEXT("DissolveAmount");
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
+	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -161,6 +165,9 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInterface>> OriginalDeathMaterials;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
