@@ -20,8 +20,13 @@ public:
 
     void ResetForNewRound();
 
+    bool IsPickupAvailable() const { return bPickupAvailable; }
+
+
 protected:
     virtual void BeginPlay() override;
+
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     void SetPickupEnabled(bool bEnabled);
 
@@ -45,6 +50,16 @@ protected:
 
     UPROPERTY()
     TObjectPtr<AActor> OverlappingActor;
+
+private:
+    void SetPickupAvailable(bool bAvailable);
+    void ApplyPickupAvailable();
+
+    UFUNCTION()
+    void OnRep_PickupAvailable();
+
+    UPROPERTY(ReplicatedUsing = OnRep_PickupAvailable)
+    bool bPickupAvailable = true;
 
     FTransform InitialTransform;
 };

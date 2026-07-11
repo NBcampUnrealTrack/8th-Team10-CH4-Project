@@ -3,11 +3,13 @@
 #include "Item/Consumable/GConsumableDefinition.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Net/UnrealNetwork.h"
 
 AGItemPickup::AGItemPickup()
 {
     PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
+    SetReplicateMovement(true);
 
     OverlapSphere = CreateDefaultSubobject<USphereComponent>(TEXT("OverlapSphere"));
     OverlapSphere->InitSphereRadius(100.0f);
@@ -23,10 +25,19 @@ void AGItemPickup::BeginPlay()
 {
     Super::BeginPlay();
 
+    InitialTransform = GetActorTransform();
+
     OverlapSphere->OnComponentBeginOverlap.AddDynamic(this, &AGItemPickup::OnOverlapBegin);
     OverlapSphere->OnComponentEndOverlap.AddDynamic(this, &AGItemPickup::OnOverlapEnd);
 
-    SetPickupEnabled(true);
+    ApplyPickupAvailable();
+}
+
+void AGItemPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(AGItemPickup, bPickupAvailable);
 }
 
 void AGItemPickup::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -53,6 +64,61 @@ void AGItemPickup::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* Oth
     }
 }
 
+void AGItemPickup::SetPickupAvailable(const bool bAvailable)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    bPickupAvailable = bAvailable;
+
+    ApplyPickupAvailable();
+
+    ForceNetUpdate();
+}
+
+void AGItemPickup::ApplyPickupAvailable()
+{
+    SetActorHiddenInGame(!bPickupAvailable);
+
+    if (OverlapSphere)
+    {
+        OverlapSphere->SetCollisionEnabled(
+            bPickupAvailable
+            ? ECollisionEnabled::QueryOnly
+            : ECollisionEnabled::NoCollision
+        );
+
+        OverlapSphere->SetGenerateOverlapEvents(
+            bPickupAvailable
+        );
+
+        OverlapSphere->UpdateOverlaps();
+    }
+
+    if (MeshComponent)
+    {
+        MeshComponent->SetVisibility(
+            bPickupAvailable,
+            true
+        );
+
+        MeshComponent->SetHiddenInGame(
+            !bPickupAvailable
+        );
+    }
+
+    if (!bPickupAvailable)
+    {
+        OverlappingActor = nullptr;
+    }
+}
+void AGItemPickup::OnRep_PickupAvailable()
+{
+    ApplyPickupAvailable();
+}
+
 bool AGItemPickup::TryPickup(AActor* Picker)
 {
     if (!HasAuthority())
@@ -60,24 +126,32 @@ bool AGItemPickup::TryPickup(AActor* Picker)
         return false;
     }
 
-    if (!Picker || Picker != OverlappingActor || !ItemDefinition)
+    if (!bPickupAvailable)
     {
         return false;
     }
 
-    UGItemHolderComponent* Holder = Picker->FindComponentByClass<UGItemHolderComponent>();
+    if (!Picker || !ItemDefinition || !OverlapSphere)
+    {
+        return false;
+    }
+
+    if (!OverlapSphere->IsOverlappingActor(Picker))
+    {
+        return false;
+    }
+
+    UGItemHolderComponent* Holder =
+        Picker->FindComponentByClass<UGItemHolderComponent>();
+
     if (!Holder)
     {
         return false;
     }
 
     Holder->HoldItem(ItemDefinition);
-    
-    OverlappingActor = nullptr;
 
-    SetPickupEnabled(false);
-
-    ForceNetUpdate();
+    SetPickupAvailable(false);
 
     return true;
 }
@@ -120,7 +194,5 @@ void AGItemPickup::ResetForNewRound()
 
     OverlappingActor = nullptr;
 
-    SetPickupEnabled(true);
-
-    ForceNetUpdate();
+    SetPickupAvailable(true);
 }

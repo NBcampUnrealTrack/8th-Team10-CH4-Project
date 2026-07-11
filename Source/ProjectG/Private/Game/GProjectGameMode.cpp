@@ -15,6 +15,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/GItemHolderComponent.h"
+#include "Item/GItemPickup.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -353,6 +354,18 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 
 		Item->ResetToSpawnTransform();
 		++ResetItemCount;
+	}
+
+	for (TActorIterator<AGItemPickup> It(World); It; ++It)
+	{
+		AGItemPickup* Pickup = *It;
+
+		if (!Pickup)
+		{
+			continue;
+		}
+
+		Pickup->ResetForNewRound();
 	}
 
 	for (int32 Index = 0; Index < Characters.Num(); ++Index)
