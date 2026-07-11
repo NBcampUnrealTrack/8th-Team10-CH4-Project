@@ -18,8 +18,12 @@ public:
 
     bool TryPickup(AActor* Picker);
 
+    void ResetForNewRound();
+
 protected:
     virtual void BeginPlay() override;
+
+    void SetPickupEnabled(bool bEnabled);
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pickup")
     TObjectPtr<UGConsumableDefinition> ItemDefinition;
@@ -41,4 +45,6 @@ protected:
 
     UPROPERTY()
     TObjectPtr<AActor> OverlappingActor;
+
+    FTransform InitialTransform;
 };

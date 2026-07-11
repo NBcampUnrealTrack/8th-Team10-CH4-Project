@@ -25,6 +25,8 @@ void AGItemPickup::BeginPlay()
 
     OverlapSphere->OnComponentBeginOverlap.AddDynamic(this, &AGItemPickup::OnOverlapBegin);
     OverlapSphere->OnComponentEndOverlap.AddDynamic(this, &AGItemPickup::OnOverlapEnd);
+
+    SetPickupEnabled(true);
 }
 
 void AGItemPickup::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -70,6 +72,55 @@ bool AGItemPickup::TryPickup(AActor* Picker)
     }
 
     Holder->HoldItem(ItemDefinition);
-    Destroy();
+    
+    OverlappingActor = nullptr;
+
+    SetPickupEnabled(false);
+
+    ForceNetUpdate();
+
     return true;
+}
+
+void AGItemPickup::SetPickupEnabled(const bool bEnabled)
+{
+    SetActorHiddenInGame(!bEnabled);
+
+    if (OverlapSphere)
+    {
+        OverlapSphere->SetCollisionEnabled(
+            bEnabled
+            ? ECollisionEnabled::QueryOnly
+            : ECollisionEnabled::NoCollision
+        );
+
+        OverlapSphere->SetGenerateOverlapEvents(bEnabled);
+    }
+
+    if (MeshComponent)
+    {
+        MeshComponent->SetVisibility(bEnabled, true);
+        MeshComponent->SetHiddenInGame(!bEnabled);
+    }
+}
+
+void AGItemPickup::ResetForNewRound()
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    SetActorTransform(
+        InitialTransform,
+        false,
+        nullptr,
+        ETeleportType::TeleportPhysics
+    );
+
+    OverlappingActor = nullptr;
+
+    SetPickupEnabled(true);
+
+    ForceNetUpdate();
 }
