@@ -63,6 +63,24 @@ void UGProjectItemHolderComponent::DropHeldItem()
 	ServerDropHeldItem();
 }
 
+AGProjectItemActorBase* UGProjectItemHolderComponent::ReleaseHeldItem()
+{
+	AGProjectCharacter* Character = GetOwnerCharacter();
+	if (!Character || !Character->HasAuthority() || !HeldItem)
+	{
+		return nullptr;
+	}
+
+	AGProjectItemActorBase* ReleasedItem = HeldItem;
+	HeldItem = nullptr;
+
+	ReleasedItem->HandleUnequipped(Character);
+	ReleasedItem->ForceNetUpdate();
+	Character->ForceNetUpdate();
+
+	return ReleasedItem;
+}
+
 bool UGProjectItemHolderComponent::HasNearbyPickup()
 {
 	AGProjectCharacter* Character = GetOwnerCharacter();
