@@ -20,6 +20,8 @@ class UGProjectComboData;
 class UGProjectItemHolderComponent;
 class UGameplayEffect;
 class USpringArmComponent;
+class AGProjectFloatingText; // 추가
+class UBillboardComponent; // 추가
 
 UCLASS()
 class PROJECTG_API AGProjectCharacter : public ACharacter, public IAbilitySystemInterface
@@ -67,6 +69,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
 
+	// 추가: AttributeSet에서 데미지 발생 시 호출 (모든 클라이언트에 방송)
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastShowDamageText(float Damage, bool bIsCritical);
+
 	UFUNCTION(BlueprintPure, Category = "Death")
 	bool IsDead() const;
 
@@ -77,6 +83,7 @@ public:
 	void StopSprint();
 
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override; // 추가: 에디터 뷰포트 미리보기 마커 위치 갱신용
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -131,6 +138,20 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource|SP")
 	TSubclassOf<UGameplayEffect> SPRegenGameplayEffectClass;
+
+	// 추가: 피격 데미지 숫자 연출용
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Damage")
+	TSubclassOf<AGProjectFloatingText> FloatingDamageTextClass;
+
+	// 추가
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Damage")
+	float DamageTextHeightOffset = 150.0f;
+
+#if WITH_EDITORONLY_DATA
+	// 추가: 에디터 뷰포트에서만 보이는 데미지 텍스트 스폰 위치 미리보기 마커 (게임/패키징 시 자동 제외)
+	UPROPERTY(VisibleAnywhere, Category = "UI|Damage")
+	TObjectPtr<UBillboardComponent> DamageTextPreviewMarker;
+#endif
 
 private:
 	void InitAbilityActorInfo();

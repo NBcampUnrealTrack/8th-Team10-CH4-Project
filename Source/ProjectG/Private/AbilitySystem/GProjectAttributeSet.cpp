@@ -51,6 +51,12 @@ void UGProjectAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 			return;
 		}
 
+		// 추가: 피격 데미지 숫자 연출 (모든 클라이언트에 방송)
+		if (AGProjectCharacter* DamagedCharacter = Cast<AGProjectCharacter>(Data.Target.GetAvatarActor()))
+		{
+			DamagedCharacter->MulticastShowDamageText(Damage, false);
+		}
+
 		const float OldHealth = GetHealth();
 		const float NewHealth = FMath::Clamp(OldHealth - Damage, 0.0f, GetMaxHealth());
 		SetHealth(NewHealth);
