@@ -14,6 +14,8 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/GItemHolderComponent.h"
+#include "Item/GItemPickup.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -319,7 +321,6 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		Characters.Add(Character);
 	}
 
-	// 플레이어가 들고 있는 아이템 내려놓기
 	for (AGProjectCharacter* Character : Characters)
 	{
 		if (!Character)
@@ -327,11 +328,16 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 			continue;
 		}
 
-		UGProjectItemHolderComponent* ItemHolder = Character->GetItemHolderComponent();
-
-		if (ItemHolder)
+		if (UGProjectItemHolderComponent* ItemHolder =
+			Character->GetItemHolderComponent())
 		{
 			ItemHolder->DropHeldItem();
+		}
+
+		if (UGItemHolderComponent* ConsumableHolder =
+			Character->FindComponentByClass<UGItemHolderComponent>())
+		{
+			ConsumableHolder->ClearHeldItem();
 		}
 	}
 
@@ -348,6 +354,18 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 
 		Item->ResetToSpawnTransform();
 		++ResetItemCount;
+	}
+
+	for (TActorIterator<AGItemPickup> It(World); It; ++It)
+	{
+		AGItemPickup* Pickup = *It;
+
+		if (!Pickup)
+		{
+			continue;
+		}
+
+		Pickup->ResetForNewRound();
 	}
 
 	for (int32 Index = 0; Index < Characters.Num(); ++Index)

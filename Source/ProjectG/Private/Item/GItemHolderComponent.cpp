@@ -84,6 +84,28 @@ void UGItemHolderComponent::Multicast_PlayUseEffect_Implementation(UNiagaraSyste
         Owner->GetActorRotation());
 }
 
+void UGItemHolderComponent::ClearHeldItem()
+{
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        return;
+    }
+
+    if (!ConsumableItem)
+    {
+        return;
+    }
+
+    ConsumableItem = nullptr;
+
+    RefreshConsumableMesh();
+
+    if (AActor* Owner = GetOwner())
+    {
+        Owner->ForceNetUpdate();
+    }
+}
+
 void UGItemHolderComponent::BeginPlay()
 {
     Super::BeginPlay();

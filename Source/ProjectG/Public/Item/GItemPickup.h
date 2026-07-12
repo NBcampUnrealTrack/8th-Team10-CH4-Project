@@ -18,8 +18,17 @@ public:
 
     bool TryPickup(AActor* Picker);
 
+    void ResetForNewRound();
+
+    bool IsPickupAvailable() const { return bPickupAvailable; }
+
+
 protected:
     virtual void BeginPlay() override;
+
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    void SetPickupEnabled(bool bEnabled);
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pickup")
     TObjectPtr<UGConsumableDefinition> ItemDefinition;
@@ -41,4 +50,16 @@ protected:
 
     UPROPERTY()
     TObjectPtr<AActor> OverlappingActor;
+
+private:
+    void SetPickupAvailable(bool bAvailable);
+    void ApplyPickupAvailable();
+
+    UFUNCTION()
+    void OnRep_PickupAvailable();
+
+    UPROPERTY(ReplicatedUsing = OnRep_PickupAvailable)
+    bool bPickupAvailable = true;
+
+    FTransform InitialTransform;
 };

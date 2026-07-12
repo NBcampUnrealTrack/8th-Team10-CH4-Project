@@ -35,6 +35,10 @@ public:
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_PlayUseEffect(UNiagaraSystem* Effect);
 
+    UFUNCTION(BlueprintCallable, Category = "Item")
+    void ClearHeldItem();
+
+
 protected:
     virtual void BeginPlay() override;
 
