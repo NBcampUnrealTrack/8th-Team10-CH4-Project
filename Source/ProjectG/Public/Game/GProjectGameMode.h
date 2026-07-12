@@ -43,6 +43,8 @@ protected:
 
 	bool HasTeamWonMatch() const;
 
+	void AssignPlayerColor(AGProjectPlayerState* PS);
+
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
 

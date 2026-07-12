@@ -8,6 +8,7 @@
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/ScrollBox.h"
+#include "Components/Border.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -24,6 +25,16 @@ void UGProjectMenuWidget::NativeConstruct()
 	JoinButton->OnClicked.AddDynamic(this, &ThisClass::OnJoinButtonClicked);
 	ExitButton->OnClicked.AddDynamic(this, &ThisClass::OnExitButtonClicked);
 	HostButton->OnClicked.AddDynamic(this, &ThisClass::OnHostButtonClicked);
+
+	if (ConfirmNoResultsButton)
+	{
+		ConfirmNoResultsButton->OnClicked.AddDynamic(this, &ThisClass::OnConfirmNoResultsClicked);
+	}
+
+	if (NoResultsBorder)
+	{
+		NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
+	}
 }
 
 void UGProjectMenuWidget::OnHostButtonClicked()
@@ -84,6 +95,11 @@ void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(const TArray<FString>& 
 
 	if (bWasSuccessful && SessionNames.Num() > 0)
 	{
+		if (NoResultsBorder)
+		{
+			NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
+		}
+
 		if (UGameInstance* GameInstance = GetGameInstance())
 		{
 			UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
@@ -110,6 +126,13 @@ void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(const TArray<FString>& 
 			}
 		}
 	}
+	else
+	{
+		if (NoResultsBorder)
+		{
+			NoResultsBorder->SetVisibility(ESlateVisibility::Visible);
+		}
+	}
 }
 
 void UGProjectMenuWidget::HandleSessionRowClicked(int32 SessionIndex)
@@ -121,5 +144,13 @@ void UGProjectMenuWidget::HandleSessionRowClicked(int32 SessionIndex)
 		{
 			SessionSubsystem->JoinGameSession(SessionIndex);
 		}
+	}
+}
+
+void UGProjectMenuWidget::OnConfirmNoResultsClicked()
+{
+	if (NoResultsBorder)
+	{
+		NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }

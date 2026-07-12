@@ -5,6 +5,44 @@
 #include "Character/GProjectCharacter.h"
 #include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
+#include "Game/GProjectGameState.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
+#include "Player/GProjectPlayerState.h"
+
+namespace
+{
+	AGProjectPlayerState* ResolvePlayerState(
+		AActor* Actor)
+	{
+		if (!IsValid(Actor))
+		{
+			return nullptr;
+		}
+
+		if (AGProjectPlayerState* PlayerState = Cast<AGProjectPlayerState>(Actor))
+		{
+			return PlayerState;
+		}
+
+		if (APawn* Pawn = Cast<APawn>(Actor))
+		{
+			return Pawn ->GetPlayerState<AGProjectPlayerState>();
+		}
+
+		if (AController* Controller = Cast<AController>(Actor))
+		{
+			return Controller->GetPlayerState<AGProjectPlayerState>();
+		}
+
+		if (APawn* InstigatorPawn = Actor->GetInstigator())
+		{
+			return InstigatorPawn ->GetPlayerState<AGProjectPlayerState>();
+		}
+
+		return nullptr;
+	}
+}
 
 UGProjectAttributeSet::UGProjectAttributeSet()
 {
@@ -63,10 +101,34 @@ void UGProjectAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 
 		if (OldHealth > 0.0f && NewHealth <= 0.0f)
 		{
-			if (AGProjectCharacter* TargetCharacter = Cast<AGProjectCharacter>(Data.Target.GetAvatarActor()))
+			AGProjectCharacter* TargetCharacter = Cast<AGProjectCharacter>(Data.Target.GetAvatarActor());
+			if (!TargetCharacter)
 			{
-				TargetCharacter->HandleDeath();
+				return;
 			}
+
+			AGProjectPlayerState* VictimPlayerState = TargetCharacter->GetPlayerState<AGProjectPlayerState>();
+
+			const FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
+
+			AGProjectPlayerState* KillerPlayerState = ResolvePlayerState(Context.GetOriginalInstigator());
+			if (!KillerPlayerState)
+			{
+				KillerPlayerState = ResolvePlayerState(Context.GetEffectCauser());
+			}
+
+			if (UWorld* World = TargetCharacter->GetWorld())
+			{
+				if (AGProjectGameState* GameState = World->GetGameState<AGProjectGameState>())
+				{
+					GameState->BroadcastKillFeed(
+						KillerPlayerState,
+						VictimPlayerState
+					);
+				}
+			}
+
+			TargetCharacter->HandleDeath();
 		}
 	}
 	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())

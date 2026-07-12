@@ -4,6 +4,7 @@
 
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "Character/GProjectCharacter.h"
 #include "Net/UnrealNetwork.h"
 
 AGProjectPlayerState::AGProjectPlayerState()
@@ -40,6 +41,11 @@ void AGProjectPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 		AGProjectPlayerState,
 		Team
 	);
+
+	DOREPLIFETIME(
+		AGProjectPlayerState,
+		PlayerColorIndex
+	);
 }
 
 void AGProjectPlayerState::SetTeam(EGProjectTeam NewTeam)
@@ -53,6 +59,25 @@ void AGProjectPlayerState::SetTeam(EGProjectTeam NewTeam)
 	OnTeamChanged.Broadcast(Team);
 
 	ForceNetUpdate();
+}
+
+void AGProjectPlayerState::SetPlayerColorIndex(int32 NewColorIndex)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	PlayerColorIndex = NewColorIndex;
+	OnRep_PlayerColorIndex();
+}
+
+void AGProjectPlayerState::OnRep_PlayerColorIndex()
+{
+	if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetPawn()))
+	{
+		Character->ApplyPlayerColor(PlayerColorIndex);
+	}
 }
 
 void AGProjectPlayerState::OnRep_Team()

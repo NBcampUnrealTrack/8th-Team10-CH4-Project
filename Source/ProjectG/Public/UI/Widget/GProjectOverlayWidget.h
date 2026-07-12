@@ -20,6 +20,7 @@ class UPanelWidget;
 class UGProjectMatchTimerWidget;
 class UVerticalBox;
 class UHorizontalBox;
+class UGProjectKillFeedWidget;
 
 enum class ERoundPhase : uint8;
 
@@ -64,10 +65,14 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectMatchHeaderWidget> MatchHeaderWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectKillFeedWidget> KillFeedWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
-
+	
+	UFUNCTION()
 	void OnLockOnTargetChanged(AActor* NewTarget);
 
 	UFUNCTION()
@@ -79,6 +84,15 @@ private:
 	void HandleRoundPhaseUIChanged(ERoundPhase NewPhase, int32 CurrentRound);
 
 	void HandleTeamScoreUIChanged(int32 RedTeamWins, int32 BlueTeamWins);
+
+	void HandleKillFeedReceived(
+		int32 KillerPlayerId,
+		const FString& KillerName,
+		int32 KillerColorIndex,
+		int32 VictimPlayerId,
+		const FString& VictimName,
+		int32 VictimColorIndex
+	);
 
 	UFUNCTION()
 	void HandleRemainTimeChanged(int32 RemainTime);
@@ -92,5 +106,7 @@ private:
 	UPROPERTY()
 	TObjectPtr<AActor> LockOnTarget;
 
+	UPROPERTY(Transient)
+	TMap<int32, TObjectPtr<UGProjectPlayerBoxWidget>> PlayerBoxesByPlayerId;
 
 };

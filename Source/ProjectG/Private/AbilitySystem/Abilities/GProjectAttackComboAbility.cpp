@@ -30,6 +30,7 @@ UGProjectAttackComboAbility::UGProjectAttackComboAbility()
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Parrying);
 
 	FAbilityTriggerData BasicAttackTrigger;
 	BasicAttackTrigger.TriggerTag = GProjectGameplayTags::Event_Input_Combat_BasicAttack;
@@ -496,6 +497,50 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			DamageParams,
 			Target->GetActorLocation() - Attacker->GetActorLocation()
 		);
+
+		const bool bParryWindowOpen = TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_ParryWindow);
+		const bool bValidParryAngle = UGProjectAbilitySystemLibrary::IsActorInFrontArc(
+			Target,
+			Attacker,
+			ParryFrontArcDegrees);
+		if (bParryWindowOpen && bValidParryAngle)
+		{
+			FGameplayTagContainer AbilitiesToCancel;
+			AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_Attack);
+			SourceASC->CancelAbilities(&AbilitiesToCancel);
+
+			FGameplayEventData ParrySuccessEventData;
+			ParrySuccessEventData.EventTag = GProjectGameplayTags::Event_Combat_Parry_Success;
+			ParrySuccessEventData.Instigator = Attacker;
+			ParrySuccessEventData.Target = Target;
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				Target,
+				GProjectGameplayTags::Event_Combat_Parry_Success,
+				ParrySuccessEventData);
+
+			FGProjectDamageEffectParams ParryStunParams;
+			ParryStunParams.SourceAbilitySystemComponent = TargetASC;
+			ParryStunParams.TargetAbilitySystemComponent = SourceASC;
+			ParryStunParams.HitstunTime = ParryStunDuration;
+			ParryStunParams.HitDirection = Attacker->GetActorLocation() - Target->GetActorLocation();
+			ParryStunParams.HitDirection.Z = 0.0f;
+			ParryStunParams.HitDirection.Normalize();
+			UGProjectAbilitySystemLibrary::ApplyHitstunEffect(
+				ParryStunParams,
+				HitstunGameplayEffectClass);
+
+			FGameplayEventData ParriedReactEventData;
+			ParriedReactEventData.EventTag = GProjectGameplayTags::Event_Combat_React_Parried;
+			ParriedReactEventData.Instigator = Target;
+			ParriedReactEventData.Target = Attacker;
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				Attacker,
+				GProjectGameplayTags::Event_Combat_React_Parried,
+				ParriedReactEventData);
+
+			HitActorsThisStep.Add(TargetPtr);
+			continue;
+		}
 
 		const FGameplayEffectContextHandle DamageContext = UGProjectAbilitySystemLibrary::ApplyDamageEffect(
 			DamageParams,

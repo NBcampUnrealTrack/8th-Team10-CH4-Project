@@ -14,6 +14,8 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/GItemHolderComponent.h"
+#include "Item/GItemPickup.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -31,6 +33,14 @@ void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	AssignTeam(NewPlayer);
+
+	AGProjectPlayerState* PS = NewPlayer->GetPlayerState<AGProjectPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	AssignPlayerColor(PS);
 
 	if (HasMatchStarted())
 	{
@@ -83,18 +93,6 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 	const EGProjectTeam Winner = DeadTeam == EGProjectTeam::Red ? EGProjectTeam::Blue : EGProjectTeam::Red;
 
 	GS->AddTeamRoundWin(Winner);
-
-	const TCHAR* DeadTeamName = DeadTeam == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
-
-	const TCHAR* WinnerTeamName = Winner == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
-
-	UE_LOG(
-		LogTemp,
-		Warning,
-		TEXT("%s Team Eliminated | Winner is %s Team"),
-		DeadTeamName,
-		WinnerTeamName
-	);
 
 	FinishRound();
 }
@@ -323,7 +321,6 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		Characters.Add(Character);
 	}
 
-	// 플레이어가 들고 있는 아이템 내려놓기
 	for (AGProjectCharacter* Character : Characters)
 	{
 		if (!Character)
@@ -331,11 +328,16 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 			continue;
 		}
 
-		UGProjectItemHolderComponent* ItemHolder = Character->GetItemHolderComponent();
-
-		if (ItemHolder)
+		if (UGProjectItemHolderComponent* ItemHolder =
+			Character->GetItemHolderComponent())
 		{
 			ItemHolder->DropHeldItem();
+		}
+
+		if (UGItemHolderComponent* ConsumableHolder =
+			Character->FindComponentByClass<UGItemHolderComponent>())
+		{
+			ConsumableHolder->ClearHeldItem();
 		}
 	}
 
@@ -352,6 +354,18 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 
 		Item->ResetToSpawnTransform();
 		++ResetItemCount;
+	}
+
+	for (TActorIterator<AGItemPickup> It(World); It; ++It)
+	{
+		AGItemPickup* Pickup = *It;
+
+		if (!Pickup)
+		{
+			continue;
+		}
+
+		Pickup->ResetForNewRound();
 	}
 
 	for (int32 Index = 0; Index < Characters.Num(); ++Index)
@@ -427,6 +441,47 @@ bool AGProjectGameMode::HasTeamWonMatch() const
 	}
 
 	return (GS->GetRedTeamRoundWins() >= RoundsToWin || GS->GetBlueTeamRoundWins() >= RoundsToWin);
+}
+
+void AGProjectGameMode::AssignPlayerColor(AGProjectPlayerState* PS)
+{
+	if (!PS)
+	{
+		return;
+	}
+
+	TSet<int32> UsedColorIndices;
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+	
+	if (GS)
+	{
+		for (APlayerState* BasePS : GS->PlayerArray)
+		{
+			const AGProjectPlayerState* OtherPS = Cast<AGProjectPlayerState>(BasePS);
+
+			if (!OtherPS || OtherPS == PS)
+			{
+				continue;
+			}
+
+			const int32 ColorIndex = OtherPS->GetPlayerColorIndex();
+
+			if (ColorIndex != INDEX_NONE)
+			{
+				UsedColorIndices.Add(ColorIndex);
+			}
+		}
+	}
+
+	for (int32 Index = 0; Index < 4; ++Index)
+	{
+		if (!UsedColorIndices.Contains(Index))
+		{
+			PS->SetPlayerColorIndex(Index);
+			return;
+		}
+	}
 }
 
 void AGProjectGameMode::AssignTeam(APlayerController* NewPlayer)

@@ -37,10 +37,8 @@ bool UGItemHolderComponent::TryPickupNearby()
     {
         return false;
     }
-
     TArray<AActor*> Overlapping;
     Owner->GetOverlappingActors(Overlapping, AGItemPickup::StaticClass());
-
     for (AActor* Actor : Overlapping)
     {
         if (AGItemPickup* Pickup = Cast<AGItemPickup>(Actor))
@@ -51,8 +49,19 @@ bool UGItemHolderComponent::TryPickupNearby()
             }
         }
     }
-
     return false;
+}
+
+bool UGItemHolderComponent::HasNearbyPickup() const
+{
+    AActor* Owner = GetOwner();
+    if (!Owner)
+    {
+        return false;
+    }
+    TArray<AActor*> Overlapping;
+    Owner->GetOverlappingActors(Overlapping, AGItemPickup::StaticClass());
+    return Overlapping.Num() > 0;
 }
 
 void UGItemHolderComponent::Multicast_PlayUseEffect_Implementation(UNiagaraSystem* Effect)
@@ -73,6 +82,28 @@ void UGItemHolderComponent::Multicast_PlayUseEffect_Implementation(UNiagaraSyste
         Effect,
         Owner->GetActorLocation() + FVector(0,0,50.f),
         Owner->GetActorRotation());
+}
+
+void UGItemHolderComponent::ClearHeldItem()
+{
+    if (GetOwnerRole() != ROLE_Authority)
+    {
+        return;
+    }
+
+    if (!ConsumableItem)
+    {
+        return;
+    }
+
+    ConsumableItem = nullptr;
+
+    RefreshConsumableMesh();
+
+    if (AActor* Owner = GetOwner())
+    {
+        Owner->ForceNetUpdate();
+    }
 }
 
 void UGItemHolderComponent::BeginPlay()

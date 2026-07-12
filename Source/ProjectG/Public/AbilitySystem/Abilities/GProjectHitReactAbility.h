@@ -39,6 +39,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
 	FName RightSection = TEXT("HitRight");
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
+	FName ParriedSection = TEXT("Parried");
+
 private:
 	FName DetermineHitSection(const FGameplayEventData* TriggerEventData) const;
 

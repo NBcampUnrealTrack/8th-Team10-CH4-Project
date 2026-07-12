@@ -57,6 +57,12 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction")
 	TSubclassOf<UGameplayEffect> HitstunGameplayEffectClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry", meta = (ClampMin = "0.0"))
+	float ParryStunDuration = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry", meta = (ClampMin = "0.0", ClampMax = "360.0"))
+	float ParryFrontArcDegrees = 120.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cost")
 	TSubclassOf<UGameplayEffect> SPCostGameplayEffectClass;
 

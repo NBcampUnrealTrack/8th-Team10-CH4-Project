@@ -7,6 +7,7 @@
 #include "GProjectLockOnComponent.generated.h"
 
 class AActor;
+class UWidgetComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectLockOnTargetChangedSignature, AActor*, NewTarget);
 
@@ -61,9 +62,15 @@ private:
 	void SetCurrentTarget(AActor* NewTarget);
 	void ApplyLockOnState();
 	void UpdateOwnerRotation(float DeltaTime) const;
+	void UpdateLockOnWidget();
 
 	UPROPERTY(ReplicatedUsing = OnRep_CurrentTarget, BlueprintReadOnly, Category = "Lock On", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AActor> CurrentTarget;
 
 	bool bDefaultOrientRotationToMovement = true;
+
+	UPROPERTY(VisibleAnywhere, Category = "Lock On")
+	TObjectPtr<UWidgetComponent> LockOnWidgetComp;
+	UPROPERTY(EditAnywhere, Category = "Lock On")
+	TSubclassOf<UUserWidget> LockOnWidgetClass;
 };

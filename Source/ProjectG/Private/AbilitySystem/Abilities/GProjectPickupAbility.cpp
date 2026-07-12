@@ -13,6 +13,7 @@ UGProjectPickupAbility::UGProjectPickupAbility()
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+    ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Interaction_Pickup);
 }
 
 void UGProjectPickupAbility::ActivateAbility(
@@ -27,6 +28,14 @@ void UGProjectPickupAbility::ActivateAbility(
         return;
     }
 
+    AActor* Avatar = GetAvatarActorFromActorInfo();
+    UGItemHolderComponent* Holder = Avatar ? Avatar->FindComponentByClass<UGItemHolderComponent>() : nullptr;
+    if (!Holder || !Holder->HasNearbyPickup())
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+        return;
+    }
+
     bPickedUp = false;
 
     if (ACharacter* Char = Cast<ACharacter>(GetAvatarActorFromActorInfo()))
@@ -36,7 +45,6 @@ void UGProjectPickupAbility::ActivateAbility(
             Move->DisableMovement();
         }
     }
-
     if (!PickupMontage)
     {
         DoPickup();
