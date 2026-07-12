@@ -31,6 +31,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dashing, "State.Movement.Dashing");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Attacking, "State.Combat.Attacking");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_AirAttackUsed, "State.Combat.AirAttackUsed");
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Airborne, "State.Combat.Airborne");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Hitstun, "State.Combat.Hitstun");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Knockdown, "State.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Parrying, "State.Combat.Parrying");

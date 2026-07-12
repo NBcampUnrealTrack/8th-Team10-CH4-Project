@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
+#include "Kismet/GameplayStatics.h"
 #include "GProjectGameplayTags.h"
 
 UGProjectParryAbility::UGProjectParryAbility()
@@ -115,6 +116,17 @@ void UGProjectParryAbility::OnParrySuccess(FGameplayEventData Payload)
 	if (bFinishingParry)
 	{
 		return;
+	}
+
+	if (ParrySuccessSound)
+	{
+		if (const AActor* AvatarActor = GetAvatarActorFromActorInfo())
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				this,
+				ParrySuccessSound,
+				AvatarActor->GetActorLocation());
+		}
 	}
 
 	if (ParryMontage && !SuccessSection.IsNone())

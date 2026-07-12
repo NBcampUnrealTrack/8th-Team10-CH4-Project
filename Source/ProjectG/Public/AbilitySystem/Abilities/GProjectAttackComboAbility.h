@@ -63,6 +63,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 	float ParryFrontArcDegrees = 120.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Airborne", meta = (ClampMin = "1.0"))
+	float AirborneHorizontalKnockbackMultiplier = 2.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cost")
 	TSubclassOf<UGameplayEffect> SPCostGameplayEffectClass;
 

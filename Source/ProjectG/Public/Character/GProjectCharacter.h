@@ -11,7 +11,6 @@
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
-class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
@@ -79,6 +78,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement|Sprint")
 	void StopSprint();
 
+	UFUNCTION(BlueprintCallable, Category = "Feedback|Hit")
+	void PlayHitFlash();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -114,18 +116,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
 	FName DeathDownLoopSection = TEXT("DownLoop");
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.0"))
-	float DissolveDelay = 1.5f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.01"))
-	float DissolveDuration = 1.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
-	FName DissolveParameterName = TEXT("DissolveAmount");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
-	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -138,21 +128,29 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource|SP")
 	TSubclassOf<UGameplayEffect> SPRegenGameplayEffectClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit")
+	FName HitFlashParameterName = TEXT("HitFlashAmount");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashDuration = 0.1f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashAmount = 1.0f;
+
 private:
 	void InitAbilityActorInfo();
 	void AddCharacterAbilities();
 	void RefreshMovementStateTags();
 	void SetSprintRequested(bool bRequested);
 	void ApplySPRegenEffect();
-	void StartDeathDissolve();
-	void UpdateDeathDissolve(float DeltaSeconds);
-	void FinishDeathDissolve();
+	void SetHitFlashAmount(float Amount);
+	void ResetHitFlash();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeath();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastStartDeathDissolve();
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitFlash();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastResetDeathState();
@@ -161,15 +159,7 @@ private:
 	bool bDead = false;
 
 	bool bSprintRequested = false;
-	bool bDissolving = false;
-	float DissolveElapsed = 0.0f;
-	FTimerHandle DeathDissolveTimer;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UMaterialInterface>> OriginalDeathMaterials;
+	FTimerHandle HitFlashTimer;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;

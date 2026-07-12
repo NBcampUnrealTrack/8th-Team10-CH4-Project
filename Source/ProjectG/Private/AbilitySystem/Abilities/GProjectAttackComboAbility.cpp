@@ -542,6 +542,13 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			continue;
 		}
 
+		const bool bTargetCombatAirborne = TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Airborne);
+		if (bTargetCombatAirborne)
+		{
+			DamageParams.KnockbackForce.X *= AirborneHorizontalKnockbackMultiplier;
+			DamageParams.KnockbackForce.Y *= AirborneHorizontalKnockbackMultiplier;
+		}
+
 		const FGameplayEffectContextHandle DamageContext = UGProjectAbilitySystemLibrary::ApplyDamageEffect(
 			DamageParams,
 			DamageGameplayEffectClass);
@@ -552,6 +559,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 
 		if (DamageParams.CausesKnockdown())
 		{
+			TargetASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 			UGProjectAbilitySystemLibrary::SendKnockdownEvent(DamageParams);
 		}
 		else
@@ -561,10 +569,17 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		}
 		HitActorsThisStep.Add(TargetPtr);
 
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target); !DamageParams.KnockbackForce.IsNearlyZero())
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target);
+			!DamageParams.KnockbackForce.IsNearlyZero() || DamageParams.AirborneLaunchForce > 0.0f)
 		{
 			FVector LaunchVelocity = DamageParams.KnockbackForce;
-			LaunchVelocity.Z = 200.0f;
+			LaunchVelocity.Z = DamageParams.AirborneLaunchForce > 0.0f
+				? DamageParams.AirborneLaunchForce
+				: 200.0f;
+			if (DamageParams.AirborneLaunchForce > 0.0f)
+			{
+				TargetASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 1);
+			}
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 		}
 	}
