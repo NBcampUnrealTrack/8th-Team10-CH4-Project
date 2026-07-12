@@ -8,6 +8,7 @@
 
 class UAbilityTask_PlayMontageAndWait;
 class UAnimMontage;
+class USoundBase;
 
 UCLASS()
 class PROJECTG_API UGProjectHitReactAbility : public UGProjectGameplayAbility
@@ -41,6 +42,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sections")
 	FName ParriedSection = TEXT("Parried");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Hit Reaction|Sound")
+	TObjectPtr<USoundBase> HitReactSound;
 
 private:
 	FName DetermineHitSection(const FGameplayEventData* TriggerEventData) const;
