@@ -78,14 +78,31 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 	{
 		return;
 	}
+	APlayerController* DeadPC = Cast<APlayerController>(DeadPlayerState->GetOwner());
+	if (DeadPC)
+	{
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			APlayerController* OtherPC = It->Get();
+			if (!OtherPC || OtherPC == DeadPC) continue;
+			
+			AGProjectCharacter* LivingCharacter = Cast<AGProjectCharacter>(OtherPC->GetPawn());
+          
+			if (LivingCharacter && !LivingCharacter->IsDead())
+			{
+				DeadPC->SetViewTargetWithBlend(LivingCharacter, 0.5f);
+				break; 
+			}
+		}
+	}
 
 	if (!IsTeamEliminated(DeadTeam))
 	{
 		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("Player Died, But team still alive | PlayerID = %d"),
-			DeadPlayerState->GetPlayerId()
+		   LogTemp,
+		   Warning,
+		   TEXT("Player Died, But team still alive | PlayerID = %d"),
+		   DeadPlayerState->GetPlayerId()
 		);
 		return;
 	}
@@ -131,7 +148,7 @@ void AGProjectGameMode::HandleMatchHasEnded()
 		RoundTransitionTimerHandle
 	);
 
-	// ÃÖÁ¾ ½ÂÀÚ, °á°ú UI ·Îºñ ÀÌµ¿ µî.....
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ UI ï¿½Îºï¿½ ï¿½Ìµï¿½ ï¿½ï¿½.....
 }
 
 void AGProjectGameMode::StartRound()
@@ -393,6 +410,8 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		PC->SetControlRotation(
 			PlayerStart->GetActorRotation()
 		);
+		
+		PC->SetViewTarget(Character);
 	}
 
 }
