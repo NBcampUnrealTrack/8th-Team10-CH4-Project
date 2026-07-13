@@ -5,6 +5,7 @@
 #include "Player/GProjectPlayerState.h"
 #include "UI/Widget/GProjectLobbyWidget.h"
 #include "Subsystem/GProjectSessionSubsystem.h"
+#include "Subsystem/GProjectPlayerInfoSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 
@@ -17,11 +18,18 @@ void AGProjectLobbyPlayerController::BeginPlay()
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
 		UGProjectSessionSubsystem* SessionSubsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
-
 		if (SessionSubsystem)
 		{
 			SessionSubsystem->LoginWithEOS();
 		}
+
+		UGProjectPlayerInfoSubsystem* PlayerInfoSubsystem = GameInstance->GetSubsystem<UGProjectPlayerInfoSubsystem>();
+		if (PlayerInfoSubsystem)
+		{
+			ServerSetPlayerName(PlayerInfoSubsystem->GetPlayerName());
+			GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Yellow, FString::Printf(TEXT("%s"), *PlayerInfoSubsystem->GetPlayerName()));
+		}
+
 	}
 
 	FString CurrentMapName = GetWorld()->GetMapName();
@@ -120,4 +128,17 @@ void AGProjectLobbyPlayerController::ApplyPlayerCountToLobbyWidget(int32 Current
 	{
 		LobbyUI->UpdatePlayerCountText(CurrentPlayers, RequiredPlayers);
 	}
+}
+
+void AGProjectLobbyPlayerController::ServerSetPlayerName_Implementation(const FString& InName)
+{
+	if (AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(PlayerState))
+	{
+		PS->SetPlayerName(InName);
+	}
+}
+
+bool AGProjectLobbyPlayerController::ServerSetPlayerName_Validate(const FString& InName)
+{
+	return true;
 }

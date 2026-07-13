@@ -9,6 +9,8 @@
 
 AGProjectPlayerState::AGProjectPlayerState()
 {
+	bReplicates = true;
+
 	AbilitySystemComponent = CreateDefaultSubobject<UGProjectAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
@@ -45,6 +47,11 @@ void AGProjectPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(
 		AGProjectPlayerState,
 		PlayerColorIndex
+	);
+
+	DOREPLIFETIME(
+		AGProjectPlayerState,
+		PlayerName
 	);
 }
 
@@ -85,3 +92,19 @@ void AGProjectPlayerState::OnRep_Team()
 	OnTeamChanged.Broadcast(Team);
 }
 
+void AGProjectPlayerState::CopyProperties(APlayerState* NewPlayerState)
+{
+	Super::CopyProperties(NewPlayerState);
+
+	if (AGProjectPlayerState* NewPS = Cast<AGProjectPlayerState>(NewPlayerState))
+	{
+		NewPS->SetPlayerName(this->GetPlayerName());
+	}
+}
+
+void AGProjectPlayerState::SetPlayerName(const FString& InName)
+{
+	Super::SetPlayerName(InName);
+
+	PlayerName = InName;
+}

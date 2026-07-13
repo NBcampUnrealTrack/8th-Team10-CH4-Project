@@ -20,6 +20,10 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientUpdatePlayerCount(int32 CurrentPlayers, int32 RequiredPlayers);
 
+protected:
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetPlayerName(const FString& InName);
+
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UUserWidget> MenuWidgetClass;

@@ -50,6 +50,9 @@ public:
 
 	FGProjectTeamChangedSignature OnTeamChanged;
 
+	FString GetPlayerName() const { return PlayerName; }
+	void SetPlayerName(const FString& InName) override;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability System")
 	TObjectPtr<UGProjectAbilitySystemComponent> AbilitySystemComponent;
@@ -69,4 +72,10 @@ private:
 
 	UFUNCTION()
 	void OnRep_Team();
+
+	UFUNCTION()
+	virtual void CopyProperties(APlayerState* NewPlayerState) override;
+
+	UPROPERTY(Replicated)
+	FString PlayerName;
 };

@@ -5,6 +5,7 @@
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "GameFramework/PlayerState.h"
+#include "Player/GProjectPlayerState.h"
 #include "GameplayEffectTypes.h"
 
 void UGProjectPlayerBoxWidgetController::BroadcastInitialValues()
@@ -42,7 +43,16 @@ void UGProjectPlayerBoxWidgetController::BindCallbacksToDependencies()
 
 FText UGProjectPlayerBoxWidgetController::GetPlayerName() const
 {
-	return PlayerState ? FText::FromString(PlayerState->GetPlayerName()) : FText::GetEmpty();
+	if (PlayerState)
+	{
+		AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(PlayerState);
+		if (PS && !PS->GetPlayerName().IsEmpty())
+		{
+			return FText::FromString(PS->GetPlayerName());
+		}
+		return FText::FromString(PlayerState->GetPlayerName());
+	}
+	return FText::GetEmpty();
 }
 
 void UGProjectPlayerBoxWidgetController::HealthChanged(const FOnAttributeChangeData& Data)

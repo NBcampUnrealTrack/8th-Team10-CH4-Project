@@ -6,7 +6,8 @@
 #include "Components/EditableText.h"
 #include "Components/Button.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
-#include "Subsystem/GProjectSessionSubsystem.h"
+#include "Player/GProjectPlayerState.h"
+#include "Subsystem/GProjectPlayerInfoSubsystem.h"
 
 void UGProjectProfileSettingsWidget::NativeConstruct()
 {
@@ -22,12 +23,20 @@ void UGProjectProfileSettingsWidget::OnSaveProfileClicked()
 {
 	if (PlayerNameInput)
 	{
-		const FText InputName = PlayerNameInput->GetText();
+		const FString InputName = PlayerNameInput->GetText().ToString();
 
 		if (!InputName.IsEmpty())
 		{
-			// +Save name code
+			if (UGameInstance* GI = GetGameInstance())
+			{
+				if (UGProjectPlayerInfoSubsystem* InfoSubsystem = GI->GetSubsystem<UGProjectPlayerInfoSubsystem>())
+				{
+					InfoSubsystem->SetPlayerName(InputName);
+					InfoSubsystem->SetPlayerName(InputName);
+				}
+			}
 		}
 	}
+
 	SetVisibility(ESlateVisibility::Collapsed);
 }
