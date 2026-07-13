@@ -11,11 +11,14 @@
 #include "EngineUtils.h"
 #include "Item/GProjectItemActorBase.h"
 #include "Item/GProjectItemHolderComponent.h"
+#include "Item/SpawnItem/SpawnBase.h"
+
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/GItemHolderComponent.h"
 #include "Item/GItemPickup.h"
+#include "Kismet/GameplayStatics.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -117,6 +120,79 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 void AGProjectGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnBase::StaticClass(), (TArray<AActor*>&)SpawnZones);
+	
+	if (ItemPool.Num() > 0 && SpawnZones.Num() > 0)
+	{
+		for (int32 i = 0; i < 5; ++i)
+		{
+			SpawnRandomItem();
+		}
+		
+		GetWorldTimerManager().SetTimer(
+		   ItemSpawnTimerHandle,
+		   this,
+		   &AGProjectGameMode::SpawnRandomItem,
+		   10.0f,
+		   true
+		);
+	}
+}
+
+void AGProjectGameMode::SpawnRandomItem()
+{
+	if (CurrentSpawnedItems >= MaxSpawnedItems) return;
+	
+	if (ItemPool.Num() == 0 || SpawnZones.Num() == 0) return;
+	
+	float TotalWeight = 0.0f;
+	for (UItemSpawnDataAsset* Asset : ItemPool)
+	{
+		if (Asset)
+		{
+			TotalWeight += Asset->SpawnWeight;
+		}
+	}
+
+	if (TotalWeight <= 0.0f) return;
+    
+	float DiceRoll = FMath::FRandRange(0.0f, TotalWeight);
+    
+	UItemSpawnDataAsset* ChosenAsset = nullptr;
+	for (UItemSpawnDataAsset* Asset : ItemPool)
+	{
+		if (!Asset) continue;
+
+		DiceRoll -= Asset->SpawnWeight;
+		if (DiceRoll <= 0.0f)
+		{
+			ChosenAsset = Asset;
+			break;
+		}
+	}
+    
+	if (!ChosenAsset)
+	{
+		ChosenAsset = ItemPool.Last();
+	}
+	
+	if (ChosenAsset && ChosenAsset->ItemClass)
+	{
+		int32 RandomZoneIndex = FMath::RandRange(0, SpawnZones.Num() - 1);
+		ASpawnBase* TargetZone = SpawnZones[RandomZoneIndex];
+
+		if (TargetZone)
+		{
+			TargetZone->SpawnItem(ChosenAsset->ItemClass);
+			CurrentSpawnedItems++;
+		}
+	}
+}
+
+void AGProjectGameMode::DecreaseSpawnedItemCount()
+{
+	CurrentSpawnedItems = FMath::Max(0, CurrentSpawnedItems - 1);
 }
 
 void AGProjectGameMode::HandleMatchHasStarted()
