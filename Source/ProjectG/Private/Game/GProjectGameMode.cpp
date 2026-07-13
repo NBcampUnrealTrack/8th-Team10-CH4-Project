@@ -102,6 +102,35 @@ void AGProjectGameMode::BeginPlay()
 	Super::BeginPlay();
 }
 
+void AGProjectGameMode::HandleSeamlessTravelPlayer(AController*& Controller)
+{
+	Super::HandleSeamlessTravelPlayer(Controller);
+
+	APlayerController* PC = Cast<APlayerController>(Controller);
+
+	AssignTeam(PC);
+
+	AGProjectPlayerState* PS = Controller->GetPlayerState<AGProjectPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	AssignPlayerColor(PS);
+
+	if (HasMatchStarted())
+	{
+		return;
+	}
+
+	if (GetNumPlayers() < RequiredPlayers)
+	{
+		return;
+	}
+
+	StartMatch();
+}
+
 void AGProjectGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();

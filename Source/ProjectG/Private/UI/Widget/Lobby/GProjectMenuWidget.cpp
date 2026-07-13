@@ -5,10 +5,12 @@
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "UI/Widget/Lobby/GProjectSessionRowWidget.h"
 #include "Game/Lobby/GProjectLobbyGameMode.h"
+#include "Game/Lobby/GProjectSessionTypes.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/ScrollBox.h"
 #include "Components/Border.h"
+#include "Components/TextBlock.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -35,35 +37,73 @@ void UGProjectMenuWidget::NativeConstruct()
 	{
 		NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
+	if (ConfirmHostButton)
+	{
+		ConfirmHostButton->OnClicked.AddDynamic(this, &ThisClass::OnConfirmHostButtonClicked);
+	}
+
+	if (HostSettingsBorder)
+	{
+		HostSettingsBorder->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
+	if (BtnPrevMap)
+	{
+		BtnPrevMap->OnClicked.AddDynamic(this, &ThisClass::OnPrevMapClicked);
+	}
+
+	if (BtnNextMap)
+	{
+		BtnNextMap->OnClicked.AddDynamic(this, &ThisClass::OnNextMapClicked);
+	}
+
+	if (BtnPrevPlayers)
+	{
+		BtnPrevPlayers->OnClicked.AddDynamic(this, &ThisClass::OnPrevPlayersClicked);
+	}
+
+	if (BtnNextPlayers)
+	{
+		BtnNextPlayers->OnClicked.AddDynamic(this, &ThisClass::OnNextPlayersClicked);
+	}
+
+	if (ProfileSettingsButton)
+	{
+		ProfileSettingsButton->OnClicked.AddDynamic(this, &ThisClass::OnProfileSettingsButtonClicked);
+	}
+
+	InitMapDataFromTable();
+	UpdateMapSelectionUI();
+	UpdatePlayerSelectionUI();
 }
 
 void UGProjectMenuWidget::OnHostButtonClicked()
 {
-	int32 TargetMaxPlayers = 2;
-
-	if (UWorld* World = GetWorld())
+	if (HostSettingsBorder)
 	{
-		if (AWorldSettings* WorldSettings = World->GetWorldSettings())
-		{
-			if (UClass* GameModeClass = WorldSettings->DefaultGameMode)
-			{
-				if (const AGProjectLobbyGameMode* DefaultGM =
-					Cast<AGProjectLobbyGameMode>(GameModeClass->GetDefaultObject()))
-				{
-					TargetMaxPlayers = DefaultGM->GetRequiredPlayers();
-				}
-			}
-		}
+		HostSettingsBorder->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void UGProjectMenuWidget::OnConfirmHostButtonClicked()
+{
+	FString RoomName = RoomNameInput ? RoomNameInput->GetText().ToString() : TEXT("New Room");
+	FString TargetMapName = TEXT("DefaultMap");
+	FString TargetMapPath = TEXT("/Game/Level/TestLevel");
+
+	if (CachedBattleMaps.IsValidIndex(CurrentMapIndex))
+	{
+		TargetMapName = CachedBattleMaps[CurrentMapIndex].DisplayName;
+		TargetMapPath = CachedBattleMaps[CurrentMapIndex].MapPath;
 	}
 
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		UGProjectSessionSubsystem* Subsystem =
-			GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
-
+		UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
 		if (Subsystem)
 		{
-			Subsystem->CreateGameSession(TargetMaxPlayers, FName("LobbyMap"));
+			Subsystem->CreateGameSession(CurrentMaxPlayers, FName(*TargetMapName), RoomName, TargetMapPath);
 		}
 	}
 }
@@ -152,5 +192,121 @@ void UGProjectMenuWidget::OnConfirmNoResultsClicked()
 	if (NoResultsBorder)
 	{
 		NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
+	}
+}
+
+void UGProjectMenuWidget::InitMapDataFromTable()
+{
+	CachedBattleMaps.Empty();
+
+	if (!MapDataTable)
+	{
+		return;
+	}
+
+	TArray<FBattleMapData*> AllRows;
+	MapDataTable->GetAllRows<FBattleMapData>(TEXT("GProjectMenuWidgetContext"), AllRows);
+
+	for (FBattleMapData* Row : AllRows)
+	{
+		if (Row)
+		{
+			CachedBattleMaps.Add(*Row);
+		}
+	}
+}
+
+void UGProjectMenuWidget::OnPrevMapClicked()
+{
+	if (CachedBattleMaps.Num() == 0)
+	{
+		return;
+	}
+
+	CurrentMapIndex--;
+
+	if (CurrentMapIndex < 0)
+	{
+		CurrentMapIndex = CachedBattleMaps.Num() - 1;
+	}
+
+	UpdateMapSelectionUI();
+}
+
+void UGProjectMenuWidget::OnNextMapClicked()
+{
+	if (CachedBattleMaps.Num() == 0)
+	{
+		return;
+	}
+
+	CurrentMapIndex++;
+
+	if (CurrentMapIndex >= CachedBattleMaps.Num())
+	{
+		CurrentMapIndex = 0;
+	}
+
+	UpdateMapSelectionUI();
+}
+
+void UGProjectMenuWidget::OnPrevPlayersClicked()
+{
+	CurrentMaxPlayers--;
+
+	if (CurrentMaxPlayers < 2)
+	{
+		CurrentMaxPlayers = 4;
+	}
+
+	UpdatePlayerSelectionUI();
+}
+
+void UGProjectMenuWidget::OnNextPlayersClicked()
+{
+	CurrentMaxPlayers++;
+
+	if (CurrentMaxPlayers > 4)
+	{
+		CurrentMaxPlayers = 2;
+	}
+
+	UpdatePlayerSelectionUI();
+}
+
+void UGProjectMenuWidget::UpdateMapSelectionUI()
+{
+	if (!TextMapName)
+	{
+		return;
+	}
+
+	if (CachedBattleMaps.IsValidIndex(CurrentMapIndex))
+	{
+		TextMapName->SetText(FText::FromString(CachedBattleMaps[CurrentMapIndex].DisplayName));
+	}
+	else
+	{
+		TextMapName->SetText(FText::FromString(TEXT("No Maps Available")));
+	}
+}
+
+void UGProjectMenuWidget::UpdatePlayerSelectionUI()
+{
+	if (TextMaxPlayers)
+	{
+		TextMaxPlayers->SetText(FText::AsNumber(CurrentMaxPlayers));
+	}
+}
+
+void UGProjectMenuWidget::OnProfileSettingsButtonClicked()
+{
+	if (ProfileWidgetClass)
+	{
+		UUserWidget* ProfileWidget = CreateWidget<UUserWidget>(GetWorld(), ProfileWidgetClass);
+		if (ProfileWidget)
+		{
+			ProfileWidget->AddToViewport();
+		}
 	}
 }

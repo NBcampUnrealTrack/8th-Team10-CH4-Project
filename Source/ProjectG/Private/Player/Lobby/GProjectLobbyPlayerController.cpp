@@ -1,6 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
+
+#include "Player/GProjectPlayerState.h"
+#include "UI/Widget/GProjectLobbyWidget.h"
+#include "Subsystem/GProjectSessionSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
 
@@ -8,9 +12,16 @@ void AGProjectLobbyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!IsLocalController())
+	if (!IsLocalController()) return;
+
+	if (UGameInstance* GameInstance = GetGameInstance())
 	{
-		return;
+		UGProjectSessionSubsystem* SessionSubsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
+
+		if (SessionSubsystem)
+		{
+			SessionSubsystem->LoginWithEOS();
+		}
 	}
 
 	FString CurrentMapName = GetWorld()->GetMapName();
@@ -54,8 +65,8 @@ void AGProjectLobbyPlayerController::ShowLobbyUI()
 
 	if (!LobbyWidgetClass) return;
 
-	CurrentWidgetInstance = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
-	LobbyWidgetInstance = CurrentWidgetInstance;
+	LobbyWidgetInstance = CreateWidget<UGProjectLobbyWidget>(this, LobbyWidgetClass);
+	CurrentWidgetInstance = LobbyWidgetInstance;
 
 	if (!CurrentWidgetInstance) return;
 
@@ -100,12 +111,13 @@ void AGProjectLobbyPlayerController::ClientUpdatePlayerCount_Implementation(int3
 
 void AGProjectLobbyPlayerController::ApplyPlayerCountToLobbyWidget(int32 CurrentPlayers, int32 RequiredPlayers)
 {
-	if (!LobbyWidgetInstance) return;
+	if (!LobbyWidgetInstance)
+	{
+		return;
+	}
 
-	UTextBlock* PlayerCountText = Cast<UTextBlock>(LobbyWidgetInstance->GetWidgetFromName(TEXT("PlayerCountText")));
-	if (!PlayerCountText) return;
-
-	FString ContentString = FString::Printf(TEXT("Players %d / %d"), CurrentPlayers, RequiredPlayers);
-
-	PlayerCountText->SetText(FText::FromString(ContentString));
+	if (UGProjectLobbyWidget* LobbyUI = Cast<UGProjectLobbyWidget>(LobbyWidgetInstance))
+	{
+		LobbyUI->UpdatePlayerCountText(CurrentPlayers, RequiredPlayers);
+	}
 }

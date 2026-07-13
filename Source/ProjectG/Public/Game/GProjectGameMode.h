@@ -27,6 +27,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void HandleSeamlessTravelPlayer(AController*& Controller) override;
 
 	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;

@@ -14,8 +14,11 @@ class PROJECTG_API AGProjectLobbyGameMode : public AGameModeBase
 	GENERATED_BODY()
 	
 public:
+	AGProjectLobbyGameMode();
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
+	virtual void BeginPlay() override;
 
 	int32 GetRequiredPlayers() const;
 

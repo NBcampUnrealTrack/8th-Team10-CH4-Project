@@ -7,6 +7,7 @@
 #include "GProjectLobbyPlayerController.generated.h"
 
 class UUserWidget;
+class UGProjectLobbyWidget;
 
 UCLASS()
 class PROJECTG_API AGProjectLobbyPlayerController : public APlayerController
