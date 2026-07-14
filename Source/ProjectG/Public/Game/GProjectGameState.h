@@ -154,8 +154,8 @@ private:
 	//UFUNCTION()
 	//void OnRep_RoundCountdownValue();
 
-	//UFUNCTION(NetMulticast, Reliable)
-	//void MulticastRoundCountdown(int32 CountdownValue);
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRoundCountdown(int32 CountdownValue);
 
 	//UPROPERTY(ReplicatedUsing = OnRep_RoundCountdownValue)
 	//int32 RoundCountdownValue = -1;
