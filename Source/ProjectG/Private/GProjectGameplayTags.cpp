@@ -27,6 +27,7 @@ namespace GProjectGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Dead, "State.Character.Dead");
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Invulnerable, "State.Character.Invulnerable");
+	UE_DEFINE_GAMEPLAY_TAG(State_Character_Transformed, "State.Character.Transformed");
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Airborne, "State.Movement.Airborne");
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dashing, "State.Movement.Dashing");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Attacking, "State.Combat.Attacking");

@@ -30,6 +30,7 @@ namespace GProjectGameplayTags
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Invulnerable);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Transformed);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Airborne);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dashing);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Attacking);
