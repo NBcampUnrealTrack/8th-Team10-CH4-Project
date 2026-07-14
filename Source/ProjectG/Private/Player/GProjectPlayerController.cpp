@@ -256,6 +256,15 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 		return;
 	}
 
+	// 공격 몽타주(콤보) 재생 중에는 이동 입력 차단
+	if (const UGProjectAbilitySystemComponent* ASC = GetASC())
+	{
+		if (ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Attacking))
+		{
+			return;
+		}
+	}
+
 	const FRotator YawRotation(0.0f, GetControlRotation().Yaw, 0.0f);
 	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);

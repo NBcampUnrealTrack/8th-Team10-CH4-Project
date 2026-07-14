@@ -9,7 +9,11 @@
 
 bool AGProjectWeaponItemActor::CanBePickedUpBy(const AGProjectCharacter* Character) const
 {
-	return GetWeaponDefinition() && Super::CanBePickedUpBy(Character);
+	UGProjectWeaponDefinition* WeaponDefinition = GetWeaponDefinition();
+	return WeaponDefinition
+		&& Character
+		&& WeaponDefinition->RequiredCharacterVariant == Character->GetCharacterVariant()
+		&& Super::CanBePickedUpBy(Character);
 }
 
 void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character)

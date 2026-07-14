@@ -23,6 +23,8 @@
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
 #include "Game/GProjectGameMode.h"
+#include "UI/Widget/GProjectFloatingText.h" // 추가
+#include "Components/BillboardComponent.h" // 추가
 #include "Player/GProjectPlayerColors.h"
 
 AGProjectCharacter::AGProjectCharacter()
@@ -62,6 +64,30 @@ AGProjectCharacter::AGProjectCharacter()
 
 	LockOnComponent = CreateDefaultSubobject<UGProjectLockOnComponent>(TEXT("LockOnComponent"));
 	ItemHolderComponent = CreateDefaultSubobject<UGProjectItemHolderComponent>(TEXT("ItemHolderComponent"));
+
+#if WITH_EDITORONLY_DATA
+	// 추가: 데미지 텍스트 스폰 위치 미리보기용 (에디터 뷰포트에서만 보임)
+	DamageTextPreviewMarker = CreateEditorOnlyDefaultSubobject<UBillboardComponent>(TEXT("DamageTextPreviewMarker"));
+	if (DamageTextPreviewMarker)
+	{
+		DamageTextPreviewMarker->SetupAttachment(GetRootComponent());
+		DamageTextPreviewMarker->SetRelativeLocation(FVector(0.f, 0.f, DamageTextHeightOffset));
+		DamageTextPreviewMarker->bIsScreenSizeScaled = true;
+	}
+#endif
+}
+
+// 추가: DamageTextHeightOffset 값이 Details 패널에서 바뀔 때마다 미리보기 마커 위치 갱신
+void AGProjectCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+#if WITH_EDITORONLY_DATA
+	if (DamageTextPreviewMarker)
+	{
+		DamageTextPreviewMarker->SetRelativeLocation(FVector(0.f, 0.f, DamageTextHeightOffset));
+	}
+#endif
 }
 
 void AGProjectCharacter::BeginPlay()
@@ -355,6 +381,24 @@ void AGProjectCharacter::HandleDeath()
 	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
 	{
 		GM->NotifyPlayerDied(GetPlayerState<AGProjectPlayerState>());
+	}
+}
+
+// 추가: 데미지 텍스트를 모든 클라이언트에서 각자 로컬로 스폰
+void AGProjectCharacter::MulticastShowDamageText_Implementation(float Damage, bool bIsCritical)
+{
+	if (!FloatingDamageTextClass)
+	{
+		return;
+	}
+
+	const FVector RandomOffset(FMath::FRandRange(-20.f, 20.f), FMath::FRandRange(-20.f, 20.f), 0.f);
+	const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, DamageTextHeightOffset) + RandomOffset;
+
+	if (AGProjectFloatingText* FloatingText = GetWorld()->SpawnActor<AGProjectFloatingText>(
+		FloatingDamageTextClass, SpawnLocation, FRotator::ZeroRotator))
+	{
+		FloatingText->SetDamageAmount(Damage, bIsCritical);
 	}
 }
 
