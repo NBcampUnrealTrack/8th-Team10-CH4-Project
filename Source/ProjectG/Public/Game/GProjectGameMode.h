@@ -52,6 +52,9 @@ protected:
 	
 	void SpectateOtherPlayer(class AGProjectPlayerState* DeadPlayerState);
 
+	void TickRoundCountdown();
+	void BeginRoundFight();
+
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
 
@@ -84,9 +87,15 @@ protected:
 	UPROPERTY()
 	TArray<ASpawnBase*> SpawnZones;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Round")
+	int32 RoundCountdownStartValue = 3;
+
 private:
+	void AssignTeam(APlayerController* NewPlayer);
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
+	FTimerHandle RoundCountdownTimerHandle;
 
-	void AssignTeam(APlayerController* NewPlayer);
+	int CurrentRoundCountdownValue = 0;
 };

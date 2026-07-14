@@ -13,6 +13,7 @@
 #include "Item/GProjectItemHolderComponent.h"
 #include "Item/SpawnItem/SpawnBase.h"
 
+
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/GItemHolderComponent.h"
@@ -232,9 +233,54 @@ void AGProjectGameMode::HandleMatchHasEnded()
 	GetWorldTimerManager().ClearTimer(
 		RoundTransitionTimerHandle
 	);
+
+	GetWorldTimerManager().ClearTimer(
+		RoundCountdownTimerHandle
+	);
 }
 
-void AGProjectGameMode::StartRound()
+void AGProjectGameMode::TickRoundCountdown()
+{
+	if (!IsMatchInProgress())
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::Countdown)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	--CurrentRoundCountdownValue;
+
+	if (CurrentRoundCountdownValue > 0)
+	{
+		GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
+
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+	GS->BroadcastRoundCountdown(0);
+
+	BeginRoundFight();
+}
+
+void AGProjectGameMode::BeginRoundFight()
 {
 	if (!IsMatchInProgress())
 	{
@@ -242,6 +288,7 @@ void AGProjectGameMode::StartRound()
 	}
 
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
 	if (!GS)
 	{
 		return;
@@ -270,12 +317,50 @@ void AGProjectGameMode::StartRound()
 			true
 		);
 	}
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
 	GetWorldTimerManager().SetTimer(
 	   MatchTimerHandle,
 	   this,
 	   &ThisClass::TickMatchTimer,
 	   1.0f,
 	   true
+	);
+}
+
+void AGProjectGameMode::StartRound()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+	GS->SetRemainMatchTime(RoundDuration);
+
+	GS->SetRoundPhase(ERoundPhase::Countdown);
+
+	CurrentRoundCountdownValue = FMath::Max(RoundCountdownStartValue, 1);
+
+	GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
+
+	GetWorldTimerManager().SetTimer(
+		RoundCountdownTimerHandle,
+		this,
+		&ThisClass::TickRoundCountdown,
+		1.0f,
+		true
 	);
 }
 
@@ -298,10 +383,12 @@ void AGProjectGameMode::FinishRound()
 		   RoundTransitionDuration, 
 		   false
 		);
+
 		return;
 	}
 
 	GS->SetRoundPhase(ERoundPhase::Intermission);
+
 	GetWorldTimerManager().SetTimer(
 	   RoundTransitionTimerHandle,
 	   this,

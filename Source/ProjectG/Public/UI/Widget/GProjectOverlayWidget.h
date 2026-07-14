@@ -21,6 +21,7 @@ class UGProjectMatchTimerWidget;
 class UVerticalBox;
 class UHorizontalBox;
 class UGProjectKillFeedWidget;
+class UGProjectRoundCountdownWidget;
 
 enum class ERoundPhase : uint8;
 
@@ -68,6 +69,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UGProjectKillFeedWidget> KillFeedWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UGProjectRoundCountdownWidget> RoundCountdownWidget;
+
 private:
 	UFUNCTION()
 	void RefreshPlayerBoxes();
@@ -93,6 +97,8 @@ private:
 		const FString& VictimName,
 		int32 VictimColorIndex
 	);
+
+	void HandleRoundCountdownChanged(const int32 CountdownValue);
 
 	UFUNCTION()
 	void HandleRemainTimeChanged(int32 RemainTime);
