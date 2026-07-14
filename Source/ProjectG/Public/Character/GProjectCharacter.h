@@ -12,6 +12,7 @@
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
+class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
@@ -127,6 +128,18 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
 	FName DeathDownLoopSection = TEXT("DownLoop");
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.0"))
+	float DissolveDelay = 1.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.01"))
+	float DissolveDuration = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
+	FName DissolveParameterName = TEXT("DissolveAmount");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
+	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -170,12 +183,18 @@ private:
 	void ApplySPRegenEffect();
 	void SetHitFlashAmount(float Amount);
 	void ResetHitFlash();
+	void StartDeathDissolve();
+	void UpdateDeathDissolve(float DeltaSeconds);
+	void FinishDeathDissolve();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeath();
 
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayHitFlash();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastStartDeathDissolve();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastResetDeathState();
@@ -185,6 +204,16 @@ private:
 
 	bool bSprintRequested = false;
 	FTimerHandle HitFlashTimer;
+
+	bool bDissolving = false;
+	float DissolveElapsed = 0.0f;
+	FTimerHandle DeathDissolveTimer;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInterface>> OriginalDeathMaterials;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
