@@ -78,7 +78,10 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Spawning")
 	void SpawnRandomItem();
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Settings", meta = (AllowPrivateAccess = "true"))
+	float ItemSpawnInterval = 10.0f;
+	
+	UPROPERTY()
 	TArray<ASpawnBase*> SpawnZones;
 
 private:

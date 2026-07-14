@@ -266,9 +266,8 @@ void AGProjectGameMode::StartRound()
 			ItemSpawnTimerHandle,
 			this,
 			&AGProjectGameMode::SpawnRandomItem,
-			2.0f,
-			true,
-			2.0f
+			ItemSpawnInterval,
+			true
 		);
 	}
 	GetWorldTimerManager().SetTimer(
