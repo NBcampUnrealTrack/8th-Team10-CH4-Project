@@ -20,9 +20,24 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientUpdatePlayerCount(int32 CurrentPlayers, int32 RequiredPlayers);
 
+	UFUNCTION(Server, Reliable)
+	void Server_ToggleReady();
+
+	UFUNCTION(Server, Reliable)
+	void Server_RequestStartGame();
+
+	class UGProjectLobbyWidget* GetLobbyWidget() const;
+
+	void BindLobbyWidgetToPlayerState();
+
+	UFUNCTION(Client, Reliable)
+	void ClientRefreshLobbyUI();
+
 protected:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetPlayerName(const FString& InName);
+
+	virtual void OnRep_PlayerState() override;
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "UI", meta = (AllowPrivateAccess = "true"))

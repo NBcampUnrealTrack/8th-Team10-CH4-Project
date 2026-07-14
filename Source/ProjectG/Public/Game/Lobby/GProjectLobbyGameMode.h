@@ -21,11 +21,13 @@ public:
 	virtual void BeginPlay() override;
 
 	int32 GetRequiredPlayers() const;
+	bool CanStartGame() const;
+	void StartGame();
 
 private:
 	void UpdatePlayerCountUI();
 	void CheckAutoStart();
-	void StartGame();
+
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby Settings")

@@ -53,6 +53,16 @@ void AGProjectPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 		AGProjectPlayerState,
 		PlayerName
 	);
+
+	DOREPLIFETIME(
+		AGProjectPlayerState,
+		bIsReady
+	);
+
+	DOREPLIFETIME(
+		AGProjectPlayerState, 
+		bIsHost
+	);
 }
 
 void AGProjectPlayerState::SetTeam(EGProjectTeam NewTeam)
@@ -104,7 +114,36 @@ void AGProjectPlayerState::CopyProperties(APlayerState* NewPlayerState)
 
 void AGProjectPlayerState::SetPlayerName(const FString& InName)
 {
-	Super::SetPlayerName(InName);
+	if (!InName.IsEmpty())
+	{
+		Super::SetPlayerName(InName);
 
-	PlayerName = InName;
+		PlayerName = InName;
+	}
+	else
+	{
+		PlayerName = Super::GetPlayerName();
+	}
+}
+
+void AGProjectPlayerState::SetReady(bool bNewReady)
+{
+	if (bIsReady == bNewReady)
+	{
+		return;
+	}
+
+	bIsReady = bNewReady;
+
+	if (GEngine)
+	{
+		FString StateText = bIsReady ? TEXT("Ready") : TEXT("Wait");
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] Player State: %s"), *GetPlayerName(), *StateText));
+	}
+	OnReadyChanged.Broadcast();
+}
+
+void AGProjectPlayerState::OnRep_IsReady()
+{
+	OnReadyChanged.Broadcast();
 }

@@ -43,16 +43,8 @@ void UGProjectPlayerBoxWidgetController::BindCallbacksToDependencies()
 
 FText UGProjectPlayerBoxWidgetController::GetPlayerName() const
 {
-	if (PlayerState)
-	{
-		AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(PlayerState);
-		if (PS && !PS->GetPlayerName().IsEmpty())
-		{
-			return FText::FromString(PS->GetPlayerName());
-		}
-		return FText::FromString(PlayerState->GetPlayerName());
-	}
-	return FText::GetEmpty();
+	AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(PlayerState);
+	return  PS ? FText::FromString(PS->GetPlayerName()) : FText::GetEmpty();
 }
 
 void UGProjectPlayerBoxWidgetController::HealthChanged(const FOnAttributeChangeData& Data)

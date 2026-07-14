@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Game/Lobby/GProjectLobbyGameMode.h"
+#include "Player/GProjectPlayerState.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -33,9 +34,17 @@ void AGProjectLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
+	if (AGProjectPlayerState* PS = NewPlayer->GetPlayerState<AGProjectPlayerState>())
+	{
+		if (NewPlayer->GetNetConnection() == nullptr)
+		{
+			PS->bIsHost = true;
+		}
+	}
+
 	UpdatePlayerCountUI();
 
-	CheckAutoStart();
+	//CheckAutoStart();
 }
 
 void AGProjectLobbyGameMode::Logout(AController* Exiting)
@@ -76,7 +85,7 @@ void AGProjectLobbyGameMode::UpdatePlayerCountUI()
 
 void AGProjectLobbyGameMode::CheckAutoStart()
 {
-	if (!GameState) return;
+	/*if (!GameState) return;
 	if (bIsStartingGame) return;
 
 	UWorld* World = GetWorld();
@@ -93,7 +102,7 @@ void AGProjectLobbyGameMode::CheckAutoStart()
 	if (CurrentPlayers >= RequiredPlayers)
 	{
 		StartGame();
-	}
+	}*/
 }
 
 void AGProjectLobbyGameMode::StartGame()
@@ -137,3 +146,32 @@ int32 AGProjectLobbyGameMode::GetRequiredPlayers() const
 	return RequiredPlayers;
 }
 
+bool AGProjectLobbyGameMode::CanStartGame() const
+{
+	if (!GameState) return false;
+
+	int32 TotalPlayers = GameState->PlayerArray.Num();
+
+	if (TotalPlayers <= 1)
+	{
+		return false;
+	}
+
+	for (APlayerState* PS : GameState->PlayerArray)
+	{
+		if (AGProjectPlayerState* GProjectPS = Cast<AGProjectPlayerState>(PS))
+		{
+			if (GProjectPS->bIsHost)
+			{
+				continue;
+			}
+
+			if (!GProjectPS->bIsReady)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}

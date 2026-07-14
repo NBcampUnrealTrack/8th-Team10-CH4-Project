@@ -3,6 +3,7 @@
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 
 #include "Player/GProjectPlayerState.h"
+#include "Game/Lobby/GProjectLobbyGameMode.h"
 #include "UI/Widget/GProjectLobbyWidget.h"
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "Subsystem/GProjectPlayerInfoSubsystem.h"
@@ -73,10 +74,13 @@ void AGProjectLobbyPlayerController::ShowLobbyUI()
 
 	if (!LobbyWidgetClass) return;
 
-	LobbyWidgetInstance = CreateWidget<UGProjectLobbyWidget>(this, LobbyWidgetClass);
-	CurrentWidgetInstance = LobbyWidgetInstance;
+	UGProjectLobbyWidget* LobbyUI = CreateWidget<UGProjectLobbyWidget>(this, LobbyWidgetClass);
+	if (!LobbyUI) return;
 
-	if (!CurrentWidgetInstance) return;
+	LobbyUI->InitLobbyWidget(this);
+
+	LobbyWidgetInstance = LobbyUI;
+	CurrentWidgetInstance = LobbyUI;
 
 	CurrentWidgetInstance->AddToViewport();
 
@@ -142,3 +146,84 @@ bool AGProjectLobbyPlayerController::ServerSetPlayerName_Validate(const FString&
 {
 	return true;
 }
+
+
+void AGProjectLobbyPlayerController::Server_ToggleReady_Implementation()
+{
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+	if (!PS || PS->bIsHost) return;
+
+	PS->SetReady(!PS->bIsReady);
+
+	if (GEngine)
+	{
+		FString StateText = PS->bIsReady ? TEXT("READY") : TEXT("WAIT");
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] State: %s"), *PS->GetPlayerName(), *StateText));
+	}
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (AGProjectLobbyPlayerController* LobbyPC = Cast<AGProjectLobbyPlayerController>(It->Get()))
+			{
+				LobbyPC->ClientRefreshLobbyUI();
+			}
+		}
+	}
+}
+
+void AGProjectLobbyPlayerController::Server_RequestStartGame_Implementation()
+{
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+	if (PS && PS->bIsHost)
+	{
+		if (AGProjectLobbyGameMode* GM = GetWorld()->GetAuthGameMode<AGProjectLobbyGameMode>())
+		{
+			if (GM->CanStartGame())
+			{
+				if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Yellow, TEXT("Host requested Game Start!"));
+				GM->StartGame();
+			}
+		}
+	}
+}
+
+UGProjectLobbyWidget* AGProjectLobbyPlayerController::GetLobbyWidget() const
+{
+	return Cast<UGProjectLobbyWidget>(LobbyWidgetInstance);
+}
+
+void AGProjectLobbyPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	BindLobbyWidgetToPlayerState();
+}
+
+void AGProjectLobbyPlayerController::BindLobbyWidgetToPlayerState()
+{
+	if (!IsLocalController()) return;
+
+	UGProjectLobbyWidget* LobbyUI = GetLobbyWidget();
+	if (!LobbyUI) return;
+
+	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
+	if (!PS) return;
+
+	PS->OnReadyChanged.RemoveAll(LobbyUI);
+	PS->OnReadyChanged.AddUObject(LobbyUI, &UGProjectLobbyWidget::RefreshButtonState);
+
+	LobbyUI->RefreshButtonState();
+}
+
+void AGProjectLobbyPlayerController::ClientRefreshLobbyUI_Implementation()
+{
+	if (UGProjectLobbyWidget* LobbyUI = GetLobbyWidget())
+	{
+		LobbyUI->RefreshButtonState();
+	}
+}
+
+

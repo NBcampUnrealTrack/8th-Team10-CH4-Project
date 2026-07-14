@@ -24,6 +24,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
 	EGProjectTeam
 )
 
+DECLARE_MULTICAST_DELEGATE(FGProjectReadyChangedSignature)
+
 UCLASS()
 class PROJECTG_API AGProjectPlayerState : public APlayerState, public IAbilitySystemInterface
 {
@@ -52,6 +54,19 @@ public:
 
 	FString GetPlayerName() const { return PlayerName; }
 	void SetPlayerName(const FString& InName) override;
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsReady)
+	bool bIsReady = false;
+
+	UPROPERTY(Replicated)
+	bool bIsHost = false;
+
+	UFUNCTION()
+	void OnRep_IsReady();
+
+	void SetReady(bool bNewReady);
+
+	FGProjectReadyChangedSignature OnReadyChanged;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability System")
