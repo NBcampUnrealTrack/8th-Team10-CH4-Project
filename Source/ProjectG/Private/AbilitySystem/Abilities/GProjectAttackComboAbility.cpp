@@ -102,6 +102,7 @@ void UGProjectAttackComboAbility::EndAbility(
 {
 	InputBuffer.Reset();
 	HitActorsThisStep.Reset();
+	LastHitTimestamps.Reset();
 	CurrentComboStepIndex = INDEX_NONE;
 	bComboWindowOpen = false;
 	bNextSectionReserved = false;
@@ -365,6 +366,9 @@ void UGProjectAttackComboAbility::SyncCurrentStepFromMontage()
 
 void UGProjectAttackComboAbility::BeginCurrentStepTrace(FName TraceSocketName)
 {
+	// Reset per hit window, not just per combo step, so multiple hit windows in one section can each land on the same target.
+	HitActorsThisStep.Reset();
+
 	bHasPreviousUnarmedTraceLocation = false;
 	PreviousUnarmedTraceLocation = FVector::ZeroVector;
 	CurrentUnarmedTraceSocket = TraceSocketName;
@@ -484,6 +488,14 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			continue;
 		}
 
+		// Guard against back-to-back hit windows landing on the same target almost simultaneously.
+		const float CurrentTime = GetWorld()->GetTimeSeconds();
+		if (const float* LastHitTime = LastHitTimestamps.Find(TargetPtr);
+			LastHitTime && CurrentTime - *LastHitTime < MinHitReapplyInterval)
+		{
+			continue;
+		}
+
 		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
 		if (!TargetASC)
 		{
@@ -539,6 +551,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 				ParriedReactEventData);
 
 			HitActorsThisStep.Add(TargetPtr);
+			LastHitTimestamps.Add(TargetPtr, CurrentTime);
 			continue;
 		}
 
@@ -568,6 +581,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			UGProjectAbilitySystemLibrary::SendHitReactEvent(DamageParams);
 		}
 		HitActorsThisStep.Add(TargetPtr);
+		LastHitTimestamps.Add(TargetPtr, CurrentTime);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target);
 			!DamageParams.KnockbackForce.IsNearlyZero() || DamageParams.AirborneLaunchForce > 0.0f)
