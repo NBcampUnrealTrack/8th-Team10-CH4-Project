@@ -6,6 +6,7 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Item/Weapon/GProjectCombatStyle.h"
+#include "GameplayTagContainer.h"
 #include "Character/GProjectCharacterVariant.h"
 #include "GProjectCharacter.generated.h"
 
@@ -22,6 +23,8 @@ class UGProjectComboData;
 class UGProjectItemHolderComponent;
 class UGameplayEffect;
 class USpringArmComponent;
+class UGProjectTransform;
+class USkeletalMeshComponent;
 class AGProjectFloatingText; // 추가
 class UBillboardComponent; // 추가
 
@@ -73,6 +76,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Combo")
 	void ResetActiveComboData();
 
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void StartTransform(UGProjectTransform* NewTransform);
+
+	UFUNCTION(BlueprintCallable, Category = "Transform")
+	void EndTransform();
+
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	bool IsTransformed() const { return ActiveTransform != nullptr; }
+
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
 
@@ -100,6 +112,9 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+
+	UFUNCTION()
+	void OnRep_ActiveTransform();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Settings")
 	TArray<TSubclassOf<UGProjectGameplayAbility>> StartupAbilities;
@@ -152,6 +167,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Resource|SP")
 	TSubclassOf<UGameplayEffect> SPRegenGameplayEffectClass;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform")
+	TObjectPtr<UGProjectTransform> GorillaTransform;
 	// 추가: 피격 데미지 숫자 연출용
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Damage")
 	TSubclassOf<AGProjectFloatingText> FloatingDamageTextClass;
@@ -186,6 +203,9 @@ private:
 	void StartDeathDissolve();
 	void UpdateDeathDissolve(float DeltaSeconds);
 	void FinishDeathDissolve();
+	void ApplyTransformVisual();
+	void ClearTransformVisual();
+	void OnTransformedTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeath();
@@ -207,6 +227,8 @@ private:
 
 	bool bDissolving = false;
 	float DissolveElapsed = 0.0f;
+	float DefaultWalkSpeed = 450.0f;
+	float DefaultSprintSpeed = 750.0f;
 	FTimerHandle DeathDissolveTimer;
 
 	UPROPERTY(Transient)
@@ -241,6 +263,12 @@ private:
 
 	UPROPERTY(Replicated)
 	TObjectPtr<UGProjectComboData> ActiveDashComboData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Transform", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> TransformMeshComponent;
+
+	UPROPERTY(ReplicatedUsing = OnRep_ActiveTransform)
+	TObjectPtr<UGProjectTransform> ActiveTransform;
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
 	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;

@@ -14,6 +14,7 @@ UGProjectPickupItemAbility::UGProjectPickupItemAbility()
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+    ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Transformed);
     ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Interaction_Pickup);
 }
 

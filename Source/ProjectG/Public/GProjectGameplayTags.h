@@ -16,6 +16,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_BasicAttack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_StrongAttack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_WeaponAttack);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_ThrowWeapon);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Combat_Parry);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Skill);
@@ -30,6 +31,7 @@ namespace GProjectGameplayTags
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Invulnerable);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Transformed);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Airborne);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dashing);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Attacking);
@@ -43,6 +45,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Interaction_Pickup);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Attack);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_ThrowWeapon);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Parry);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_HitReact);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Knockdown);
@@ -60,6 +63,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_Begin);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_Tick);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Attack_Trace_End);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Throw_Release);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Parry_Success);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Parry_Window_Close);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_HitReact);

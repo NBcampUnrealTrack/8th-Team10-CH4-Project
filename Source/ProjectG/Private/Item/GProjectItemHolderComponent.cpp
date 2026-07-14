@@ -63,6 +63,24 @@ void UGProjectItemHolderComponent::DropHeldItem()
 	ServerDropHeldItem();
 }
 
+AGProjectItemActorBase* UGProjectItemHolderComponent::ReleaseHeldItem()
+{
+	AGProjectCharacter* Character = GetOwnerCharacter();
+	if (!Character || !Character->HasAuthority() || !HeldItem)
+	{
+		return nullptr;
+	}
+
+	AGProjectItemActorBase* ReleasedItem = HeldItem;
+	HeldItem = nullptr;
+
+	ReleasedItem->HandleUnequipped(Character);
+	ReleasedItem->ForceNetUpdate();
+	Character->ForceNetUpdate();
+
+	return ReleasedItem;
+}
+
 bool UGProjectItemHolderComponent::HasNearbyPickup()
 {
 	AGProjectCharacter* Character = GetOwnerCharacter();
@@ -178,7 +196,8 @@ void UGProjectItemHolderComponent::PickupItemInternal(AGProjectItemActorBase* It
 void UGProjectItemHolderComponent::DropHeldItemInternal()
 {
 	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character || !HeldItem)
+	UWorld* World = GetWorld();
+	if (!Character || !HeldItem || !World)
 	{
 		return;
 	}
@@ -186,8 +205,24 @@ void UGProjectItemHolderComponent::DropHeldItemInternal()
 	AGProjectItemActorBase* DroppedItem = HeldItem;
 	HeldItem = nullptr;
 	DroppedItem->HandleUnequipped(Character);
-	DroppedItem->SetActorLocation(
-		Character->GetActorLocation() + Character->GetActorForwardVector() * 120.0f + FVector(0.0f, 0.0f, 40.0f));
+
+	const FVector DropOrigin = Character->GetActorLocation() +
+		Character->GetActorForwardVector() * 120.0f +
+		FVector(0.0f, 0.0f, 40.0f);
+
+	FVector DropLocation = DropOrigin;
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(DropItemGroundTrace), false, Character);
+	QueryParams.AddIgnoredActor(DroppedItem);
+
+	FHitResult GroundHit;
+	const FVector TraceEnd = DropOrigin - FVector(0.0f, 0.0f, 500.0f);
+	if (World->LineTraceSingleByChannel(GroundHit, DropOrigin, TraceEnd, ECC_WorldStatic, QueryParams))
+	{
+		DropLocation = GroundHit.ImpactPoint + FVector(0.0f, 0.0f, 20.0f);
+	}
+
+	DroppedItem->SetActorLocation(DropLocation);
 	DroppedItem->SetPickupEnabled(true);
 	DroppedItem->ForceNetUpdate();
 	Character->ForceNetUpdate();

@@ -31,6 +31,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	void DropHeldItem();
 
+	AGProjectItemActorBase* ReleaseHeldItem();
+
 	UFUNCTION(BlueprintPure, Category = "Item")
 	bool HasHeldItem() const { return HeldItem != nullptr; }
 

@@ -1,7 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Character/GProjectCharacter.h"
-
+#include "Character/GProjectTransform.h"
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
 #include "AbilitySystem/Combo/GProjectComboData.h"
@@ -65,6 +65,12 @@ AGProjectCharacter::AGProjectCharacter()
 	LockOnComponent = CreateDefaultSubobject<UGProjectLockOnComponent>(TEXT("LockOnComponent"));
 	ItemHolderComponent = CreateDefaultSubobject<UGProjectItemHolderComponent>(TEXT("ItemHolderComponent"));
 
+	TransformMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TransformMesh"));
+	TransformMeshComponent->SetupAttachment(GetCapsuleComponent());
+	TransformMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TransformMeshComponent->SetVisibility(false);
+	TransformMeshComponent->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
 #if WITH_EDITORONLY_DATA
 	// 추가: 데미지 텍스트 스폰 위치 미리보기용 (에디터 뷰포트에서만 보임)
 	DamageTextPreviewMarker = CreateEditorOnlyDefaultSubobject<UBillboardComponent>(TEXT("DamageTextPreviewMarker"));
@@ -93,6 +99,10 @@ void AGProjectCharacter::OnConstruction(const FTransform& Transform)
 void AGProjectCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	DefaultWalkSpeed = WalkSpeed;
+	DefaultSprintSpeed = SprintSpeed;
+
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
@@ -213,6 +223,7 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 		FGameplayTagContainer EffectTagsToRemove;
 
 		EffectTagsToRemove.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
+		EffectTagsToRemove.AddTag(GProjectGameplayTags::State_Character_Transformed);
 
 		ASC->RemoveActiveEffectsWithGrantedTags(EffectTagsToRemove);
 
@@ -224,6 +235,8 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 	}
+
+	EndTransform();
 
 	SetHitFlashAmount(0.0f);
 	GetWorldTimerManager().ClearTimer(HitFlashTimer);
@@ -346,6 +359,7 @@ void AGProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectCharacter, ActiveAirComboData);
 	DOREPLIFETIME(AGProjectCharacter, ActiveDashComboData);
 	DOREPLIFETIME(AGProjectCharacter, CombatStyle);
+	DOREPLIFETIME(AGProjectCharacter, ActiveTransform);
 }
 
 void AGProjectCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
@@ -422,16 +436,25 @@ void AGProjectCharacter::MulticastPlayDeath_Implementation()
 {
 	bDead = true;
 
-	UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
-	if (!AnimInstance || !DeathMontage || DeathMontagePlayRate <= 0.0f)
+	USkeletalMeshComponent* DeathMesh = ActiveTransform ? TransformMeshComponent.Get() : GetMesh();
+	UAnimMontage* MontageToPlay = ActiveTransform ? ActiveTransform->DeathMontage.Get() : DeathMontage.Get();
+
+	UAnimInstance* AnimInstance = DeathMesh ? DeathMesh->GetAnimInstance() : nullptr;
+	if (!AnimInstance || !MontageToPlay || DeathMontagePlayRate <= 0.0f)
 	{
 		return;
 	}
 
-	AnimInstance->Montage_Play(DeathMontage, DeathMontagePlayRate);
-	AnimInstance->Montage_JumpToSection(DeathFallSection, DeathMontage);
-	AnimInstance->Montage_SetNextSection(DeathFallSection, DeathDownLoopSection, DeathMontage);
-	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, DeathMontage);
+	AnimInstance->Montage_Play(MontageToPlay, DeathMontagePlayRate);
+
+	if (ActiveTransform)
+	{
+		return;
+	}
+
+	AnimInstance->Montage_JumpToSection(DeathFallSection, MontageToPlay);
+	AnimInstance->Montage_SetNextSection(DeathFallSection, DeathDownLoopSection, MontageToPlay);
+	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, MontageToPlay);
 }
 
 void AGProjectCharacter::MulticastPlayHitFlash_Implementation()
@@ -466,7 +489,7 @@ void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
 	DissolveElapsed = 0.0f;
 	bDissolving = true;
 
-	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	USkeletalMeshComponent* CharacterMesh = ActiveTransform ? TransformMeshComponent.Get() : GetMesh();
 	if (!CharacterMesh)
 	{
 		FinishDeathDissolve();
@@ -519,9 +542,15 @@ void AGProjectCharacter::UpdateDeathDissolve(float DeltaSeconds)
 void AGProjectCharacter::FinishDeathDissolve()
 {
 	bDissolving = false;
+
 	if (GetMesh())
 	{
-		GetMesh()->SetVisibility(false, true);
+		GetMesh()->SetVisibility(false, false);
+	}
+
+	if (TransformMeshComponent)
+	{
+		TransformMeshComponent->SetVisibility(false, false);
 	}
 
 	TArray<AActor*> AttachedActors;
@@ -602,6 +631,11 @@ void AGProjectCharacter::InitAbilityActorInfo()
 
 	ASC->InitAbilityActorInfo(GProjectPlayerState, this);
 	RefreshMovementStateTags();
+
+	ASC->RegisterGameplayTagEvent(
+		GProjectGameplayTags::State_Character_Transformed,
+		EGameplayTagEventType::NewOrRemoved)
+		.AddUObject(this, &ThisClass::OnTransformedTagChanged);
 }
 
 void AGProjectCharacter::ApplySPRegenEffect()
@@ -726,6 +760,12 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 
 	DissolveMaterials.Reset();
 
+	if (TransformMeshComponent)
+	{
+		TransformMeshComponent->SetVisibility(false, false);
+		TransformMeshComponent->SetSkeletalMesh(nullptr);
+	}
+
 	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 	{
 		for (int32 MaterialIndex = 0; MaterialIndex < OriginalDeathMaterials.Num(); ++MaterialIndex)
@@ -768,3 +808,125 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 	}
 }
 
+void AGProjectCharacter::StartTransform(UGProjectTransform* NewTransform)
+{
+	if (!HasAuthority() || !NewTransform || bDead)
+	{
+		return;
+	}
+
+	if (ItemHolderComponent && ItemHolderComponent->HasHeldItem())
+	{
+		ItemHolderComponent->DropHeldItem();
+	}
+
+	ActiveTransform = NewTransform;
+	ApplyTransformVisual();
+
+	SetActiveComboData(
+		NewTransform->GroundComboData,
+		NewTransform->AirComboData,
+		NewTransform->DashComboData);
+
+	ForceNetUpdate();
+}
+
+void AGProjectCharacter::EndTransform()
+{
+	if (!HasAuthority() || !ActiveTransform)
+	{
+		return;
+	}
+
+	ActiveTransform = nullptr;
+	ClearTransformVisual();
+	ResetActiveComboData();
+
+	ForceNetUpdate();
+}
+
+void AGProjectCharacter::OnRep_ActiveTransform()
+{
+	if (ActiveTransform)
+	{
+		ApplyTransformVisual();
+		return;
+	}
+
+	ClearTransformVisual();
+}
+
+void AGProjectCharacter::ApplyTransformVisual()
+{
+	if (!ActiveTransform || !TransformMeshComponent)
+	{
+		return;
+	}
+
+	TransformMeshComponent->SetSkeletalMesh(ActiveTransform->TransformMesh);
+	TransformMeshComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	TransformMeshComponent->SetAnimInstanceClass(ActiveTransform->TransformAnimClass);
+	TransformMeshComponent->SetRelativeLocation(ActiveTransform->MeshRelativeLocation);
+	TransformMeshComponent->SetRelativeRotation(ActiveTransform->MeshRelativeRotation);
+	TransformMeshComponent->SetRelativeScale3D(FVector(ActiveTransform->MeshScale));
+	TransformMeshComponent->SetVisibility(true, true);
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetVisibility(false, false);
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCapsuleSize(ActiveTransform->CapsuleRadius, ActiveTransform->CapsuleHalfHeight);
+	}
+
+	WalkSpeed = ActiveTransform->WalkSpeed;
+	SprintSpeed = ActiveTransform->SprintSpeed;
+	SetSprintRequested(bSprintRequested);
+
+	SetCombatStyle(EGProjectCombatStyle::Unarmed);
+}
+
+void AGProjectCharacter::ClearTransformVisual()
+{
+	if (!TransformMeshComponent)
+	{
+		return;
+	}
+
+	TransformMeshComponent->SetVisibility(false, true);
+	TransformMeshComponent->SetSkeletalMesh(nullptr);
+
+	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
+	{
+		CharacterMesh->SetVisibility(true, false);
+	}
+
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCapsuleSize(34.0f, 90.0f);
+	}
+
+	WalkSpeed = DefaultWalkSpeed;
+	SprintSpeed = DefaultSprintSpeed;
+	SetSprintRequested(bSprintRequested);
+
+	ResetAttackTraceSource();
+}
+
+void AGProjectCharacter::OnTransformedTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (NewCount > 0)
+	{
+		StartTransform(GorillaTransform);
+		return;
+	}
+
+	EndTransform();
+}
