@@ -14,6 +14,7 @@ UENUM(BlueprintType)
 enum class ERoundPhase : uint8
 {
 	Waiting,
+	Countdown,
 	Playing,
 	Intermission,
 	Finished
@@ -55,6 +56,11 @@ DECLARE_MULTICAST_DELEGATE_SixParams(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectRoundCountdownChangedSignature,
+	int32
+);
+
 UCLASS()
 class PROJECTG_API AGProjectGameState : public AGameState
 {
@@ -82,8 +88,12 @@ public:
 
 	void BroadcastKillFeed(AGProjectPlayerState* KillerPlayerState, AGProjectPlayerState* VictimPlayerState);
 
+	void BroadcastRoundCountdown(int32 CountdownValue);
+
 	int32 GetRedTeamRoundWins() const { return RedTeamRoundWins; }
 	int32 GetBlueTeamRoundWins() const { return BlueTeamRoundWins; }
+
+	//int32 GetRoundCountdownValue() const { return RoundCountdownValue; }
 
 	FGProjectMatchTimeChangedSignature OnMatchTimeChanged;
 
@@ -97,6 +107,8 @@ public:
 	FGProjectTeamRoundWinsChangedSignature OnTeamRoundWinsChanged;
 
 	FGProjectKillFeedReceivedSignature OnKillFeedReceived;
+
+	FGProjectRoundCountdownChangedSignature OnRoundCountdownChanged;
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_RemainMatchTime)
@@ -138,4 +150,13 @@ private:
 		const FString& VictimName,
 		int32 VictimColorIndex
 	);
+
+	//UFUNCTION()
+	//void OnRep_RoundCountdownValue();
+
+	//UFUNCTION(NetMulticast, Reliable)
+	//void MulticastRoundCountdown(int32 CountdownValue);
+
+	//UPROPERTY(ReplicatedUsing = OnRep_RoundCountdownValue)
+	//int32 RoundCountdownValue = -1;
 };

@@ -45,6 +45,9 @@ protected:
 
 	void AssignPlayerColor(AGProjectPlayerState* PS);
 
+	void TickRoundCountdown();
+	void BeginRoundFight();
+
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
 
@@ -57,9 +60,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	float RoundTransitionDuration = 3.0f;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Round")
+	int32 RoundCountdownStartValue = 3;
+
 private:
+	void AssignTeam(APlayerController* NewPlayer);
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
+	FTimerHandle RoundCountdownTimerHandle;
 
-	void AssignTeam(APlayerController* NewPlayer);
+	int CurrentRoundCountdownValue = 0;
 };

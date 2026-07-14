@@ -131,7 +131,79 @@ void AGProjectGameMode::HandleMatchHasEnded()
 		RoundTransitionTimerHandle
 	);
 
+	GetWorldTimerManager().ClearTimer(
+		RoundCountdownTimerHandle
+	);
+
 	// 최종 승자, 결과 UI 로비 이동 등.....
+}
+
+void AGProjectGameMode::TickRoundCountdown()
+{
+	if (!IsMatchInProgress())
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::Countdown)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	--CurrentRoundCountdownValue;
+
+	if (CurrentRoundCountdownValue > 0)
+	{
+		GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
+
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+	GS->BroadcastRoundCountdown(0);
+
+	BeginRoundFight();
+}
+
+void AGProjectGameMode::BeginRoundFight()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	GS->SetRoundPhase(ERoundPhase::Playing);
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		MatchTimerHandle,
+		this,
+		&ThisClass::TickMatchTimer,
+		1.0f,
+		true
+	);
 }
 
 void AGProjectGameMode::StartRound()
@@ -142,23 +214,28 @@ void AGProjectGameMode::StartRound()
 	}
 
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
 	if (!GS)
 	{
 		return;
 	}
 
-	GS->SetRoundPhase(ERoundPhase::Playing);
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
 
 	GS->SetRemainMatchTime(RoundDuration);
 
-	GetWorldTimerManager().ClearTimer(
-		MatchTimerHandle
-	);
+	GS->SetRoundPhase(ERoundPhase::Countdown);
+
+	CurrentRoundCountdownValue = FMath::Max(RoundCountdownStartValue, 1);
+
+	GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
 
 	GetWorldTimerManager().SetTimer(
-		MatchTimerHandle,
+		RoundCountdownTimerHandle,
 		this,
-		&ThisClass::TickMatchTimer,
+		&ThisClass::TickRoundCountdown,
 		1.0f,
 		true
 	);
