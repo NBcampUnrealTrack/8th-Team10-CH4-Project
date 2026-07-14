@@ -5,9 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "TimerManager.h"
+#include "Item/ItemSpawnDataAsset.h"
 #include "GProjectGameMode.generated.h"
 
-
+class ASpawnBase;
 class APlayerController;
 class AGProjectPlayerState;
 
@@ -24,26 +25,35 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
 	void NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState);
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning|Limit")
+	void DecreaseSpawnedItemCount();
 
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
-
+	
 	void StartRound();
 	void FinishRound();
 	void StartNextRound();
 	void TickMatchTimer();
 	void FinishMatchAfterDelay();
-
 	void ResetPlayersForNextRound();
-
+	
+	void ClearPreviousRoundItems();
+	
 	bool IsTeamEliminated(EGProjectTeam Team)const;
 
 	bool HasTeamWonMatch() const;
 
 	void AssignPlayerColor(AGProjectPlayerState* PS);
+	
+	void SpectateOtherPlayer(class AGProjectPlayerState* DeadPlayerState);
+
+	void TickRoundCountdown();
+	void BeginRoundFight();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
@@ -56,10 +66,36 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	float RoundTransitionDuration = 3.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
+	TArray<UItemSpawnDataAsset*> ItemPool;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning|Limit")
+	int32 MaxSpawnedItems = 10;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning|Limit")
+	int32 CurrentSpawnedItems = 0;
+	
+	FTimerHandle ItemSpawnTimerHandle;
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning")
+	void SpawnRandomItem();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Settings", meta = (AllowPrivateAccess = "true"))
+	float ItemSpawnInterval = 10.0f;
+	
+	UPROPERTY()
+	TArray<ASpawnBase*> SpawnZones;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Round")
+	int32 RoundCountdownStartValue = 3;
 
 private:
+	void AssignTeam(APlayerController* NewPlayer);
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
+	FTimerHandle RoundCountdownTimerHandle;
 
-	void AssignTeam(APlayerController* NewPlayer);
+	int CurrentRoundCountdownValue = 0;
 };

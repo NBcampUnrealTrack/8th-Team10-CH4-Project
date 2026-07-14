@@ -24,6 +24,7 @@
 #include "UI/Widget/GProjectMatchResultWidget.h"
 #include "UI/Widget/GProjectMatchHeaderWidget.h"
 #include "UI/Widget/GProjectKillFeedWidget.h"
+#include "UI/Widget/GProjectRoundCountdownWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -56,6 +57,9 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 
 	OverlayController->OnKillFeedReceived.RemoveAll(this);
 	OverlayController->OnKillFeedReceived.AddUObject(this, &ThisClass::HandleKillFeedReceived);
+
+	OverlayController->OnRoundCountdownChanged.RemoveAll(this);
+	OverlayController->OnRoundCountdownChanged.AddUObject(this, &ThisClass::HandleRoundCountdownChanged);
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -70,6 +74,8 @@ void UGProjectOverlayWidget::NativeDestruct()
 		OverlayController = Cast<UGProjectOverlayWidgetController>(WidgetController))
 	{
 		OverlayController->OnKillFeedReceived.RemoveAll(this);
+
+		OverlayController->OnRoundCountdownChanged.RemoveAll(this);
 	}
 
 	PlayerBoxesByPlayerId.Reset();
@@ -394,4 +400,14 @@ void UGProjectOverlayWidget::HandleKillFeedReceived(
 			VictimColorIndex
 		);
 	}
+}
+
+void UGProjectOverlayWidget::HandleRoundCountdownChanged(const int32 CountdownValue)
+{
+	if (!RoundCountdownWidget)
+	{
+		return;
+	}
+
+	RoundCountdownWidget->ShowCountdown(CountdownValue);
 }

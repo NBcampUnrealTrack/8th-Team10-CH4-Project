@@ -30,6 +30,9 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 		GameState->OnTeamRoundWinsChanged.AddUObject(this, &ThisClass::HandleTeamRoundWinsChanged);
 		GameState->OnKillFeedReceived.RemoveAll(this);
 		GameState->OnKillFeedReceived.AddUObject(this, &ThisClass::HandleKillFeedReceived);
+
+		GameState->OnRoundCountdownChanged.RemoveAll(this);
+		GameState->OnRoundCountdownChanged.AddUObject(this, &ThisClass::HandleRoundCountdownChanged);
 	}
 
 	BindTeamCallbacks();
@@ -185,4 +188,9 @@ void UGProjectOverlayWidgetController::HandleKillFeedReceived(
 		VictimName,
 		VictimColorIndex
 	);
+}
+
+void UGProjectOverlayWidgetController::HandleRoundCountdownChanged(const int32 CountdownValue)
+{
+	OnRoundCountdownChanged.Broadcast(CountdownValue);
 }

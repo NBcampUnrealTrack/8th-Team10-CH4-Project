@@ -11,11 +11,14 @@
 #include "EngineUtils.h"
 #include "Item/GProjectItemActorBase.h"
 #include "Item/GProjectItemHolderComponent.h"
+#include "Item/SpawnItem/SpawnBase.h"
+
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Item/GItemHolderComponent.h"
 #include "Item/GItemPickup.h"
+#include "Kismet/GameplayStatics.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -78,14 +81,31 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 	{
 		return;
 	}
+	APlayerController* DeadPC = Cast<APlayerController>(DeadPlayerState->GetOwner());
+	if (DeadPC)
+	{
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			APlayerController* OtherPC = It->Get();
+			if (!OtherPC || OtherPC == DeadPC) continue;
+			
+			AGProjectCharacter* LivingCharacter = Cast<AGProjectCharacter>(OtherPC->GetPawn());
+          
+			if (LivingCharacter && !LivingCharacter->IsDead())
+			{
+				DeadPC->SetViewTargetWithBlend(LivingCharacter, 0.5f);
+				break; 
+			}
+		}
+	}
 
 	if (!IsTeamEliminated(DeadTeam))
 	{
 		UE_LOG(
-			LogTemp,
-			Warning,
-			TEXT("Player Died, But team still alive | PlayerID = %d"),
-			DeadPlayerState->GetPlayerId()
+		   LogTemp,
+		   Warning,
+		   TEXT("Player Died, But team still alive | PlayerID = %d"),
+		   DeadPlayerState->GetPlayerId()
 		);
 		return;
 	}
@@ -100,6 +120,89 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 void AGProjectGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+	
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnBase::StaticClass(), (TArray<AActor*>&)SpawnZones);
+}
+
+void AGProjectGameMode::SpawnRandomItem()
+{
+    int32 RealActiveCount = 0;
+
+    if (ItemPool.Num() > 0)
+    {
+        for (UItemSpawnDataAsset* Asset : ItemPool)
+        {
+            if (!Asset || !Asset->ItemClass) continue;
+
+            TArray<AActor*> FoundItems;
+        	
+            UGameplayStatics::GetAllActorsOfClass(GetWorld(), Asset->ItemClass, FoundItems);
+
+            for (AActor* Act : FoundItems)
+            {
+                if (::IsValid(Act) && !Act->IsActorBeingDestroyed())
+                {
+                    RealActiveCount++;
+                }
+            }
+        }
+    }
+    CurrentSpawnedItems = RealActiveCount;
+	
+    if (CurrentSpawnedItems >= MaxSpawnedItems)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("아이템 최대 스폰 갯수 도달: 맵에 이미 %d개가 존재하여 스폰하지 않습니다. (최대: %d)"), CurrentSpawnedItems, MaxSpawnedItems);
+        return;
+    }
+	
+    if (ItemPool.Num() == 0 || SpawnZones.Num() == 0) return;
+	
+    float TotalWeight = 0.0f;
+    for (UItemSpawnDataAsset* Asset : ItemPool)
+    {
+       if (Asset)
+       {
+          TotalWeight += Asset->SpawnWeight;
+       }
+    }
+    if (TotalWeight <= 0.0f) return;
+    
+    float DiceRoll = FMath::FRandRange(0.0f, TotalWeight);
+    UItemSpawnDataAsset* ChosenAsset = nullptr;
+    
+    for (UItemSpawnDataAsset* Asset : ItemPool)
+    {
+       if (!Asset) continue;
+       DiceRoll -= Asset->SpawnWeight;
+        
+       if (DiceRoll <= 0.0f)
+       {
+          ChosenAsset = Asset;
+          break;
+       }
+    }
+    if (!ChosenAsset)
+    {
+       ChosenAsset = ItemPool.Last();
+    }
+	
+    if (ChosenAsset && ChosenAsset->ItemClass)
+    {
+       int32 RandomZoneIndex = FMath::RandRange(0, SpawnZones.Num() - 1);
+       ASpawnBase* TargetZone = SpawnZones[RandomZoneIndex];
+        
+       if (TargetZone)
+       {
+          TargetZone->SpawnItem(ChosenAsset->ItemClass);
+          CurrentSpawnedItems++;
+          UE_LOG(LogTemp, Log, TEXT("아이템 스폰 성공! 현재 카운트: %d / %d"), CurrentSpawnedItems, MaxSpawnedItems);
+       }
+    }
+}
+
+void AGProjectGameMode::DecreaseSpawnedItemCount()
+{
+	CurrentSpawnedItems = FMath::Max(0, CurrentSpawnedItems - 1);
 }
 
 void AGProjectGameMode::HandleMatchHasStarted()
@@ -131,7 +234,99 @@ void AGProjectGameMode::HandleMatchHasEnded()
 		RoundTransitionTimerHandle
 	);
 
-	// ���� ����, ��� UI �κ� �̵� ��.....
+	GetWorldTimerManager().ClearTimer(
+		RoundCountdownTimerHandle
+	);
+}
+
+void AGProjectGameMode::TickRoundCountdown()
+{
+	if (!IsMatchInProgress())
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::Countdown)
+	{
+		GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+		return;
+	}
+
+	--CurrentRoundCountdownValue;
+
+	if (CurrentRoundCountdownValue > 0)
+	{
+		GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
+
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
+
+	GS->BroadcastRoundCountdown(0);
+
+	BeginRoundFight();
+}
+
+void AGProjectGameMode::BeginRoundFight()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	GS->SetRoundPhase(ERoundPhase::Playing);
+	GS->SetRemainMatchTime(RoundDuration);
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
+	
+	ClearPreviousRoundItems();
+	
+	if (ItemPool.Num() > 0 && SpawnZones.Num() > 0)
+	{
+		for (int32 i = 0; i < 5; ++i)
+		{
+			SpawnRandomItem();
+		}
+		
+		GetWorldTimerManager().SetTimer(
+			ItemSpawnTimerHandle,
+			this,
+			&AGProjectGameMode::SpawnRandomItem,
+			ItemSpawnInterval,
+			true
+		);
+	}
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+	   MatchTimerHandle,
+	   this,
+	   &ThisClass::TickMatchTimer,
+	   1.0f,
+	   true
+	);
 }
 
 void AGProjectGameMode::StartRound()
@@ -142,23 +337,28 @@ void AGProjectGameMode::StartRound()
 	}
 
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
 	if (!GS)
 	{
 		return;
 	}
 
-	GS->SetRoundPhase(ERoundPhase::Playing);
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
 
 	GS->SetRemainMatchTime(RoundDuration);
 
-	GetWorldTimerManager().ClearTimer(
-		MatchTimerHandle
-	);
+	GS->SetRoundPhase(ERoundPhase::Countdown);
+
+	CurrentRoundCountdownValue = FMath::Max(RoundCountdownStartValue, 1);
+
+	GS->BroadcastRoundCountdown(CurrentRoundCountdownValue);
 
 	GetWorldTimerManager().SetTimer(
-		MatchTimerHandle,
+		RoundCountdownTimerHandle,
 		this,
-		&ThisClass::TickMatchTimer,
+		&ThisClass::TickRoundCountdown,
 		1.0f,
 		true
 	);
@@ -167,29 +367,21 @@ void AGProjectGameMode::StartRound()
 void AGProjectGameMode::FinishRound()
 {
 	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
-
-	if (!GS)
-	{
-		return;
-	}
-
-	if (GS->GetRoundPhase() != ERoundPhase::Playing)
-	{
-		return;
-	}
-
+	if (!GS) return;
+	if (GS->GetRoundPhase() != ERoundPhase::Playing) return;
+	
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
 
 	if (HasTeamWonMatch())
 	{
 		GS->SetRoundPhase(ERoundPhase::Finished);
-
 		GetWorldTimerManager().SetTimer(
-			RoundTransitionTimerHandle, 
-			this, 
-			&ThisClass::FinishMatchAfterDelay, 
-			RoundTransitionDuration, 
-			false
+		   RoundTransitionTimerHandle, 
+		   this, 
+		   &ThisClass::FinishMatchAfterDelay, 
+		   RoundTransitionDuration, 
+		   false
 		);
 
 		return;
@@ -198,12 +390,39 @@ void AGProjectGameMode::FinishRound()
 	GS->SetRoundPhase(ERoundPhase::Intermission);
 
 	GetWorldTimerManager().SetTimer(
-		RoundTransitionTimerHandle,
-		this,
-		&ThisClass::StartNextRound,
-		RoundTransitionDuration,
-		false
+	   RoundTransitionTimerHandle,
+	   this,
+	   &ThisClass::StartNextRound,
+	   RoundTransitionDuration,
+	   false
 	);
+}
+
+void AGProjectGameMode::ClearPreviousRoundItems()
+{
+	CurrentSpawnedItems = 0;
+	
+	if (ItemPool.Num() == 0) return;
+
+	int32 DestroyedCount = 0;
+	
+	for (UItemSpawnDataAsset* Asset : ItemPool)
+	{
+		if (!Asset || !Asset->ItemClass) continue;
+
+		TArray<AActor*> FoundItems;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), Asset->ItemClass, FoundItems);
+
+		for (AActor* Item : FoundItems)
+		{
+			if (::IsValid(Item))
+			{
+				Item->Destroy(); 
+				DestroyedCount++;
+			}
+		}
+	}
+	UE_LOG(LogTemp, Warning, TEXT("=== [새 라운드 청소] 실제 데이터 에셋 기반 아이템 %d개 완벽 파괴 완료! ==="), DestroyedCount);
 }
 
 void AGProjectGameMode::StartNextRound()
@@ -393,6 +612,8 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		PC->SetControlRotation(
 			PlayerStart->GetActorRotation()
 		);
+		
+		PC->SetViewTarget(Character);
 	}
 
 }
