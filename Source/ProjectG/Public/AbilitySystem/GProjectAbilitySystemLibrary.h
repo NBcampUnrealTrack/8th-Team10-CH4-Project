@@ -33,6 +33,9 @@ struct FGProjectDamageEffectParams
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
 	float KnockbackForceMagnitude = 0.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Airborne", meta = (ClampMin = "0.0"))
+	float AirborneLaunchForce = 0.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
 	float HitstunTime = 0.0f;
 
@@ -69,6 +72,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
 	static void SetKnockbackDirection(FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude = 0.0f);
+
+	UFUNCTION(BlueprintPure, Category = "ProjectG|Combat")
+	static bool IsActorInFrontArc(const AActor* Defender, const AActor* Attacker, float ArcAngleDegrees);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem", meta = (WorldContext = "WorldContextObject"))
 	static void GetLivePlayersWithinRadius(const UObject* WorldContextObject, TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius, const FVector& SphereOrigin);

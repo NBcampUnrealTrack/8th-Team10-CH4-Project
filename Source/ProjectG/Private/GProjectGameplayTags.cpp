@@ -14,6 +14,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_StrongAttack, "InputTag.Combat.StrongAttack");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_WeaponAttack, "InputTag.Combat.WeaponAttack");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_ThrowWeapon, "InputTag.Combat.ThrowWeapon");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Combat_Parry, "InputTag.Combat.Parry");
 
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Skill, "InputTag.Skill");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Skill_Accessory, "InputTag.Skill.Accessory");
@@ -32,13 +33,17 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Movement_Dashing, "State.Movement.Dashing");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Attacking, "State.Combat.Attacking");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_AirAttackUsed, "State.Combat.AirAttackUsed");
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Airborne, "State.Combat.Airborne");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Hitstun, "State.Combat.Hitstun");
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Knockdown, "State.Combat.Knockdown");
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_Parrying, "State.Combat.Parrying");
+	UE_DEFINE_GAMEPLAY_TAG(State_Combat_ParryWindow, "State.Combat.ParryWindow");
 	UE_DEFINE_GAMEPLAY_TAG(State_Targeting_LockOn, "State.Targeting.LockOn");
 	UE_DEFINE_GAMEPLAY_TAG(State_Interaction_Pickup, "State.Interaction.Pickup");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Attack, "Ability.Combat.Attack");
-	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_ThrowWeapon, "Ability.Combat.Throweapon");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_ThrowWeapon, "Ability.Combat.ThrowWeapon");
+	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Parry, "Ability.Combat.Parry");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_HitReact, "Ability.Combat.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Knockdown, "Ability.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Movement_Sprint, "Ability.Movement.Sprint");
@@ -54,7 +59,10 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_Tick, "Event.Combat.Attack.Trace.Tick");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Attack_Trace_End, "Event.Combat.Attack.Trace.End");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Throw_Release, "Event.Combat.Throw.Release");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Parry_Success, "Event.Combat.Parry.Success");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Parry_Window_Close, "Event.Combat.Parry.Window.Close");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_HitReact, "Event.Combat.HitReact");
+	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_React_Parried, "Event.Combat.React.Parried");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Combat_Knockdown, "Event.Combat.Knockdown");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_Pickup, "Event.Interaction.Pickup");
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_UseItem, "Event.Interaction.UseItem");

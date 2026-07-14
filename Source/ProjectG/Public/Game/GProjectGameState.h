@@ -6,12 +6,15 @@
 #include "GameFramework/GameState.h"
 #include "GProjectGameState.generated.h"
 
+class AGProjectPlayerState;
 enum class EGProjectTeam : uint8;
+
 
 UENUM(BlueprintType)
 enum class ERoundPhase : uint8
 {
 	Waiting,
+	Countdown,
 	Playing,
 	Intermission,
 	Finished
@@ -43,6 +46,21 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_SixParams(
+	FGProjectKillFeedReceivedSignature,
+	int32,
+	const FString&,
+	int32,
+	int32,
+	const FString&,
+	int32
+);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectRoundCountdownChangedSignature,
+	int32
+);
+
 UCLASS()
 class PROJECTG_API AGProjectGameState : public AGameState
 {
@@ -68,8 +86,14 @@ public:
 	void AddTeamRoundWin(EGProjectTeam Winner);
 	void ResetTeamRoundWins();
 
+	void BroadcastKillFeed(AGProjectPlayerState* KillerPlayerState, AGProjectPlayerState* VictimPlayerState);
+
+	void BroadcastRoundCountdown(int32 CountdownValue);
+
 	int32 GetRedTeamRoundWins() const { return RedTeamRoundWins; }
 	int32 GetBlueTeamRoundWins() const { return BlueTeamRoundWins; }
+
+	//int32 GetRoundCountdownValue() const { return RoundCountdownValue; }
 
 	FGProjectMatchTimeChangedSignature OnMatchTimeChanged;
 
@@ -81,6 +105,10 @@ public:
 	FGProjectRoundPhaseChangedSignature OnRoundPhaseChanged;
 
 	FGProjectTeamRoundWinsChangedSignature OnTeamRoundWinsChanged;
+
+	FGProjectKillFeedReceivedSignature OnKillFeedReceived;
+
+	FGProjectRoundCountdownChangedSignature OnRoundCountdownChanged;
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_RemainMatchTime)
@@ -112,4 +140,23 @@ private:
 
 	UFUNCTION()
 	void OnRep_TeamRoundWins();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastReceiveKillFeed(
+		int32 KillerPlayerId,
+		const FString& KillerName,
+		int32 KillerColorIndex,
+		int32 VictimPlayerId,
+		const FString& VictimName,
+		int32 VictimColorIndex
+	);
+
+	//UFUNCTION()
+	//void OnRep_RoundCountdownValue();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRoundCountdown(int32 CountdownValue);
+
+	//UPROPERTY(ReplicatedUsing = OnRep_RoundCountdownValue)
+	//int32 RoundCountdownValue = -1;
 };

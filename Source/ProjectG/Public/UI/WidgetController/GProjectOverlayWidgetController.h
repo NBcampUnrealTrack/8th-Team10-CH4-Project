@@ -33,6 +33,21 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_SixParams(
+	FGProjectKillFeedUIReceivedSignature,
+	int32,
+	const FString&,
+	int32,
+	int32,
+	const FString&,
+	int32
+);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectRoundCountdownUIChangedSignature,
+	int32
+);
+
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
 {
@@ -58,6 +73,10 @@ public:
 
 	FGProjectTeamScoreUIChangedSignature OnTeamScoreUIChanged;
 
+	FGProjectKillFeedUIReceivedSignature OnKillFeedReceived;
+
+	FGProjectRoundCountdownUIChangedSignature OnRoundCountdownChanged;
+
 private:
 	void HandlePlayerListChanged();
 	void HandleMatchTimeChanged(int32 RemainTime);
@@ -70,4 +89,15 @@ private:
 	void HandleRoundPhaseChanged(ERoundPhase NewPhase);
 
 	void HandleTeamRoundWinsChanged(int32 RedTeamWins, int32 BlueTeamWins);
+
+	void HandleKillFeedReceived(
+		int32 KillerPlayerId,
+		const FString& KillerName,
+		int32 KillerColorIndex,
+		int32 VictimPlayerId,
+		const FString& VictimName,
+		int32 VictimColorIndex
+	);
+
+	void HandleRoundCountdownChanged(int32 CountdownValue);
 };

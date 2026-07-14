@@ -9,6 +9,7 @@
 class UButton;
 class UScrollBox;
 class UEditableText;
+class UBorder;
 class UGProjectSessionRowWidget;
 
 UCLASS()
@@ -37,6 +38,9 @@ protected:
 	UFUNCTION()
 	void HandleSessionRowClicked(int32 SessionIndex);
 
+	UFUNCTION()
+	void OnConfirmNoResultsClicked();
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "USTitleWidget", Meta = (AllowPrivateAccess, BindWidget))
 	TObjectPtr<UButton> HostButton;
@@ -52,4 +56,10 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UGProjectSessionRowWidget> SessionRowWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", Meta = (AllowPrivateAccess, BindWidget))
+	TObjectPtr<UBorder> NoResultsBorder;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", Meta = (AllowPrivateAccess, BindWidget))
+	TObjectPtr<UButton> ConfirmNoResultsButton;
 };

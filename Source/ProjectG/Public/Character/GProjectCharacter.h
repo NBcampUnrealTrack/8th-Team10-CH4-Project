@@ -7,11 +7,13 @@
 #include "GameFramework/Character.h"
 #include "Item/Weapon/GProjectCombatStyle.h"
 #include "GameplayTagContainer.h"
+#include "Character/GProjectCharacterVariant.h"
 #include "GProjectCharacter.generated.h"
 
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
+class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
@@ -23,6 +25,8 @@ class UGameplayEffect;
 class USpringArmComponent;
 class UGProjectTransform;
 class USkeletalMeshComponent;
+class AGProjectFloatingText; // 추가
+class UBillboardComponent; // 추가
 
 UCLASS()
 class PROJECTG_API AGProjectCharacter : public ACharacter, public IAbilitySystemInterface
@@ -43,6 +47,8 @@ public:
 	FName GetAttackTraceStartSocketName() const;
 	FName GetAttackTraceEndSocketName() const;
 
+	void ApplyPlayerColor(int32 ColorIndex);
+
 	UFUNCTION(BlueprintCallable, Category = "Round")
 	void ResetForNewRound(const FTransform& SpawnTransform);
 
@@ -51,6 +57,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Style")
 	void SetCombatStyle(EGProjectCombatStyle NewCombatStyle);
+
+	UFUNCTION(BlueprintPure, Category = "Character|Variant")
+	EGProjectCharacterVariant GetCharacterVariant() const { return CharacterVariant; }
 
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
 	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
@@ -79,6 +88,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();
 
+	// 추가: AttributeSet에서 데미지 발생 시 호출 (모든 클라이언트에 방송)
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastShowDamageText(float Damage, bool bIsCritical);
+
 	UFUNCTION(BlueprintPure, Category = "Death")
 	bool IsDead() const;
 
@@ -88,7 +101,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Movement|Sprint")
 	void StopSprint();
 
+	UFUNCTION(BlueprintCallable, Category = "Feedback|Hit")
+	void PlayHitFlash();
+
 protected:
+	virtual void OnConstruction(const FTransform& Transform) override; // 추가: 에디터 뷰포트 미리보기 마커 위치 갱신용
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -135,6 +152,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
 	FName DissolveParameterName = TEXT("DissolveAmount");
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
+	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -149,6 +169,28 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform")
 	TObjectPtr<UGProjectTransform> GorillaTransform;
+	// 추가: 피격 데미지 숫자 연출용
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Damage")
+	TSubclassOf<AGProjectFloatingText> FloatingDamageTextClass;
+
+	// 추가
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI|Damage")
+	float DamageTextHeightOffset = 150.0f;
+
+#if WITH_EDITORONLY_DATA
+	// 추가: 에디터 뷰포트에서만 보이는 데미지 텍스트 스폰 위치 미리보기 마커 (게임/패키징 시 자동 제외)
+	UPROPERTY(VisibleAnywhere, Category = "UI|Damage")
+	TObjectPtr<UBillboardComponent> DamageTextPreviewMarker;
+#endif
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit")
+	FName HitFlashParameterName = TEXT("HitFlashAmount");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashDuration = 0.1f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashAmount = 1.0f;
 
 private:
 	void InitAbilityActorInfo();
@@ -156,6 +198,8 @@ private:
 	void RefreshMovementStateTags();
 	void SetSprintRequested(bool bRequested);
 	void ApplySPRegenEffect();
+	void SetHitFlashAmount(float Amount);
+	void ResetHitFlash();
 	void StartDeathDissolve();
 	void UpdateDeathDissolve(float DeltaSeconds);
 	void FinishDeathDissolve();
@@ -165,6 +209,9 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeath();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitFlash();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastStartDeathDissolve();
@@ -176,6 +223,8 @@ private:
 	bool bDead = false;
 
 	bool bSprintRequested = false;
+	FTimerHandle HitFlashTimer;
+
 	bool bDissolving = false;
 	float DissolveElapsed = 0.0f;
 	float DefaultWalkSpeed = 450.0f;
@@ -184,6 +233,9 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInterface>> OriginalDeathMaterials;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -220,4 +272,10 @@ private:
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
 	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character|Variant", meta = (AllowPrivateAccess = "true"))
+	EGProjectCharacterVariant CharacterVariant = EGProjectCharacterVariant::Base;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<UMaterialInstanceDynamic>> PlayerColorMaterials;
 };

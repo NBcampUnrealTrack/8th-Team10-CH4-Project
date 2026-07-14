@@ -40,6 +40,8 @@ void AGProjectGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	DOREPLIFETIME(AGProjectGameState, RedTeamRoundWins);
 
 	DOREPLIFETIME(AGProjectGameState, BlueTeamRoundWins);
+
+	//DOREPLIFETIME(AGProjectGameState, RoundCountdownValue);
 }
 
 void AGProjectGameState::SetRemainMatchTime(int32 Time)
@@ -67,6 +69,13 @@ void AGProjectGameState::OnRep_RoundPhase()
 void AGProjectGameState::OnRep_TeamRoundWins()
 {
 	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
+}
+
+void AGProjectGameState::MulticastRoundCountdown_Implementation(int32 CountdownValue)
+{
+	OnRoundCountdownChanged.Broadcast(
+		CountdownValue
+	);
 }
 
 void AGProjectGameState::BroadcastChatMessage(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
@@ -154,6 +163,63 @@ void AGProjectGameState::ResetTeamRoundWins()
 	BlueTeamRoundWins = 0;
 
 	OnTeamRoundWinsChanged.Broadcast(RedTeamRoundWins, BlueTeamRoundWins);
+}
+
+void AGProjectGameState::BroadcastKillFeed(AGProjectPlayerState* KillerPlayerState, AGProjectPlayerState* VictimPlayerState)
+{
+	if (!HasAuthority() || !VictimPlayerState)
+	{
+		return;
+	}
+
+	const bool bValidKiller = KillerPlayerState && KillerPlayerState != VictimPlayerState;
+
+	const int32 KillerPlayerId =
+		bValidKiller ? KillerPlayerState->GetPlayerId() : INDEX_NONE;
+
+	const FString KillerName =
+		bValidKiller ? KillerPlayerState->GetPlayerName() : TEXT("Environment");
+
+	const int32 KillerColorIndex =
+		bValidKiller ? KillerPlayerState->GetPlayerColorIndex() : INDEX_NONE;
+
+	MulticastReceiveKillFeed(
+		KillerPlayerId,
+		KillerName,
+		KillerColorIndex,
+		VictimPlayerState->GetPlayerId(),
+		VictimPlayerState->GetPlayerName(),
+		VictimPlayerState->GetPlayerColorIndex()
+	);
+}
+
+void AGProjectGameState::MulticastReceiveKillFeed_Implementation(
+	const int32 KillerPlayerId,
+	const FString& KillerName,
+	const int32 KillerColorIndex,
+	const int32 VictimPlayerId,
+	const FString& VictimName,
+	const int32 VictimColorIndex)
+{
+	OnKillFeedReceived.Broadcast(
+		KillerPlayerId,
+		KillerName,
+		KillerColorIndex,
+		VictimPlayerId,
+		VictimName,
+		VictimColorIndex
+	);
+}
+
+void AGProjectGameState::BroadcastRoundCountdown(const int32 CountdownValue)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+
+	MulticastRoundCountdown(CountdownValue);
 }
 
 void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)

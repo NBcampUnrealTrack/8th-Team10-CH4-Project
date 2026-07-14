@@ -30,6 +30,7 @@ UGProjectAttackComboAbility::UGProjectAttackComboAbility()
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Parrying);
 
 	FAbilityTriggerData BasicAttackTrigger;
 	BasicAttackTrigger.TriggerTag = GProjectGameplayTags::Event_Input_Combat_BasicAttack;
@@ -101,6 +102,7 @@ void UGProjectAttackComboAbility::EndAbility(
 {
 	InputBuffer.Reset();
 	HitActorsThisStep.Reset();
+	LastHitTimestamps.Reset();
 	CurrentComboStepIndex = INDEX_NONE;
 	bComboWindowOpen = false;
 	bNextSectionReserved = false;
@@ -364,6 +366,9 @@ void UGProjectAttackComboAbility::SyncCurrentStepFromMontage()
 
 void UGProjectAttackComboAbility::BeginCurrentStepTrace(FName TraceSocketName)
 {
+	// Reset per hit window, not just per combo step, so multiple hit windows in one section can each land on the same target.
+	HitActorsThisStep.Reset();
+
 	bHasPreviousUnarmedTraceLocation = false;
 	PreviousUnarmedTraceLocation = FVector::ZeroVector;
 	CurrentUnarmedTraceSocket = TraceSocketName;
@@ -483,6 +488,14 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			continue;
 		}
 
+		// Guard against back-to-back hit windows landing on the same target almost simultaneously.
+		const float CurrentTime = GetWorld()->GetTimeSeconds();
+		if (const float* LastHitTime = LastHitTimestamps.Find(TargetPtr);
+			LastHitTime && CurrentTime - *LastHitTime < MinHitReapplyInterval)
+		{
+			continue;
+		}
+
 		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
 		if (!TargetASC)
 		{
@@ -497,6 +510,58 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			Target->GetActorLocation() - Attacker->GetActorLocation()
 		);
 
+		const bool bParryWindowOpen = TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_ParryWindow);
+		const bool bValidParryAngle = UGProjectAbilitySystemLibrary::IsActorInFrontArc(
+			Target,
+			Attacker,
+			ParryFrontArcDegrees);
+		if (bParryWindowOpen && bValidParryAngle)
+		{
+			FGameplayTagContainer AbilitiesToCancel;
+			AbilitiesToCancel.AddTag(GProjectGameplayTags::Ability_Combat_Attack);
+			SourceASC->CancelAbilities(&AbilitiesToCancel);
+
+			FGameplayEventData ParrySuccessEventData;
+			ParrySuccessEventData.EventTag = GProjectGameplayTags::Event_Combat_Parry_Success;
+			ParrySuccessEventData.Instigator = Attacker;
+			ParrySuccessEventData.Target = Target;
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				Target,
+				GProjectGameplayTags::Event_Combat_Parry_Success,
+				ParrySuccessEventData);
+
+			FGProjectDamageEffectParams ParryStunParams;
+			ParryStunParams.SourceAbilitySystemComponent = TargetASC;
+			ParryStunParams.TargetAbilitySystemComponent = SourceASC;
+			ParryStunParams.HitstunTime = ParryStunDuration;
+			ParryStunParams.HitDirection = Attacker->GetActorLocation() - Target->GetActorLocation();
+			ParryStunParams.HitDirection.Z = 0.0f;
+			ParryStunParams.HitDirection.Normalize();
+			UGProjectAbilitySystemLibrary::ApplyHitstunEffect(
+				ParryStunParams,
+				HitstunGameplayEffectClass);
+
+			FGameplayEventData ParriedReactEventData;
+			ParriedReactEventData.EventTag = GProjectGameplayTags::Event_Combat_React_Parried;
+			ParriedReactEventData.Instigator = Target;
+			ParriedReactEventData.Target = Attacker;
+			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+				Attacker,
+				GProjectGameplayTags::Event_Combat_React_Parried,
+				ParriedReactEventData);
+
+			HitActorsThisStep.Add(TargetPtr);
+			LastHitTimestamps.Add(TargetPtr, CurrentTime);
+			continue;
+		}
+
+		const bool bTargetCombatAirborne = TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Airborne);
+		if (bTargetCombatAirborne)
+		{
+			DamageParams.KnockbackForce.X *= AirborneHorizontalKnockbackMultiplier;
+			DamageParams.KnockbackForce.Y *= AirborneHorizontalKnockbackMultiplier;
+		}
+
 		const FGameplayEffectContextHandle DamageContext = UGProjectAbilitySystemLibrary::ApplyDamageEffect(
 			DamageParams,
 			DamageGameplayEffectClass);
@@ -507,6 +572,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 
 		if (DamageParams.CausesKnockdown())
 		{
+			TargetASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 			UGProjectAbilitySystemLibrary::SendKnockdownEvent(DamageParams);
 		}
 		else
@@ -515,11 +581,19 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 			UGProjectAbilitySystemLibrary::SendHitReactEvent(DamageParams);
 		}
 		HitActorsThisStep.Add(TargetPtr);
+		LastHitTimestamps.Add(TargetPtr, CurrentTime);
 
-		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target); !DamageParams.KnockbackForce.IsNearlyZero())
+		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target);
+			!DamageParams.KnockbackForce.IsNearlyZero() || DamageParams.AirborneLaunchForce > 0.0f)
 		{
 			FVector LaunchVelocity = DamageParams.KnockbackForce;
-			LaunchVelocity.Z = 200.0f;
+			LaunchVelocity.Z = DamageParams.AirborneLaunchForce > 0.0f
+				? DamageParams.AirborneLaunchForce
+				: 200.0f;
+			if (DamageParams.AirborneLaunchForce > 0.0f)
+			{
+				TargetASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 1);
+			}
 			TargetCharacter->LaunchCharacter(LaunchVelocity, true, true);
 		}
 	}

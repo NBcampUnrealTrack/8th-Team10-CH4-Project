@@ -23,6 +23,9 @@
 #include "AbilitySystem/GProjectAttributeSet.h"
 #include "TimerManager.h"
 #include "Game/GProjectGameMode.h"
+#include "UI/Widget/GProjectFloatingText.h" // 추가
+#include "Components/BillboardComponent.h" // 추가
+#include "Player/GProjectPlayerColors.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -67,6 +70,30 @@ AGProjectCharacter::AGProjectCharacter()
 	TransformMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	TransformMeshComponent->SetVisibility(false);
 	TransformMeshComponent->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+#if WITH_EDITORONLY_DATA
+	// 추가: 데미지 텍스트 스폰 위치 미리보기용 (에디터 뷰포트에서만 보임)
+	DamageTextPreviewMarker = CreateEditorOnlyDefaultSubobject<UBillboardComponent>(TEXT("DamageTextPreviewMarker"));
+	if (DamageTextPreviewMarker)
+	{
+		DamageTextPreviewMarker->SetupAttachment(GetRootComponent());
+		DamageTextPreviewMarker->SetRelativeLocation(FVector(0.f, 0.f, DamageTextHeightOffset));
+		DamageTextPreviewMarker->bIsScreenSizeScaled = true;
+	}
+#endif
+}
+
+// 추가: DamageTextHeightOffset 값이 Details 패널에서 바뀔 때마다 미리보기 마커 위치 갱신
+void AGProjectCharacter::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+#if WITH_EDITORONLY_DATA
+	if (DamageTextPreviewMarker)
+	{
+		DamageTextPreviewMarker->SetRelativeLocation(FVector(0.f, 0.f, DamageTextHeightOffset));
+	}
+#endif
 }
 
 void AGProjectCharacter::BeginPlay()
@@ -137,14 +164,51 @@ FName AGProjectCharacter::GetAttackTraceEndSocketName() const
 	return AttackTraceEndSocket;
 }
 
+void AGProjectCharacter::ApplyPlayerColor(int32 ColorIndex)
+{
+	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	if (!CharacterMesh)
+	{
+		return;
+	}
+
+	const FLinearColor PlayerColor = GProjectPlayerColors::GetColor(ColorIndex);
+
+	PlayerColorMaterials.Reset();
+
+	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
+
+	for (int32 Index = 0; Index < MaterialCount; ++Index)
+	{
+		UMaterialInstanceDynamic* MID = CharacterMesh->CreateDynamicMaterialInstance(Index);
+		if (!MID)
+		{
+			continue;
+		}
+
+		MID->SetVectorParameterValue(TEXT("PlayerColor"), PlayerColor);
+
+		PlayerColorMaterials.Add(MID);
+	}
+}
+
+void AGProjectCharacter::PlayHitFlash()
+{
+	if (HasAuthority())
+	{
+		MulticastPlayHitFlash();
+		return;
+	}
+
+	MulticastPlayHitFlash();
+}
+
 void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
-
-	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
 
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
 
@@ -168,9 +232,16 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
 
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 	}
 
 	EndTransform();
+
+	SetHitFlashAmount(0.0f);
+	GetWorldTimerManager().ClearTimer(HitFlashTimer);
+	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
+
 	if (LockOnComponent)
 	{
 		LockOnComponent->ClearLockOn();
@@ -323,7 +394,6 @@ void AGProjectCharacter::HandleDeath()
 
 	MulticastPlayDeath();
 
-
 	if (DissolveDelay <= 0.0f)
 	{
 		StartDeathDissolve();
@@ -341,6 +411,24 @@ void AGProjectCharacter::HandleDeath()
 	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
 	{
 		GM->NotifyPlayerDied(GetPlayerState<AGProjectPlayerState>());
+	}
+}
+
+// 추가: 데미지 텍스트를 모든 클라이언트에서 각자 로컬로 스폰
+void AGProjectCharacter::MulticastShowDamageText_Implementation(float Damage, bool bIsCritical)
+{
+	if (!FloatingDamageTextClass)
+	{
+		return;
+	}
+
+	const FVector RandomOffset(FMath::FRandRange(-20.f, 20.f), FMath::FRandRange(-20.f, 20.f), 0.f);
+	const FVector SpawnLocation = GetActorLocation() + FVector(0.f, 0.f, DamageTextHeightOffset) + RandomOffset;
+
+	if (AGProjectFloatingText* FloatingText = GetWorld()->SpawnActor<AGProjectFloatingText>(
+		FloatingDamageTextClass, SpawnLocation, FRotator::ZeroRotator))
+	{
+		FloatingText->SetDamageAmount(Damage, bIsCritical);
 	}
 }
 
@@ -369,6 +457,23 @@ void AGProjectCharacter::MulticastPlayDeath_Implementation()
 	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, MontageToPlay);
 }
 
+void AGProjectCharacter::MulticastPlayHitFlash_Implementation()
+{
+	if (PlayerColorMaterials.IsEmpty() || HitFlashDuration <= 0.0f)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(HitFlashTimer);
+	SetHitFlashAmount(HitFlashAmount);
+	GetWorldTimerManager().SetTimer(
+		HitFlashTimer,
+		this,
+		&ThisClass::ResetHitFlash,
+		HitFlashDuration,
+		false);
+}
+
 void AGProjectCharacter::StartDeathDissolve()
 {
 	if (HasAuthority())
@@ -380,10 +485,11 @@ void AGProjectCharacter::StartDeathDissolve()
 void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
 {
 	DissolveMaterials.Reset();
+	OriginalDeathMaterials.Reset();
 	DissolveElapsed = 0.0f;
 	bDissolving = true;
 
-	USkeletalMeshComponent* CharacterMesh = GetMesh();
+	USkeletalMeshComponent* CharacterMesh = ActiveTransform ? TransformMeshComponent.Get() : GetMesh();
 	if (!CharacterMesh)
 	{
 		FinishDeathDissolve();
@@ -392,8 +498,16 @@ void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
 
 	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
 	DissolveMaterials.Reserve(MaterialCount);
+	OriginalDeathMaterials.Reserve(MaterialCount);
 	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
 	{
+		OriginalDeathMaterials.Add(CharacterMesh->GetMaterial(MaterialIndex));
+
+		if (DeathDissolveMaterials.IsValidIndex(MaterialIndex) && DeathDissolveMaterials[MaterialIndex])
+		{
+			CharacterMesh->SetMaterial(MaterialIndex, DeathDissolveMaterials[MaterialIndex]);
+		}
+
 		if (UMaterialInstanceDynamic* DynamicMaterial = CharacterMesh->CreateDynamicMaterialInstance(MaterialIndex))
 		{
 			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, 0.0f);
@@ -482,6 +596,11 @@ void AGProjectCharacter::PossessedBy(AController* NewController)
 	InitAbilityActorInfo();
 	AddCharacterAbilities();
 	ApplySPRegenEffect();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::OnRep_PlayerState()
@@ -489,6 +608,11 @@ void AGProjectCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 
 	InitAbilityActorInfo();
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		ApplyPlayerColor(PS->GetPlayerColorIndex());
+	}
 }
 
 void AGProjectCharacter::InitAbilityActorInfo()
@@ -530,6 +654,29 @@ void AGProjectCharacter::ApplySPRegenEffect()
 		EffectContext);
 }
 
+void AGProjectCharacter::SetHitFlashAmount(float Amount)
+{
+	if (HitFlashParameterName.IsNone())
+	{
+		return;
+	}
+
+	for (UMaterialInstanceDynamic* DynamicMaterial : PlayerColorMaterials)
+	{
+		if (!DynamicMaterial)
+		{
+			continue;
+		}
+
+		DynamicMaterial->SetScalarParameterValue(HitFlashParameterName, Amount);
+	}
+}
+
+void AGProjectCharacter::ResetHitFlash()
+{
+	SetHitFlashAmount(0.0f);
+}
+
 void AGProjectCharacter::RefreshMovementStateTags()
 {
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
@@ -548,6 +695,7 @@ void AGProjectCharacter::RefreshMovementStateTags()
 	if (!bAirborne)
 	{
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 	}
 }
 
@@ -596,7 +744,6 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 {
 	bDead = false;
 
-
 	bDissolving = false;
 	DissolveElapsed = 0.0f;
 
@@ -613,8 +760,22 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 
 	DissolveMaterials.Reset();
 
+	if (TransformMeshComponent)
+	{
+		TransformMeshComponent->SetVisibility(false, false);
+		TransformMeshComponent->SetSkeletalMesh(nullptr);
+	}
+
 	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 	{
+		for (int32 MaterialIndex = 0; MaterialIndex < OriginalDeathMaterials.Num(); ++MaterialIndex)
+		{
+			if (OriginalDeathMaterials[MaterialIndex])
+			{
+				CharacterMesh->SetMaterial(MaterialIndex, OriginalDeathMaterials[MaterialIndex]);
+			}
+		}
+
 		CharacterMesh->SetHiddenInGame(false, true);
 		CharacterMesh->SetVisibility(true, true);
 		CharacterMesh->SetComponentTickEnabled(true);
@@ -632,6 +793,8 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 			}
 		}
 	}
+
+	OriginalDeathMaterials.Reset();
 
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);

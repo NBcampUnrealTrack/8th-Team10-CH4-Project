@@ -3,8 +3,10 @@
 #include "AbilitySystem/Abilities/GProjectHitReactAbility.h"
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Character/GProjectCharacter.h"
 #include "GameFramework/Actor.h"
 #include "GProjectGameplayTags.h"
+#include "Kismet/GameplayStatics.h"
 
 UGProjectHitReactAbility::UGProjectHitReactAbility()
 {
@@ -23,6 +25,11 @@ UGProjectHitReactAbility::UGProjectHitReactAbility()
 	Trigger.TriggerTag = GProjectGameplayTags::Event_Combat_HitReact;
 	Trigger.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
 	AbilityTriggers.Add(Trigger);
+
+	FAbilityTriggerData ParriedTrigger;
+	ParriedTrigger.TriggerTag = GProjectGameplayTags::Event_Combat_React_Parried;
+	ParriedTrigger.TriggerSource = EGameplayAbilityTriggerSource::GameplayEvent;
+	AbilityTriggers.Add(ParriedTrigger);
 }
 
 void UGProjectHitReactAbility::ActivateAbility(
@@ -31,6 +38,22 @@ void UGProjectHitReactAbility::ActivateAbility(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
+	if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo()))
+	{
+		Character->PlayHitFlash();
+	}
+
+	if (HitReactSound)
+	{
+		if (const AActor* AvatarActor = GetAvatarActorFromActorInfo())
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				this,
+				HitReactSound,
+				AvatarActor->GetActorLocation());
+		}
+	}
+
 	if (!HitReactMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -51,6 +74,11 @@ void UGProjectHitReactAbility::ActivateAbility(
 
 FName UGProjectHitReactAbility::DetermineHitSection(const FGameplayEventData* TriggerEventData) const
 {
+	if (TriggerEventData && TriggerEventData->EventTag.MatchesTagExact(GProjectGameplayTags::Event_Combat_React_Parried))
+	{
+		return ParriedSection;
+	}
+
 	const AActor* TargetActor = GetAvatarActorFromActorInfo();
 	const AActor* Attacker = TriggerEventData ? TriggerEventData->Instigator.Get() : nullptr;
 	if (!TargetActor || !Attacker)
