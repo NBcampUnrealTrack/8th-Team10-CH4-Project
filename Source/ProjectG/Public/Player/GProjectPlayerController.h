@@ -50,6 +50,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> ChatAction;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Spectate")
+	TObjectPtr<UInputAction> SpectatePrevAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Spectate")
+	TObjectPtr<UInputAction> SpectateNextAction;
 
 private:
 	UGProjectAbilitySystemComponent* GetASC();
@@ -59,7 +65,11 @@ private:
 	void Move(const FInputActionValue& InputActionValue);
 	void JumpPressed();
 	void JumpReleased();
-
+	
+	void SpectatePrev();
+	void SpectateNext();
+	int32 CurrentSpectateIndex = 0;
+	
 	void AbilityInputTagPressed(FGameplayTag InputTag);
 	void AbilityInputTagReleased(FGameplayTag InputTag);
 	void AbilityInputTagHeld(FGameplayTag InputTag);
@@ -68,7 +78,7 @@ private:
 	void FlushPendingAttackInput();
 	void ClearPendingAttackInput();
 	void TryStartParryInput();
-
+	
 	void OpenChat();
 	bool bChatOpen = false;
 	TWeakObjectPtr<UGProjectChatWidget> ChatWidget;
@@ -86,6 +96,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendChatMessage(const FString& Message);
+	
+	UFUNCTION(Server, Reliable)
+	void ServerChangeSpectateTarget(int32 Direction);
 
 	UPROPERTY()
 	TObjectPtr<UGProjectAbilitySystemComponent> GProjectAbilitySystemComponent;

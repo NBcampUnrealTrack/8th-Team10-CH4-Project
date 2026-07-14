@@ -5,9 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
 #include "TimerManager.h"
+#include "Item/ItemSpawnDataAsset.h"
 #include "GProjectGameMode.generated.h"
 
-
+class ASpawnBase;
 class APlayerController;
 class AGProjectPlayerState;
 
@@ -24,6 +25,9 @@ public:
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
 	void NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState);
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning|Limit")
+	void DecreaseSpawnedItemCount();
 
 protected:
 	virtual void BeginPlay() override;
@@ -44,6 +48,8 @@ protected:
 	bool HasTeamWonMatch() const;
 
 	void AssignPlayerColor(AGProjectPlayerState* PS);
+	
+	void SpectateOtherPlayer(class AGProjectPlayerState* DeadPlayerState);
 
 	void TickRoundCountdown();
 	void BeginRoundFight();
@@ -59,6 +65,26 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	float RoundTransitionDuration = 3.0f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
+	TArray<UItemSpawnDataAsset*> ItemPool;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning|Limit")
+	int32 MaxSpawnedItems = 10;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Spawning|Limit")
+	int32 CurrentSpawnedItems = 0;
+	
+	FTimerHandle ItemSpawnTimerHandle;
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning")
+	void SpawnRandomItem();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "Spawning")
+	FTransform GetRandomSpawnTransform();
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
+	TArray<ASpawnBase*> SpawnZones;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	int32 RoundCountdownStartValue = 3;

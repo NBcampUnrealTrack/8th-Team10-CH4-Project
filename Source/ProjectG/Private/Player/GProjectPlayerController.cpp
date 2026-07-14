@@ -15,6 +15,7 @@
 #include "InputActionValue.h"
 #include "Player/GProjectPlayerState.h"
 #include "Targeting/GProjectLockOnComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "UI/HUD/GProjectHUD.h"
 #include "Game/GProjectGameState.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -156,7 +157,16 @@ void AGProjectPlayerController::SetupInputComponent()
 		UE_LOG(LogTemp, Warning, TEXT("InputConfig is not set on %s."), *GetNameSafe(this));
 		return;
 	}
-
+	
+	if (SpectatePrevAction)
+	{
+		GProjectInputComponent->BindAction(SpectatePrevAction, ETriggerEvent::Started, this, &ThisClass::SpectatePrev);
+	}
+	if (SpectateNextAction)
+	{
+		GProjectInputComponent->BindAction(SpectateNextAction, ETriggerEvent::Started, this, &ThisClass::SpectateNext);
+	}
+	
 	GProjectInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 }
 
@@ -244,6 +254,15 @@ void AGProjectPlayerController::Move(const FInputActionValue& InputActionValue)
 	if (IsGameplayInputBlocked())
 	{
 		return;
+	}
+
+	// 공격 몽타주(콤보) 재생 중에는 이동 입력 차단
+	if (const UGProjectAbilitySystemComponent* ASC = GetASC())
+	{
+		if (ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Attacking))
+		{
+			return;
+		}
 	}
 
 	const FRotator YawRotation(0.0f, GetControlRotation().Yaw, 0.0f);
@@ -502,4 +521,67 @@ void AGProjectPlayerController::ServerSendChatMessage_Implementation(const FStri
 void AGProjectPlayerController::ServerSendAttackInputEvent_Implementation(FGameplayTag InputTag)
 {
 	SendAttackInputEvent(InputTag);
+}
+
+void AGProjectPlayerController::SpectatePrev()
+{
+	APawn* MyPawn = GetPawn();
+	bool bIsDead = true;
+	if (AGProjectCharacter* MyChar = Cast<AGProjectCharacter>(MyPawn))
+	{
+		bIsDead = MyChar->IsDead();
+	}
+
+	if (bIsDead)
+	{
+		ServerChangeSpectateTarget(-1); 
+	}
+}
+
+void AGProjectPlayerController::SpectateNext()
+{
+	bool bIsDead = true;
+	if (AGProjectCharacter* MyChar = Cast<AGProjectCharacter>(GetPawn()))
+	{
+		bIsDead = MyChar->IsDead();
+	}
+
+	if (bIsDead)
+	{
+		ServerChangeSpectateTarget(1); 
+	}
+}
+
+void AGProjectPlayerController::ServerChangeSpectateTarget_Implementation(int32 Direction)
+{
+	TArray<AGProjectCharacter*> LivingCharacters;
+    
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		APlayerController* PC = It->Get();
+		if (!PC) continue;
+
+		AGProjectCharacter* LoopChar = Cast<AGProjectCharacter>(PC->GetPawn());
+		if (LoopChar && !LoopChar->IsDead())
+		{
+			LivingCharacters.Add(LoopChar);
+		}
+	}
+	
+	if (LivingCharacters.Num() == 0) return;
+	
+	CurrentSpectateIndex += Direction;
+	if (CurrentSpectateIndex >= LivingCharacters.Num())
+	{
+		CurrentSpectateIndex = 0;
+	}
+	else if (CurrentSpectateIndex < 0)
+	{
+		CurrentSpectateIndex = LivingCharacters.Num() - 1;
+	}
+	
+	if (LivingCharacters.IsValidIndex(CurrentSpectateIndex))
+	{
+		SetViewTargetWithBlend(LivingCharacters[CurrentSpectateIndex], 0.3f);
+	}
 }
