@@ -40,6 +40,7 @@ public:
 	UGProjectAbilitySystemComponent* GetGProjectAbilitySystemComponent() const;
 	UGProjectLockOnComponent* GetLockOnComponent() const;
 	UGProjectItemHolderComponent* GetItemHolderComponent() const;
+	USkeletalMeshComponent* GetActiveMesh() const;
 	UGProjectComboData* GetActiveGroundComboData() const;
 	UGProjectComboData* GetActiveAirComboData() const;
 	UGProjectComboData* GetActiveDashComboData() const;
@@ -229,6 +230,7 @@ private:
 	float DissolveElapsed = 0.0f;
 	float DefaultWalkSpeed = 450.0f;
 	float DefaultSprintSpeed = 750.0f;
+	float DefaultDashingSpeedThreshold = 650.0f;
 	FTimerHandle DeathDissolveTimer;
 
 	UPROPERTY(Transient)

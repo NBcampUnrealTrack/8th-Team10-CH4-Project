@@ -376,7 +376,8 @@ void UGProjectAttackComboAbility::BeginCurrentStepTrace(FName TraceSocketName)
 	AActor* Attacker = GetAvatarActorFromActorInfo();
 	const FGProjectComboStep* CurrentComboStep = GetCurrentComboStep();
 	const AGProjectCharacter* Character = Cast<AGProjectCharacter>(Attacker);
-	UMeshComponent* TraceMesh = Character ? Character->GetMesh() : nullptr;
+	UMeshComponent* TraceMesh = Character ? Character->GetActiveMesh() : nullptr;
+
 	if (!CurrentComboStep || !Character || Character->GetCombatStyle() != EGProjectCombatStyle::Unarmed ||
 		!TraceMesh || CurrentUnarmedTraceSocket.IsNone())
 	{
@@ -409,7 +410,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 	if (Character)
 	{
 		TraceMesh = Character->GetCombatStyle() == EGProjectCombatStyle::Unarmed
-			? Character->GetMesh()
+			? Character->GetActiveMesh()
 			: Character->GetAttackTraceMesh();
 	}
 

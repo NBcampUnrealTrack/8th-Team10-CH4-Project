@@ -102,6 +102,7 @@ void AGProjectCharacter::BeginPlay()
 
 	DefaultWalkSpeed = WalkSpeed;
 	DefaultSprintSpeed = SprintSpeed;
+	DefaultDashingSpeedThreshold = DashingSpeedThreshold;
 
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
@@ -132,6 +133,11 @@ UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 UGProjectItemHolderComponent* AGProjectCharacter::GetItemHolderComponent() const
 {
 	return FindComponentByClass<UGProjectItemHolderComponent>();
+}
+
+USkeletalMeshComponent* AGProjectCharacter::GetActiveMesh() const
+{
+	return ActiveTransform ? TransformMeshComponent.Get() : GetMesh();
 }
 
 UGProjectComboData* AGProjectCharacter::GetActiveGroundComboData() const
@@ -815,6 +821,12 @@ void AGProjectCharacter::StartTransform(UGProjectTransform* NewTransform)
 		return;
 	}
 
+	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
+	{
+		ASC->CancelAllAbilities();
+
+	}
+
 	if (ItemHolderComponent && ItemHolderComponent->HasHeldItem())
 	{
 		ItemHolderComponent->DropHeldItem();
@@ -838,10 +850,14 @@ void AGProjectCharacter::EndTransform()
 		return;
 	}
 
+	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
+	{
+		ASC->CancelAllAbilities();
+	}
+
 	ActiveTransform = nullptr;
 	ClearTransformVisual();
 	ResetActiveComboData();
-
 	ForceNetUpdate();
 }
 
@@ -883,7 +899,16 @@ void AGProjectCharacter::ApplyTransformVisual()
 
 	WalkSpeed = ActiveTransform->WalkSpeed;
 	SprintSpeed = ActiveTransform->SprintSpeed;
+	DashingSpeedThreshold = ActiveTransform->DashingSpeedThreshold;
 	SetSprintRequested(bSprintRequested);
+
+	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
+	{
+		if (ASC->AbilityActorInfo.IsValid())
+		{
+			ASC->AbilityActorInfo->SkeletalMeshComponent = TransformMeshComponent;
+		}
+	}
 
 	SetCombatStyle(EGProjectCombatStyle::Unarmed);
 }
@@ -910,8 +935,17 @@ void AGProjectCharacter::ClearTransformVisual()
 
 	WalkSpeed = DefaultWalkSpeed;
 	SprintSpeed = DefaultSprintSpeed;
+	DashingSpeedThreshold = DefaultDashingSpeedThreshold;
 	SetSprintRequested(bSprintRequested);
 
+	if (UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent())
+	{
+		if (ASC->AbilityActorInfo.IsValid())
+		{
+			ASC->AbilityActorInfo->SkeletalMeshComponent = GetMesh();
+		}
+
+	}
 	ResetAttackTraceSource();
 }
 
