@@ -34,6 +34,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Movement_Dashing);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Attacking);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_AirAttackUsed);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Airborne);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Hitstun);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Knockdown);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_Parrying);

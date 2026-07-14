@@ -3,8 +3,10 @@
 #include "AbilitySystem/Abilities/GProjectHitReactAbility.h"
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Character/GProjectCharacter.h"
 #include "GameFramework/Actor.h"
 #include "GProjectGameplayTags.h"
+#include "Kismet/GameplayStatics.h"
 
 UGProjectHitReactAbility::UGProjectHitReactAbility()
 {
@@ -36,6 +38,22 @@ void UGProjectHitReactAbility::ActivateAbility(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
+	if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo()))
+	{
+		Character->PlayHitFlash();
+	}
+
+	if (HitReactSound)
+	{
+		if (const AActor* AvatarActor = GetAvatarActorFromActorInfo())
+		{
+			UGameplayStatics::PlaySoundAtLocation(
+				this,
+				HitReactSound,
+				AvatarActor->GetActorLocation());
+		}
+	}
+
 	if (!HitReactMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);

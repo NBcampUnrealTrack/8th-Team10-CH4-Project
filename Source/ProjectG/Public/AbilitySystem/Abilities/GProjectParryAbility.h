@@ -10,6 +10,7 @@
 class UAbilityTask_PlayMontageAndWait;
 class UAbilityTask_WaitGameplayEvent;
 class UAnimMontage;
+class USoundBase;
 
 UCLASS()
 class PROJECTG_API UGProjectParryAbility : public UGProjectGameplayAbility
@@ -50,6 +51,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry|Animation")
 	FName SuccessSection = TEXT("Section_Hit");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry|Sound")
+	TObjectPtr<USoundBase> ParrySuccessSound;
 
 private:
 	UFUNCTION()

@@ -33,6 +33,9 @@ struct FGProjectDamageEffectParams
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
 	float KnockbackForceMagnitude = 0.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Airborne", meta = (ClampMin = "0.0"))
+	float AirborneLaunchForce = 0.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction")
 	float HitstunTime = 0.0f;
 

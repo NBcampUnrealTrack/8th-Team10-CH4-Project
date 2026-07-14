@@ -63,8 +63,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Parry", meta = (ClampMin = "0.0", ClampMax = "360.0"))
 	float ParryFrontArcDegrees = 120.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Airborne", meta = (ClampMin = "1.0"))
+	float AirborneHorizontalKnockbackMultiplier = 2.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cost")
 	TSubclassOf<UGameplayEffect> SPCostGameplayEffectClass;
+
+	// Minimum time between hits on the same target, so back-to-back hit windows don't land almost simultaneously.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage", meta = (ClampMin = "0.0"))
+	float MinHitReapplyInterval = 0.5f;
 
 private:
 	UFUNCTION()
@@ -102,6 +109,7 @@ private:
 
 	TArray<FGProjectBufferedAttackInput> InputBuffer;
 	TSet<TWeakObjectPtr<AActor>> HitActorsThisStep;
+	TMap<TWeakObjectPtr<AActor>, float> LastHitTimestamps;
 	int32 CurrentComboStepIndex = INDEX_NONE;
 	bool bComboWindowOpen = false;
 	bool bNextSectionReserved = false;

@@ -100,7 +100,6 @@ void AGProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	RefreshMovementStateTags();
-	UpdateDeathDissolve(DeltaSeconds);
 }
 
 UAbilitySystemComponent* AGProjectCharacter::GetAbilitySystemComponent() const
@@ -182,14 +181,23 @@ void AGProjectCharacter::ApplyPlayerColor(int32 ColorIndex)
 	}
 }
 
+void AGProjectCharacter::PlayHitFlash()
+{
+	if (HasAuthority())
+	{
+		MulticastPlayHitFlash();
+		return;
+	}
+
+	MulticastPlayHitFlash();
+}
+
 void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 {
 	if (!HasAuthority())
 	{
 		return;
 	}
-
-	GetWorldTimerManager().ClearTimer(DeathDissolveTimer);
 
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
 
@@ -212,7 +220,12 @@ void AGProjectCharacter::ResetForNewRound(const FTransform& SpawnTransform)
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
 
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Movement_Airborne, 0);
+
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 	}
+
+	SetHitFlashAmount(0.0f);
+	GetWorldTimerManager().ClearTimer(HitFlashTimer);
 
 	if (LockOnComponent)
 	{
@@ -364,19 +377,6 @@ void AGProjectCharacter::HandleDeath()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	MulticastPlayDeath();
-	if (DissolveDelay <= 0.0f)
-	{
-		StartDeathDissolve();
-	}
-	else
-	{
-		GetWorldTimerManager().SetTimer(
-			DeathDissolveTimer,
-			this,
-			&ThisClass::StartDeathDissolve,
-			DissolveDelay,
-			false);
-	}
 
 	if (AGProjectGameMode* GM = Cast<AGProjectGameMode>(GetWorld()->GetAuthGameMode()))
 	{
@@ -418,88 +418,21 @@ void AGProjectCharacter::MulticastPlayDeath_Implementation()
 	AnimInstance->Montage_SetNextSection(DeathDownLoopSection, DeathDownLoopSection, DeathMontage);
 }
 
-void AGProjectCharacter::StartDeathDissolve()
+void AGProjectCharacter::MulticastPlayHitFlash_Implementation()
 {
-	if (HasAuthority())
-	{
-		MulticastStartDeathDissolve();
-	}
-}
-
-void AGProjectCharacter::MulticastStartDeathDissolve_Implementation()
-{
-	DissolveMaterials.Reset();
-	OriginalDeathMaterials.Reset();
-	DissolveElapsed = 0.0f;
-	bDissolving = true;
-
-	USkeletalMeshComponent* CharacterMesh = GetMesh();
-	if (!CharacterMesh)
-	{
-		FinishDeathDissolve();
-		return;
-	}
-
-	const int32 MaterialCount = CharacterMesh->GetNumMaterials();
-	DissolveMaterials.Reserve(MaterialCount);
-	OriginalDeathMaterials.Reserve(MaterialCount);
-	for (int32 MaterialIndex = 0; MaterialIndex < MaterialCount; ++MaterialIndex)
-	{
-		OriginalDeathMaterials.Add(CharacterMesh->GetMaterial(MaterialIndex));
-
-		if (DeathDissolveMaterials.IsValidIndex(MaterialIndex) && DeathDissolveMaterials[MaterialIndex])
-		{
-			CharacterMesh->SetMaterial(MaterialIndex, DeathDissolveMaterials[MaterialIndex]);
-		}
-
-		if (UMaterialInstanceDynamic* DynamicMaterial = CharacterMesh->CreateDynamicMaterialInstance(MaterialIndex))
-		{
-			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, 0.0f);
-			DissolveMaterials.Add(DynamicMaterial);
-		}
-	}
-}
-
-void AGProjectCharacter::UpdateDeathDissolve(float DeltaSeconds)
-{
-	if (!bDissolving)
+	if (PlayerColorMaterials.IsEmpty() || HitFlashDuration <= 0.0f)
 	{
 		return;
 	}
 
-	DissolveElapsed += DeltaSeconds;
-	const float DissolveAlpha = FMath::Clamp(DissolveElapsed / DissolveDuration, 0.0f, 1.0f);
-	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
-	{
-		if (DynamicMaterial)
-		{
-			DynamicMaterial->SetScalarParameterValue(DissolveParameterName, DissolveAlpha);
-		}
-	}
-
-	if (DissolveAlpha >= 1.0f)
-	{
-		FinishDeathDissolve();
-	}
-}
-
-void AGProjectCharacter::FinishDeathDissolve()
-{
-	bDissolving = false;
-	if (GetMesh())
-	{
-		GetMesh()->SetVisibility(false, true);
-	}
-
-	TArray<AActor*> AttachedActors;
-	GetAttachedActors(AttachedActors);
-	for (AActor* AttachedActor : AttachedActors)
-	{
-		if (AttachedActor)
-		{
-			AttachedActor->SetActorHiddenInGame(true);
-		}
-	}
+	GetWorldTimerManager().ClearTimer(HitFlashTimer);
+	SetHitFlashAmount(HitFlashAmount);
+	GetWorldTimerManager().SetTimer(
+		HitFlashTimer,
+		this,
+		&ThisClass::ResetHitFlash,
+		HitFlashDuration,
+		false);
 }
 
 bool AGProjectCharacter::IsDead() const
@@ -587,6 +520,29 @@ void AGProjectCharacter::ApplySPRegenEffect()
 		EffectContext);
 }
 
+void AGProjectCharacter::SetHitFlashAmount(float Amount)
+{
+	if (HitFlashParameterName.IsNone())
+	{
+		return;
+	}
+
+	for (UMaterialInstanceDynamic* DynamicMaterial : PlayerColorMaterials)
+	{
+		if (!DynamicMaterial)
+		{
+			continue;
+		}
+
+		DynamicMaterial->SetScalarParameterValue(HitFlashParameterName, Amount);
+	}
+}
+
+void AGProjectCharacter::ResetHitFlash()
+{
+	SetHitFlashAmount(0.0f);
+}
+
 void AGProjectCharacter::RefreshMovementStateTags()
 {
 	UGProjectAbilitySystemComponent* ASC = GetGProjectAbilitySystemComponent();
@@ -605,6 +561,7 @@ void AGProjectCharacter::RefreshMovementStateTags()
 	if (!bAirborne)
 	{
 		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_AirAttackUsed, 0);
+		ASC->SetLooseGameplayTagCount(GProjectGameplayTags::State_Combat_Airborne, 0);
 	}
 }
 
@@ -653,33 +610,8 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 {
 	bDead = false;
 
-
-	bDissolving = false;
-	DissolveElapsed = 0.0f;
-
-	for (UMaterialInstanceDynamic* DynamicMaterial : DissolveMaterials)
-	{
-		if (DynamicMaterial)
-		{
-			DynamicMaterial->SetScalarParameterValue(
-				DissolveParameterName,
-				0.0f
-			);
-		}
-	}
-
-	DissolveMaterials.Reset();
-
 	if (USkeletalMeshComponent* CharacterMesh = GetMesh())
 	{
-		for (int32 MaterialIndex = 0; MaterialIndex < OriginalDeathMaterials.Num(); ++MaterialIndex)
-		{
-			if (OriginalDeathMaterials[MaterialIndex])
-			{
-				CharacterMesh->SetMaterial(MaterialIndex, OriginalDeathMaterials[MaterialIndex]);
-			}
-		}
-
 		CharacterMesh->SetHiddenInGame(false, true);
 		CharacterMesh->SetVisibility(true, true);
 		CharacterMesh->SetComponentTickEnabled(true);
@@ -697,8 +629,6 @@ void AGProjectCharacter::MulticastResetDeathState_Implementation()
 			}
 		}
 	}
-
-	OriginalDeathMaterials.Reset();
 
 	TArray<AActor*> AttachedActors;
 	GetAttachedActors(AttachedActors);

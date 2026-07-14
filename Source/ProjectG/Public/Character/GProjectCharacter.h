@@ -6,12 +6,12 @@
 #include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "Item/Weapon/GProjectCombatStyle.h"
+#include "Character/GProjectCharacterVariant.h"
 #include "GProjectCharacter.generated.h"
 
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
-class UMaterialInterface;
 class UMaterialInstanceDynamic;
 class UMeshComponent;
 class UGProjectAbilitySystemComponent;
@@ -54,6 +54,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Combat|Style")
 	void SetCombatStyle(EGProjectCombatStyle NewCombatStyle);
 
+	UFUNCTION(BlueprintPure, Category = "Character|Variant")
+	EGProjectCharacterVariant GetCharacterVariant() const { return CharacterVariant; }
+
 	UFUNCTION(BlueprintCallable, Category = "Combat|Trace")
 	void SetAttackTraceSource(UMeshComponent* InTraceMesh, FName InStartSocket, FName InEndSocket);
 
@@ -84,6 +87,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Movement|Sprint")
 	void StopSprint();
+
+	UFUNCTION(BlueprintCallable, Category = "Feedback|Hit")
+	void PlayHitFlash();
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override; // 추가: 에디터 뷰포트 미리보기 마커 위치 갱신용
@@ -121,18 +127,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Animation")
 	FName DeathDownLoopSection = TEXT("DownLoop");
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.0"))
-	float DissolveDelay = 1.5f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve", meta = (ClampMin = "0.01"))
-	float DissolveDuration = 1.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
-	FName DissolveParameterName = TEXT("DissolveAmount");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Death|Dissolve")
-	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float WalkSpeed = 450.0f;
 
@@ -159,21 +153,29 @@ protected:
 	TObjectPtr<UBillboardComponent> DamageTextPreviewMarker;
 #endif
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit")
+	FName HitFlashParameterName = TEXT("HitFlashAmount");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashDuration = 0.1f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
+	float HitFlashAmount = 1.0f;
+
 private:
 	void InitAbilityActorInfo();
 	void AddCharacterAbilities();
 	void RefreshMovementStateTags();
 	void SetSprintRequested(bool bRequested);
 	void ApplySPRegenEffect();
-	void StartDeathDissolve();
-	void UpdateDeathDissolve(float DeltaSeconds);
-	void FinishDeathDissolve();
+	void SetHitFlashAmount(float Amount);
+	void ResetHitFlash();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayDeath();
 
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastStartDeathDissolve();
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayHitFlash();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastResetDeathState();
@@ -182,15 +184,7 @@ private:
 	bool bDead = false;
 
 	bool bSprintRequested = false;
-	bool bDissolving = false;
-	float DissolveElapsed = 0.0f;
-	FTimerHandle DeathDissolveTimer;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UMaterialInstanceDynamic>> DissolveMaterials;
-
-	UPROPERTY(Transient)
-	TArray<TObjectPtr<UMaterialInterface>> OriginalDeathMaterials;
+	FTimerHandle HitFlashTimer;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -221,6 +215,9 @@ private:
 
 	UPROPERTY(Replicated, VisibleInstanceOnly, BlueprintReadOnly, Category = "Combat|Style", meta = (AllowPrivateAccess = "true"))
 	EGProjectCombatStyle CombatStyle = EGProjectCombatStyle::Unarmed;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character|Variant", meta = (AllowPrivateAccess = "true"))
+	EGProjectCharacterVariant CharacterVariant = EGProjectCharacterVariant::Base;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UMaterialInstanceDynamic>> PlayerColorMaterials;
