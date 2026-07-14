@@ -34,15 +34,16 @@ protected:
 
 	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
-
+	
 	void StartRound();
 	void FinishRound();
 	void StartNextRound();
 	void TickMatchTimer();
 	void FinishMatchAfterDelay();
-
 	void ResetPlayersForNextRound();
-
+	
+	void ClearPreviousRoundItems();
+	
 	bool IsTeamEliminated(EGProjectTeam Team)const;
 
 	bool HasTeamWonMatch() const;
@@ -76,9 +77,6 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Spawning")
 	void SpawnRandomItem();
-	
-	UFUNCTION(BlueprintImplementableEvent, Category = "Spawning")
-	FTransform GetRandomSpawnTransform();
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
 	TArray<ASpawnBase*> SpawnZones;
