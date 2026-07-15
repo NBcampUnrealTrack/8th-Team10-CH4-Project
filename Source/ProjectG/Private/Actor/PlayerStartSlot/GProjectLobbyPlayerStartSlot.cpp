@@ -42,6 +42,9 @@ void AGProjectLobbyPlayerStartSlot::LinkPlayer(AGProjectPlayerState* InPlayerSta
 	{
 		LinkedPlayerState->OnLobbyStatusChanged.RemoveAll(this);
 		LinkedPlayerState->OnLobbyStatusChanged.AddUObject(this, &AGProjectLobbyPlayerStartSlot::RefreshSlotUI);
+
+		LinkedPlayerState->OnPlayerNameChanged.RemoveAll(this);
+		LinkedPlayerState->OnPlayerNameChanged.AddUObject(this, &AGProjectLobbyPlayerStartSlot::OnPlayerNameChanged);
 	}
 
 	RefreshSlotUI();
@@ -52,6 +55,7 @@ void AGProjectLobbyPlayerStartSlot::UnlinkPlayer()
 	if (LinkedPlayerState)
 	{
 		LinkedPlayerState->OnLobbyStatusChanged.RemoveAll(this);
+		LinkedPlayerState->OnPlayerNameChanged.RemoveAll(this);
 		LinkedPlayerState = nullptr;
 	}
 	RefreshSlotUI();
@@ -93,6 +97,14 @@ void AGProjectLobbyPlayerStartSlot::OnRep_LinkedPlayerState()
 	{
 		LinkedPlayerState->OnLobbyStatusChanged.RemoveAll(this);
 		LinkedPlayerState->OnLobbyStatusChanged.AddUObject(this, &AGProjectLobbyPlayerStartSlot::RefreshSlotUI);
+
+		LinkedPlayerState->OnPlayerNameChanged.RemoveAll(this);
+		LinkedPlayerState->OnPlayerNameChanged.AddUObject(this, &AGProjectLobbyPlayerStartSlot::OnPlayerNameChanged);
 	}
+	RefreshSlotUI();
+}
+
+void AGProjectLobbyPlayerStartSlot::OnPlayerNameChanged(const FString& NewName)
+{
 	RefreshSlotUI();
 }

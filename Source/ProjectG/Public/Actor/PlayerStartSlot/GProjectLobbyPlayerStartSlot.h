@@ -40,5 +40,5 @@ public:
 
 	void RefreshSlotUI(EGProjectPlayerLobbyStatus NewStatus = EGProjectPlayerLobbyStatus::Wait);
 
-
+	void OnPlayerNameChanged(const FString& NewName);
 };

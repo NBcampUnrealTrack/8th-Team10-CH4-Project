@@ -33,6 +33,11 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
 )
 
 DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectPlayerNameChangedSignature,
+	const FString&
+);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(
 	FGProjectLobbyStatusChangedSignature, 
 	EGProjectPlayerLobbyStatus
 );
@@ -64,7 +69,10 @@ public:
 	FGProjectTeamChangedSignature OnTeamChanged;
 
 	FString GetPlayerName() const { return PlayerName; }
+
 	void SetPlayerName(const FString& InName) override;
+
+	FGProjectPlayerNameChangedSignature OnPlayerNameChanged;
 
 	void SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus NewStatus);
 
@@ -107,8 +115,10 @@ private:
 	UFUNCTION()
 	virtual void CopyProperties(APlayerState* NewPlayerState) override;
 
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerName)
 	FString PlayerName;
+
+	virtual void OnRep_PlayerName() override;
 
 	UPROPERTY(ReplicatedUsing = OnRep_PlayerLobbyStatus)
 	EGProjectPlayerLobbyStatus PlayerLobbyStatus = EGProjectPlayerLobbyStatus::Wait;

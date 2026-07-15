@@ -124,6 +124,8 @@ void AGProjectPlayerState::SetPlayerName(const FString& InName)
 	{
 		PlayerName = Super::GetPlayerName();
 	}
+
+	OnPlayerNameChanged.Broadcast(PlayerName);
 }
 
 void AGProjectPlayerState::SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus NewStatus)
@@ -165,4 +167,11 @@ void AGProjectPlayerState::SetSlotIndex(int32 NewIndex)
 void AGProjectPlayerState::OnRep_SlotIndex()
 {
 	// Add Effect
+}
+
+void AGProjectPlayerState::OnRep_PlayerName()
+{
+	Super::OnRep_PlayerName();
+
+	OnPlayerNameChanged.Broadcast(PlayerName);
 }
