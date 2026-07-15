@@ -1,18 +1,21 @@
 #include "AbilitySystem/Abilities/GProjectPickupAbility.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Item/GItemHolderComponent.h"
+#include "Character/GProjectCharacter.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/GProjectItemHolderComponent.h"
 
 UGProjectPickupAbility::UGProjectPickupAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+    NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+    StartupInputTag = GProjectGameplayTags::InputTag_Interaction_Pickup;
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+    ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Movement_Airborne);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Transformed);
     ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Interaction_Pickup);
 }
@@ -29,9 +32,10 @@ void UGProjectPickupAbility::ActivateAbility(
         return;
     }
 
-    AActor* Avatar = GetAvatarActorFromActorInfo();
-    UGItemHolderComponent* Holder = Avatar ? Avatar->FindComponentByClass<UGItemHolderComponent>() : nullptr;
-    if (!Holder || !Holder->HasNearbyPickup())
+    AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo());
+    UGProjectItemHolderComponent* Holder = Character ? Character->GetItemHolderComponent() : nullptr;
+    const bool bHasNearbyPickup = Holder && Holder->HasNearbyPickup();
+    if (!bHasNearbyPickup)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
         return;
@@ -114,9 +118,9 @@ void UGProjectPickupAbility::DoPickup()
     }
     bPickedUp = true;
 
-    if (AActor* Avatar = GetAvatarActorFromActorInfo())
+    if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo()))
     {
-        if (UGItemHolderComponent* Holder = Avatar->FindComponentByClass<UGItemHolderComponent>())
+        if (UGProjectItemHolderComponent* Holder = Character->GetItemHolderComponent())
         {
             Holder->TryPickupNearby();
         }

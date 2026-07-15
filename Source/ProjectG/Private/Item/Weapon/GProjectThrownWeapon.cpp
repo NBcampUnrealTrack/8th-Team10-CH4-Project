@@ -7,6 +7,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Item/GProjectItemActorBase.h"
+#include "Net/UnrealNetwork.h"
 #include "TimerManager.h"
 
 AGProjectThrownWeapon::AGProjectThrownWeapon()
@@ -47,11 +48,32 @@ void AGProjectThrownWeapon::BeginPlay()
 	ThrowCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
+void AGProjectThrownWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AGProjectThrownWeapon, CarriedItem);
+}
+
+void AGProjectThrownWeapon::OnRep_CarriedItem()
+{
+	AttachCarriedItemVisual();
+}
+
 void AGProjectThrownWeapon::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (HasAuthority() && CarriedItem)
 	{
 		ReleaseCarriedItem(GetActorLocation());
+	}
+	else if (!HasAuthority() && CarriedItem)
+	{
+		CarriedItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		CarriedItem->SetReplicateMovement(true);
+		CarriedItem->SetWorldPhysicsEnabled(true);
+		CarriedItem->SetPickupEnabled(true);
+		CarriedItem->SetActorHiddenInGame(false);
+		CarriedItem = nullptr;
 	}
 
 	if (UWorld* World = GetWorld())
@@ -84,6 +106,8 @@ void AGProjectThrownWeapon::InitAndLaunch(
 
 	if (CarriedItem)
 	{
+		CarriedItem->SetWorldPhysicsEnabled(false);
+		CarriedItem->SetPickupEnabled(false);
 		CarriedItem->AttachToComponent(
 			ThrowCollision,
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -131,7 +155,7 @@ void AGProjectThrownWeapon::OnThrowCollisionHit(
 	ProjectileMovement->StopMovementImmediately();
 	ProjectileMovement->Deactivate();
 
-	if (OtherActor)
+	if (OtherActor && CarriedItem && CarriedItem->ShouldApplyThrowImpactDamage())
 	{
 		ApplyThrowHit(OtherActor);
 	}
@@ -211,19 +235,38 @@ void AGProjectThrownWeapon::ReleaseCarriedItem(const FVector& ImpactLocation)
 
 	FRotator DropRotation = LandedRotation;
 	DropRotation.Yaw += DroppedItem->GetActorRotation().Yaw;
+	const FVector DropLocation = FindGroundLocation(ImpactLocation);
 
 	DroppedItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	DroppedItem->SetReplicateMovement(true);
+	DroppedItem->SetWorldPhysicsEnabled(false);
 	DroppedItem->SetActorLocationAndRotation(
-		FindGroundLocation(ImpactLocation),
+		DropLocation,
 		DropRotation,
 		false,
 		nullptr,
 		ETeleportType::TeleportPhysics
 	);
+	DroppedItem->SetWorldPhysicsEnabled(true);
 	DroppedItem->SetPickupEnabled(true);
 	DroppedItem->SetActorHiddenInGame(false);
+	DroppedItem->OnThrowLanded();
 	DroppedItem->ForceNetUpdate();
 }
+
+void AGProjectThrownWeapon::AttachCarriedItemVisual()
+{
+	if (!CarriedItem)
+	{
+		return;
+	}
+
+	CarriedItem->SetActorHiddenInGame(false);
+	CarriedItem->AttachToComponent(
+		ThrowCollision,
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+}
+
 FVector AGProjectThrownWeapon::FindGroundLocation(const FVector& Origin) const
 {
 	const UWorld* World = GetWorld();

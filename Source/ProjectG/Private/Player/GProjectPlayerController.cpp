@@ -14,7 +14,6 @@
 #include "InputAction.h"
 #include "InputActionValue.h"
 #include "Player/GProjectPlayerState.h"
-#include "Targeting/GProjectLockOnComponent.h"
 #include "Camera/PlayerCameraManager.h"
 #include "UI/HUD/GProjectHUD.h"
 #include "Game/GProjectGameState.h"
@@ -301,18 +300,6 @@ void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 		return;
 	}
 
-	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
-	{
-		if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
-		{
-			if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
-			{
-				LockOnComponent->StartLockOn();
-			}
-		}
-		return;
-	}
-
 	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack) ||
 		InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_StrongAttack))
 	{
@@ -328,18 +315,6 @@ void AGProjectPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
-	{
-		if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
-		{
-			if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
-			{
-				LockOnComponent->ClearLockOn();
-			}
-		}
-		return;
-	}
-
 	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Combat_BasicAttack))
 	{
 		bBasicAttackHeld = false;
@@ -360,21 +335,6 @@ void AGProjectPlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AGProjectPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-	if (InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Targeting_LockOn))
-	{
-		if (!IsGameplayInputBlocked())
-		{
-			if (const AGProjectCharacter* GProjectCharacter = Cast<AGProjectCharacter>(GetPawn()))
-			{
-				if (UGProjectLockOnComponent* LockOnComponent = GProjectCharacter->GetLockOnComponent())
-				{
-					LockOnComponent->StartLockOn();
-				}
-			}
-		}
-		return;
-	}
-
 	if (IsGameplayInputBlocked())
 	{
 		return;

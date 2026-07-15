@@ -20,6 +20,8 @@ class PROJECTG_API AGProjectThrownWeapon : public AActor
 public:
 	AGProjectThrownWeapon();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	void InitAndLaunch(
 		AGProjectItemActorBase* WeaponItem,
 		const FVector& LaunchVelocity,
@@ -53,6 +55,9 @@ protected:
 
 private:
 	UFUNCTION()
+	void OnRep_CarriedItem();
+
+	UFUNCTION()
 	void OnThrowCollisionHit(
 		UPrimitiveComponent* HitComponent,
 		AActor* OtherActor,
@@ -63,9 +68,10 @@ private:
 	void OnFlightTimeExpired();
 	void ApplyThrowHit(AActor* Target);
 	void ReleaseCarriedItem(const FVector& ImpactLocation);
+	void AttachCarriedItemVisual();
 	FVector FindGroundLocation(const FVector& Origin) const;
 
-	UPROPERTY()
+	UPROPERTY(ReplicatedUsing = OnRep_CarriedItem)
 	TObjectPtr<AGProjectItemActorBase> CarriedItem;
 
 	UPROPERTY()

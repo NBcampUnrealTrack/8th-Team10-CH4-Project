@@ -24,6 +24,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Camera_Look, "InputTag.Camera.Look");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction, "InputTag.Interaction");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction_Interact, "InputTag.Interaction.Interact");
+	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction_Pickup, "InputTag.Interaction.Pickup");
 	UE_DEFINE_GAMEPLAY_TAG(InputTag_Interaction_UseItem, "InputTag.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(State_Character_Dead, "State.Character.Dead");

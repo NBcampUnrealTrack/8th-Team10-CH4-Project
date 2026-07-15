@@ -44,26 +44,32 @@ void UGProjectLockOnComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(UGProjectLockOnComponent, CurrentTarget);
 }
 
-void UGProjectLockOnComponent::StartLockOn()
+bool UGProjectLockOnComponent::StartLockOn()
 {
 	if (!GetOwner() || !GetWorld())
 	{
-		return;
+		return false;
 	}
 
 	if (CurrentTarget)
 	{
-		return;
+		return true;
 	}
 
 	AActor* RequestedTarget = FindBestTarget();
+	if (!RequestedTarget)
+	{
+		return false;
+	}
+
 	if (GetOwner() && GetOwner()->HasAuthority())
 	{
 		SetCurrentTarget(IsValidTarget(RequestedTarget) ? RequestedTarget : nullptr);
-		return;
+		return CurrentTarget != nullptr;
 	}
 
 	ServerSetLockOnTarget(RequestedTarget);
+	return true;
 }
 
 void UGProjectLockOnComponent::ClearLockOn()

@@ -16,8 +16,6 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Item/GItemHolderComponent.h"
-#include "Item/GItemPickup.h"
 #include "Kismet/GameplayStatics.h"
 
 AGProjectGameMode::AGProjectGameMode()
@@ -304,7 +302,7 @@ void AGProjectGameMode::BeginRoundFight()
 	
 	if (ItemPool.Num() > 0 && SpawnZones.Num() > 0)
 	{
-		for (int32 i = 0; i < 5; ++i)
+		for (int32 i = 0; i < StartItemSpawnCount; ++i)
 		{
 			SpawnRandomItem();
 		}
@@ -553,11 +551,6 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 			ItemHolder->DropHeldItem();
 		}
 
-		if (UGItemHolderComponent* ConsumableHolder =
-			Character->FindComponentByClass<UGItemHolderComponent>())
-		{
-			ConsumableHolder->ClearHeldItem();
-		}
 	}
 
 	int32 ResetItemCount = 0;
@@ -573,18 +566,6 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 
 		Item->ResetToSpawnTransform();
 		++ResetItemCount;
-	}
-
-	for (TActorIterator<AGItemPickup> It(World); It; ++It)
-	{
-		AGItemPickup* Pickup = *It;
-
-		if (!Pickup)
-		{
-			continue;
-		}
-
-		Pickup->ResetForNewRound();
 	}
 
 	for (int32 Index = 0; Index < Characters.Num(); ++Index)

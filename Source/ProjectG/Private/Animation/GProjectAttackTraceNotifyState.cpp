@@ -3,6 +3,7 @@
 #include "Animation/GProjectAttackTraceNotifyState.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GProjectGameplayTags.h"
 
@@ -42,6 +43,11 @@ void UGProjectAttackTraceNotifyState::SendTraceEvent(
 {
 	AActor* OwnerActor = MeshComp ? MeshComp->GetOwner() : nullptr;
 	if (!OwnerActor || !OwnerActor->HasAuthority())
+	{
+		return;
+	}
+
+	if (!UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OwnerActor))
 	{
 		return;
 	}

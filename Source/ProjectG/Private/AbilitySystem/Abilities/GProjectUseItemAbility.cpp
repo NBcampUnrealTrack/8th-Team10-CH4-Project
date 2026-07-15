@@ -2,19 +2,23 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
-#include "Item/GItemHolderComponent.h"
+#include "Character/GProjectCharacter.h"
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Item/GProjectItemActorBase.h"
+#include "Item/GProjectItemHolderComponent.h"
 
 UGProjectUseItemAbility::UGProjectUseItemAbility()
 {
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
     NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerInitiated;
+    StartupInputTag = GProjectGameplayTags::InputTag_Interaction_Interact;
 
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
+    ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Movement_Airborne);
 }
 
 void UGProjectUseItemAbility::ActivateAbility(
@@ -31,15 +35,16 @@ void UGProjectUseItemAbility::ActivateAbility(
 
     bUsed = false;
 
-    AActor* Avatar = GetAvatarActorFromActorInfo();
-    UGItemHolderComponent* Holder = Avatar ? Avatar->FindComponentByClass<UGItemHolderComponent>() : nullptr;
-    if (!Holder || !Holder->HasConsumable())
+    AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo());
+    UGProjectItemHolderComponent* Holder = Character ? Character->GetItemHolderComponent() : nullptr;
+    AGProjectItemActorBase* HeldItem = Holder ? Holder->GetHeldItem() : nullptr;
+    if (!Character || !Holder || !HeldItem || !HeldItem->CanUse(Character))
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
     }
 
-    if (ACharacter* Char = Cast<ACharacter>(Avatar))
+    if (ACharacter* Char = Cast<ACharacter>(Character))
     {
         if (UCharacterMovementComponent* Move = Char->GetCharacterMovement())
         {
@@ -111,9 +116,9 @@ void UGProjectUseItemAbility::DoUse()
     }
     bUsed = true;
 
-    if (AActor* Avatar = GetAvatarActorFromActorInfo())
+    if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo()))
     {
-        if (UGItemHolderComponent* Holder = Avatar->FindComponentByClass<UGItemHolderComponent>())
+        if (UGProjectItemHolderComponent* Holder = Character->GetItemHolderComponent())
         {
             Holder->UseHeldItem();
         }
