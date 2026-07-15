@@ -78,24 +78,33 @@ bool AGProjectConsumableItemActor::Use_Implementation(AGProjectCharacter* Charac
 		return false;
 	}
 
-	if (ResolvedUseEffect)
+	UseEffect = ResolvedUseEffect;
+	UseSound = ResolvedUseSound;
+
+	MulticastPlayUseFeedback(
+		Character->GetActorLocation(),
+		Character->GetActorRotation());
+
+	return true;
+}
+
+void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(const FVector& Location, const FRotator& Rotation)
+{
+	if (UseEffect)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			GetWorld(),
-			ResolvedUseEffect,
-			Character->GetActorLocation() + FVector(0.0f, 0.0f, 50.0f),
-			Character->GetActorRotation());
+			UseEffect,
+			Location + FVector(0.0f, 0.0f, 50.0f),
+			Rotation);
 	}
-
-	if (ResolvedUseSound)
+	if (UseSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(
 			this,
-			ResolvedUseSound,
-			Character->GetActorLocation());
+			UseSound,
+			Location);
 	}
-
-	return true;
 }
 
 const UGProjectConsumableDefinition* AGProjectConsumableItemActor::GetConsumableDefinition() const
