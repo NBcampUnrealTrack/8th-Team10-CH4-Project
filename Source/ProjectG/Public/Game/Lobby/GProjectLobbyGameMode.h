@@ -27,7 +27,7 @@ public:
 private:
 	void UpdatePlayerCountUI();
 	void CheckAutoStart();
-
+	void RefreshLobbyStateAndUI();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby Settings")
@@ -36,6 +36,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby Settings")
 	FString BattleMapPath = TEXT("/Game/Level/TestLevel");
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class AGProjectLobbyPlayerStartSlot>> LobbySlots;
+
+	void InitializeLobbySlots();
+
+	void RefreshAllSlots();
+
+	void MovePlayerToSlot(APlayerController* PC, int32 SlotIndex);
+
 private:
 	bool bIsStartingGame = false;
+	bool IsCurrentMapLobby() const;
 };

@@ -15,6 +15,8 @@ class PROJECTG_API AGProjectLobbyPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	AGProjectLobbyPlayerController();
+
 	virtual void BeginPlay() override;
 
 	UFUNCTION(Client, Reliable)

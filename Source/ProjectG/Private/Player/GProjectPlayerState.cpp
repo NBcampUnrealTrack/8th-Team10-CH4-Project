@@ -56,12 +56,12 @@ void AGProjectPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 	DOREPLIFETIME(
 		AGProjectPlayerState,
-		bIsReady
+		PlayerLobbyStatus
 	);
 
 	DOREPLIFETIME(
 		AGProjectPlayerState, 
-		bIsHost
+		SlotIndex
 	);
 }
 
@@ -126,24 +126,43 @@ void AGProjectPlayerState::SetPlayerName(const FString& InName)
 	}
 }
 
-void AGProjectPlayerState::SetReady(bool bNewReady)
+void AGProjectPlayerState::SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus NewStatus)
 {
-	if (bIsReady == bNewReady)
+	if (PlayerLobbyStatus == NewStatus)
 	{
 		return;
 	}
 
-	bIsReady = bNewReady;
+	PlayerLobbyStatus = NewStatus;
 
 	if (GEngine)
 	{
-		FString StateText = bIsReady ? TEXT("Ready") : TEXT("Wait");
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] Player State: %s"), *GetPlayerName(), *StateText));
+		FString StateText;
+		switch (PlayerLobbyStatus)
+		{
+		case EGProjectPlayerLobbyStatus::Wait:   StateText = TEXT("Wait"); break;
+		case EGProjectPlayerLobbyStatus::Ready:  StateText = TEXT("Ready"); break;
+		case EGProjectPlayerLobbyStatus::Master: StateText = TEXT("Master"); break;
+		}
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] Player Lobby State: %s"), *GetPlayerName(), *StateText));
 	}
-	OnReadyChanged.Broadcast();
+	OnLobbyStatusChanged.Broadcast(PlayerLobbyStatus);
 }
 
-void AGProjectPlayerState::OnRep_IsReady()
+void AGProjectPlayerState::OnRep_PlayerLobbyStatus()
 {
-	OnReadyChanged.Broadcast();
+	OnLobbyStatusChanged.Broadcast(PlayerLobbyStatus);
+}
+
+void AGProjectPlayerState::SetSlotIndex(int32 NewIndex)
+{
+	if (HasAuthority() && SlotIndex != NewIndex)
+	{
+		SlotIndex = NewIndex;
+	}
+}
+
+void AGProjectPlayerState::OnRep_SlotIndex()
+{
+	// Add Effect
 }

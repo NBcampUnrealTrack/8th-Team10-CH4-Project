@@ -30,8 +30,8 @@ void UGProjectLobbyWidget::InitLobbyWidget(AGProjectLobbyPlayerController* InPC)
 
 		if (AGProjectPlayerState* PS = OwningLobbyPC->GetPlayerState<AGProjectPlayerState>())
 		{
-			PS->OnReadyChanged.RemoveAll(this);
-			PS->OnReadyChanged.AddUObject(this, &UGProjectLobbyWidget::RefreshButtonState);
+			PS->OnLobbyStatusChanged.RemoveAll(this);
+			PS->OnLobbyStatusChanged.AddUObject(this, &UGProjectLobbyWidget::RefreshButtonState);
 		}
 	}
 	RefreshButtonState();
@@ -54,7 +54,7 @@ void UGProjectLobbyWidget::OnLobbyActionClicked()
 
 	if (AGProjectPlayerState* PS = OwningLobbyPC->GetPlayerState<AGProjectPlayerState>())
 	{
-		if (PS->bIsHost)
+		if (PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master)
 		{
 			OwningLobbyPC->Server_RequestStartGame();
 		}
@@ -65,7 +65,7 @@ void UGProjectLobbyWidget::OnLobbyActionClicked()
 	}
 }
 
-void UGProjectLobbyWidget::RefreshButtonState()
+void UGProjectLobbyWidget::RefreshButtonState(EGProjectPlayerLobbyStatus NewStatus)
 {
 	if (!OwningLobbyPC) return;
 
@@ -75,7 +75,7 @@ void UGProjectLobbyWidget::RefreshButtonState()
 		return;
 	}
 
-	if (PS->bIsHost)
+	if (PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master)
 	{
 		if (LobbyActionText) LobbyActionText->SetText(FText::FromString(TEXT("START")));
 
@@ -93,7 +93,7 @@ void UGProjectLobbyWidget::RefreshButtonState()
 
 		if (LobbyActionText)
 		{
-			if (PS->bIsReady)
+			if (PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Ready)
 			{
 				LobbyActionText->SetText(FText::FromString(TEXT("WAIT")));
 			}

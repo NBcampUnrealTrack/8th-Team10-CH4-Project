@@ -14,9 +14,12 @@ class PROJECTG_API UGProjectLobbyStatusWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	void UpdateStatusText(const FString& StatusStr, const FLinearColor& Color);
+	void SetSlotInfo(const FString& InPlayerName, const FString& InStatus);
 
 protected:
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> StatusText;
+	TObjectPtr<class UTextBlock> PlayerNameText;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<class UTextBlock> StatusText;
 };

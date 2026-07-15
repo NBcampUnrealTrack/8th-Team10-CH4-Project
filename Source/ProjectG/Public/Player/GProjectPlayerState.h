@@ -19,12 +19,23 @@ enum class EGProjectTeam : uint8
 	Blue UMETA(DisplayName = "Blue Team")
 };
 
+UENUM(BlueprintType)
+enum class EGProjectPlayerLobbyStatus : uint8
+{
+	Master UMETA(DisplayName = "Master"),
+	Wait   UMETA(DisplayName = "Wait"),
+	Ready  UMETA(DisplayName = "Ready")
+};
+
 DECLARE_MULTICAST_DELEGATE_OneParam(
 	FGProjectTeamChangedSignature,
 	EGProjectTeam
 )
 
-DECLARE_MULTICAST_DELEGATE(FGProjectReadyChangedSignature)
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectLobbyStatusChangedSignature, 
+	EGProjectPlayerLobbyStatus
+);
 
 UCLASS()
 class PROJECTG_API AGProjectPlayerState : public APlayerState, public IAbilitySystemInterface
@@ -55,18 +66,23 @@ public:
 	FString GetPlayerName() const { return PlayerName; }
 	void SetPlayerName(const FString& InName) override;
 
-	UPROPERTY(ReplicatedUsing = OnRep_IsReady)
-	bool bIsReady = false;
+	void SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus NewStatus);
 
-	UPROPERTY(Replicated)
-	bool bIsHost = false;
+	UFUNCTION(BlueprintPure, Category = "Lobby|Status")
+	EGProjectPlayerLobbyStatus GetPlayerLobbyStatus() const { return PlayerLobbyStatus; }
 
-	UFUNCTION()
-	void OnRep_IsReady();
+	UFUNCTION(BlueprintPure, Category = "Lobby|Status")
+	bool IsMaster() const { return PlayerLobbyStatus == EGProjectPlayerLobbyStatus::Master; }
 
-	void SetReady(bool bNewReady);
+	UFUNCTION(BlueprintPure, Category = "Lobby|Status")
+	bool IsReady() const { return PlayerLobbyStatus == EGProjectPlayerLobbyStatus::Ready; }
 
-	FGProjectReadyChangedSignature OnReadyChanged;
+	FGProjectLobbyStatusChangedSignature OnLobbyStatusChanged;
+
+	UFUNCTION(BlueprintPure, Category = "Lobby|Slot")
+	int32 GetSlotIndex() const { return SlotIndex; }
+
+	void SetSlotIndex(int32 NewIndex);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Ability System")
@@ -93,4 +109,16 @@ private:
 
 	UPROPERTY(Replicated)
 	FString PlayerName;
+
+	UPROPERTY(ReplicatedUsing = OnRep_PlayerLobbyStatus)
+	EGProjectPlayerLobbyStatus PlayerLobbyStatus = EGProjectPlayerLobbyStatus::Wait;
+
+	UFUNCTION()
+	void OnRep_PlayerLobbyStatus();
+
+	UPROPERTY(ReplicatedUsing = OnRep_SlotIndex)
+	int32 SlotIndex = INDEX_NONE;
+
+	UFUNCTION()
+	void OnRep_SlotIndex();
 };

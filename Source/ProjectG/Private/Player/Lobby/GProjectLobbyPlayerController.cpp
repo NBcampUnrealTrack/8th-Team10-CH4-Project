@@ -9,6 +9,12 @@
 #include "Subsystem/GProjectPlayerInfoSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/TextBlock.h"
+#include "Kismet/GameplayStatics.h"
+
+AGProjectLobbyPlayerController::AGProjectLobbyPlayerController()
+{
+	bAutoManageActiveCameraTarget = false;
+}
 
 void AGProjectLobbyPlayerController::BeginPlay()
 {
@@ -45,6 +51,18 @@ void AGProjectLobbyPlayerController::BeginPlay()
 	{
 		ShowLobbyUI();
 		return;
+	}
+
+	// Lobby Camera
+	if (IsLocalController())
+	{
+		TArray<AActor*> FoundCameras;
+		UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("LobbyCamera"), FoundCameras);
+
+		if (FoundCameras.Num() > 0)
+		{
+			SetViewTargetWithBlend(FoundCameras[0], 0.0f);
+		}
 	}
 
 	ClearCurrentWidget();
@@ -89,6 +107,20 @@ void AGProjectLobbyPlayerController::ShowLobbyUI()
 	SetInputMode(Mode);
 
 	bShowMouseCursor = true;
+
+	if (bHasPendingUpdate)
+	{
+		ApplyPlayerCountToLobbyWidget(PendingCurrentPlayers, PendingRequiredPlayers);
+		bHasPendingUpdate = false;
+	}
+
+	TArray<AActor*> FoundCameras;
+	UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName(TEXT("LobbyCamera")), FoundCameras);
+
+	if (FoundCameras.Num() > 0 && FoundCameras[0])
+	{
+		SetViewTargetWithBlend(FoundCameras[0], 0.f);
+	}
 
 	if (bHasPendingUpdate)
 	{
@@ -151,13 +183,16 @@ bool AGProjectLobbyPlayerController::ServerSetPlayerName_Validate(const FString&
 void AGProjectLobbyPlayerController::Server_ToggleReady_Implementation()
 {
 	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
-	if (!PS || PS->bIsHost) return;
+	if (!PS || PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master) return;
 
-	PS->SetReady(!PS->bIsReady);
+	EGProjectPlayerLobbyStatus TargetStatus = (PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Ready) ?
+		EGProjectPlayerLobbyStatus::Wait : EGProjectPlayerLobbyStatus::Ready;
+
+	PS->SetPlayerLobbyStatus(TargetStatus);
 
 	if (GEngine)
 	{
-		FString StateText = PS->bIsReady ? TEXT("READY") : TEXT("WAIT");
+		FString StateText = (TargetStatus == EGProjectPlayerLobbyStatus::Ready) ? TEXT("READY") : TEXT("WAIT");
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] State: %s"), *PS->GetPlayerName(), *StateText));
 	}
 
@@ -177,7 +212,7 @@ void AGProjectLobbyPlayerController::Server_ToggleReady_Implementation()
 void AGProjectLobbyPlayerController::Server_RequestStartGame_Implementation()
 {
 	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
-	if (PS && PS->bIsHost)
+	if (PS && PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master)
 	{
 		if (AGProjectLobbyGameMode* GM = GetWorld()->GetAuthGameMode<AGProjectLobbyGameMode>())
 		{
@@ -212,8 +247,8 @@ void AGProjectLobbyPlayerController::BindLobbyWidgetToPlayerState()
 	AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>();
 	if (!PS) return;
 
-	PS->OnReadyChanged.RemoveAll(LobbyUI);
-	PS->OnReadyChanged.AddUObject(LobbyUI, &UGProjectLobbyWidget::RefreshButtonState);
+	PS->OnLobbyStatusChanged.RemoveAll(LobbyUI);
+	PS->OnLobbyStatusChanged.AddUObject(LobbyUI, &UGProjectLobbyWidget::RefreshButtonState);
 
 	LobbyUI->RefreshButtonState();
 }

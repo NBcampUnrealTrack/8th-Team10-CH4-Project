@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "OnlineSubsystem.h"
+#include "Actor/PlayerStartSlot/GProjectLobbyPlayerStartSlot.h"
 
 AGProjectLobbyGameMode::AGProjectLobbyGameMode()
 {
@@ -38,11 +39,11 @@ void AGProjectLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 	{
 		if (NewPlayer->GetNetConnection() == nullptr)
 		{
-			PS->bIsHost = true;
+			PS->SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus::Master);
 		}
 	}
 
-	UpdatePlayerCountUI();
+	RefreshLobbyStateAndUI();
 
 	//CheckAutoStart();
 }
@@ -51,23 +52,45 @@ void AGProjectLobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 
+	RefreshAllSlots();
 	UpdatePlayerCountUI();
+
+	RefreshLobbyStateAndUI();
 }
 
 void AGProjectLobbyGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitializeLobbySlots();
 	UpdatePlayerCountUI();
+
+	RefreshLobbyStateAndUI();
 }
 
 void AGProjectLobbyGameMode::UpdatePlayerCountUI()
 {
-	if (!GameState) return;
+	if (!IsCurrentMapLobby())
+	{
+		return;
+	}
+
+	if (!IsCurrentMapLobby())
+	{
+		return;
+	}
+
+	if (!GameState)
+	{
+		return;
+	}
 
 	int32 CurrentPlayers = GameState->PlayerArray.Num();
 	UWorld* World = GetWorld();
-	if (!World) return;
+	if (!World)
+	{
+		return;
+	}
 
 	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 	{
@@ -79,6 +102,14 @@ void AGProjectLobbyGameMode::UpdatePlayerCountUI()
 			{
 				LobbyPC->ClientUpdatePlayerCount(CurrentPlayers, RequiredPlayers);
 			}
+		}
+	}
+
+	for (AGProjectLobbyPlayerStartSlot* Slot : LobbySlots)
+	{
+		if (Slot)
+		{
+			Slot->RefreshSlotUI();
 		}
 	}
 }
@@ -107,6 +138,11 @@ void AGProjectLobbyGameMode::CheckAutoStart()
 
 void AGProjectLobbyGameMode::StartGame()
 {
+	if (!IsCurrentMapLobby())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("StartGame Called"));
 
 	if (bIsStartingGame)
@@ -148,7 +184,15 @@ int32 AGProjectLobbyGameMode::GetRequiredPlayers() const
 
 bool AGProjectLobbyGameMode::CanStartGame() const
 {
-	if (!GameState) return false;
+	if (!IsCurrentMapLobby())
+	{
+		return false;
+	}
+
+	if (!GameState)
+	{
+		return false;
+	}
 
 	int32 TotalPlayers = GameState->PlayerArray.Num();
 
@@ -161,12 +205,12 @@ bool AGProjectLobbyGameMode::CanStartGame() const
 	{
 		if (AGProjectPlayerState* GProjectPS = Cast<AGProjectPlayerState>(PS))
 		{
-			if (GProjectPS->bIsHost)
+			if (GProjectPS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master)
 			{
 				continue;
 			}
 
-			if (!GProjectPS->bIsReady)
+			if (GProjectPS->GetPlayerLobbyStatus() != EGProjectPlayerLobbyStatus::Ready)
 			{
 				return false;
 			}
@@ -174,4 +218,130 @@ bool AGProjectLobbyGameMode::CanStartGame() const
 	}
 
 	return true;
+}
+
+void AGProjectLobbyGameMode::InitializeLobbySlots()
+{
+	if (!IsCurrentMapLobby())
+	{
+		return;
+	}
+
+	LobbySlots.Empty();
+
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AGProjectLobbyPlayerStartSlot::StaticClass(), FoundActors);
+
+	for (AActor* Actor : FoundActors)
+	{
+		if (AGProjectLobbyPlayerStartSlot* SlotActor = Cast<AGProjectLobbyPlayerStartSlot>(Actor))
+		{
+			LobbySlots.Add(SlotActor);
+		}
+	}
+
+	LobbySlots.Sort([](const AGProjectLobbyPlayerStartSlot& A, const AGProjectLobbyPlayerStartSlot& B)
+		{
+		return A.SlotIndex < B.SlotIndex;
+		});
+}
+
+void AGProjectLobbyGameMode::RefreshAllSlots()
+{
+	if (!IsCurrentMapLobby())
+	{
+		return;
+	}
+
+	if (!GameState)
+	{
+		return;
+	}
+
+	for (AGProjectLobbyPlayerStartSlot* Slot : LobbySlots)
+	{
+		if (Slot)
+		{
+			Slot->UnlinkPlayer();
+		}
+	}
+
+	for (int32 i = 0; i < GameState->PlayerArray.Num(); ++i)
+	{
+		if (AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(GameState->PlayerArray[i]))
+		{
+			if (PS->GetSlotIndex() == INDEX_NONE)
+			{
+				PS->SetSlotIndex(i);
+			}
+
+			int32 TargetIndex = PS->GetSlotIndex();
+
+			if (LobbySlots.IsValidIndex(TargetIndex) && LobbySlots[TargetIndex])
+			{
+				LobbySlots[TargetIndex]->LinkPlayer(PS);
+
+				if (APlayerController* PC = Cast<APlayerController>(PS->GetOwner()))
+				{
+					MovePlayerToSlot(PC, TargetIndex);
+				}
+			}
+		}
+	}
+}
+
+void AGProjectLobbyGameMode::MovePlayerToSlot(APlayerController* PC, int32 TargetSlotIndex)
+{
+	if (!IsValid(PC)) return;
+
+	APawn* ControlledPawn = PC->GetPawn();
+
+	if (!IsValid(ControlledPawn))
+	{
+		TWeakObjectPtr<APlayerController> WeakPC = PC;
+
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimerForNextTick(
+				FTimerDelegate::CreateWeakLambda(this, [this, WeakPC, TargetSlotIndex]()
+					{
+						if (!WeakPC.IsValid()) return;
+
+						MovePlayerToSlot(WeakPC.Get(), TargetSlotIndex);
+					})
+			);
+		}
+
+		return;
+	}
+
+	if (!LobbySlots.IsValidIndex(TargetSlotIndex)) return;
+
+	AGProjectLobbyPlayerStartSlot* TargetSlot = LobbySlots[TargetSlotIndex];
+	if (!IsValid(TargetSlot)) return;
+	if (!IsValid(TargetSlot->SpawnPoint)) return;
+
+	ControlledPawn->SetActorLocationAndRotation(
+		TargetSlot->SpawnPoint->GetComponentLocation(),
+		TargetSlot->SpawnPoint->GetComponentRotation()
+	);
+}
+
+bool AGProjectLobbyGameMode::IsCurrentMapLobby() const
+{
+	if (UWorld* World = GetWorld())
+	{
+		FString CurrentMapName = World->GetMapName();
+		return CurrentMapName.Contains(TEXT("LobbyMap"));
+	}
+	return false;
+}
+
+void AGProjectLobbyGameMode::RefreshLobbyStateAndUI()
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &AGProjectLobbyGameMode::RefreshAllSlots));
+	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &AGProjectLobbyGameMode::UpdatePlayerCountUI));
 }

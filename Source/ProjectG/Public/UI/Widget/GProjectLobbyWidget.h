@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widget/GProjectUserWidget.h"
+#include "Player/GProjectPlayerState.h"
 #include "GProjectLobbyWidget.generated.h"
 
 class UTextBlock;
 class UEditableTextBox;
 class UButton;
+
 
 UCLASS()
 class PROJECTG_API UGProjectLobbyWidget : public UGProjectUserWidget
@@ -19,7 +21,7 @@ public:
 	void UpdatePlayerCountText(int32 CurrentPlayers, int32 RequiredPlayers);
 
 	void InitLobbyWidget(class AGProjectLobbyPlayerController* InPC);
-	void RefreshButtonState();
+	void RefreshButtonState(EGProjectPlayerLobbyStatus NewStatus = EGProjectPlayerLobbyStatus::Wait);
 
 protected:
 

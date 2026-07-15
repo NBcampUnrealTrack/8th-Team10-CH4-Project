@@ -5,11 +5,8 @@
 
 #include "Components/TextBlock.h"
 
-void UGProjectLobbyStatusWidget::UpdateStatusText(const FString& StatusStr, const FLinearColor& Color)
+void UGProjectLobbyStatusWidget::SetSlotInfo(const FString& InPlayerName, const FString& InStatus)
 {
-	if (StatusText)
-	{
-		StatusText->SetText(FText::FromString(StatusStr));
-		StatusText->SetColorAndOpacity(FSlateColor(Color));
-	}
+	if (PlayerNameText) PlayerNameText->SetText(FText::FromString(InPlayerName));
+	if (StatusText) StatusText->SetText(FText::FromString(InStatus));
 }

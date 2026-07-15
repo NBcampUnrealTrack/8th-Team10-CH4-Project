@@ -14,6 +14,4 @@ class PROJECTG_API AGProjectLobbyGameState : public AGameStateBase
 {
 	GENERATED_BODY()
 	
-public:
-	bool CanStartGame() const;
 };
