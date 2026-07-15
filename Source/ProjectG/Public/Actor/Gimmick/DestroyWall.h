@@ -28,17 +28,20 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	class UBoxComponent* CollisionBox;
-
-private:
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* MeshComponent;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick|Setting")
+	int32 MaxRoundTime = 180; 
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick|Setting", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float DestroyTimeRatio = 0.5f; // 기본값은 50%
 
+private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
 	UCurveFloat* SinkCurve;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "RoundSettings", meta = (AllowPrivateAccess = "true"))
-	int32 MaxRoundTime;
-
 	FTimeline SinkTimeline;
 	FVector StartLocation;
 	

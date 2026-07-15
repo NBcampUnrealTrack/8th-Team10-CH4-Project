@@ -62,13 +62,11 @@ void ADestroyWall::OnMatchTimeUpdated(int32 NewRemainTime)
     {
         return; 
     }
+    
+    int32 TargetRemainTime = FMath::RoundToInt(MaxRoundTime * DestroyTimeRatio);
 
-    int32 HalfTime = MaxRoundTime / 2;
-
-    if (NewRemainTime <= HalfTime)
+    if (NewRemainTime <= TargetRemainTime)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("[DestroyWall] 경고!!! 벽이 흔들립니다!!!"));
-
         bIsSinking = true;
         SetActorTickEnabled(true);
         
@@ -78,6 +76,7 @@ void ADestroyWall::OnMatchTimeUpdated(int32 NewRemainTime)
         }
     }
 }
+
 void ADestroyWall::HandleTimelineProgress(float Value)
 {
     float CurrentTime = SinkTimeline.GetPlaybackPosition();
@@ -105,7 +104,6 @@ void ADestroyWall::HandleTimelineFinished()
     SetActorTickEnabled(false);
     SetActorHiddenInGame(true);
     SetActorEnableCollision(false);
-    GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange, TEXT("[DestroyWall] 무너짐 완료"));
 }
 
 void ADestroyWall::ResetWall()
@@ -117,6 +115,4 @@ void ADestroyWall::ResetWall()
     SetActorHiddenInGame(false);
     SetActorEnableCollision(true); 
     SetActorTickEnabled(false);
-    
-    GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("[DestroyWall] 새 라운드 시작! 벽 리셋 완료!"));
 }
