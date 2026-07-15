@@ -14,15 +14,20 @@ class PROJECTG_API AGProjectLobbyGameMode : public AGameModeBase
 	GENERATED_BODY()
 	
 public:
+	AGProjectLobbyGameMode();
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
+	virtual void BeginPlay() override;
 
 	int32 GetRequiredPlayers() const;
+	bool CanStartGame() const;
+	void StartGame();
 
 private:
 	void UpdatePlayerCountUI();
 	void CheckAutoStart();
-	void StartGame();
+	void RefreshLobbyStateAndUI();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby Settings")
@@ -31,6 +36,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Lobby Settings")
 	FString BattleMapPath = TEXT("/Game/Level/TestLevel");
 
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<class AGProjectLobbyPlayerStartSlot>> LobbySlots;
+
+	void InitializeLobbySlots();
+
+	void RefreshAllSlots();
+
+	void MovePlayerToSlot(APlayerController* PC, int32 SlotIndex);
+
 private:
 	bool bIsStartingGame = false;
+	bool IsCurrentMapLobby() const;
 };

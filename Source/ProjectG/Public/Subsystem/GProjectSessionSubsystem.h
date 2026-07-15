@@ -15,17 +15,24 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnCreateSessionComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGProjectOnFindSessionsComplete, const TArray<FString>&, SessionNames, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnJoinSessionComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnLoginComplete, bool, bWasSuccessful);
 UCLASS()
 class PROJECTG_API UGProjectSessionSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	
 public:
-	UGProjectSessionSubsystem();
-
-	void CreateGameSession(int32 MaxPublicConnections, FName SessionNameSetting);
+	void CreateGameSession(
+		int32 MaxPublicConnections,
+		FName SessionNameSetting,
+		const FString& RoomName,
+		const FString& BattleMapPath
+	);
 	void FindGameSessions();
 	void JoinGameSession(int32 SessionIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Online")
+	void LoginWithEOS();
 
 	virtual void Deinitialize() override;
 
@@ -40,6 +47,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FGProjectOnJoinSessionComplete OnJoinSessionCompleteEvent;
 
+	UPROPERTY(BlueprintAssignable, Category = "Online")
+	FGProjectOnLoginComplete OnLoginCompleteEvent;
+
 	UFUNCTION(BlueprintCallable, Category = "Loading")
 	void ShowLoading();
 
@@ -53,6 +63,7 @@ protected:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 	void OnFindSessionsComplete(bool bWasSuccessful);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
+	void OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);
 
 private:
 	IOnlineSessionPtr SessionInterface;
@@ -61,6 +72,7 @@ private:
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
 	FDelegateHandle FindSessionsCompleteDelegateHandle;
 	FDelegateHandle JoinSessionCompleteDelegateHandle;
+	FDelegateHandle LoginCompleteDelegateHandle;
 
 	FName LobbyMapPath = TEXT("/Game/Level/LobbyMap");
 
@@ -72,4 +84,8 @@ private:
 
 	void LoadLoadingWidgetClassIfNeeded();
 	APlayerController* GetOwningPlayerController() const;
+
+	int32 CachedMaxPlayersForTravel;
+	FString CachedBattleMapPathForTravel;
+	FText CachedPlayerName;
 };
