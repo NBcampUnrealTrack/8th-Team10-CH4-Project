@@ -78,11 +78,14 @@ protected:
 	
 	FTimerHandle ItemSpawnTimerHandle;
 	
-	UFUNCTION(BlueprintCallable, Category = "Spawning")
-	void SpawnRandomItem();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning|Balance")
+	int32 StartItemSpawnCount = 5;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Settings", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning|Balance", meta = (AllowPrivateAccess = "true"))
 	float ItemSpawnInterval = 10.0f;
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning|Balance")
+	void SpawnRandomItem();
 	
 	UPROPERTY()
 	TArray<ASpawnBase*> SpawnZones;

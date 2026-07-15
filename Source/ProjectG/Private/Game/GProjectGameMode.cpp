@@ -304,7 +304,7 @@ void AGProjectGameMode::BeginRoundFight()
 	
 	if (ItemPool.Num() > 0 && SpawnZones.Num() > 0)
 	{
-		for (int32 i = 0; i < 5; ++i)
+		for (int32 i = 0; i < StartItemSpawnCount; ++i)
 		{
 			SpawnRandomItem();
 		}
