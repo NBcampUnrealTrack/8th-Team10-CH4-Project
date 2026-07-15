@@ -4,8 +4,8 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Character/GProjectCharacter.h"
 #include "Components/DecalComponent.h"
-#include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -15,37 +15,52 @@
 #include "Net/UnrealNetwork.h"
 #include "Particles/ParticleSystem.h"
 
+namespace
+{
+	const FName FuseProgressParameterName = TEXT("FuseProgress");
+	const FName BombFlashParameterName = TEXT("BombFlashAmount");
+
+	constexpr float DecalProjectionDepth = 256.0f;
+	constexpr float WarningDecalGroundTraceUp = 100.0f;
+	constexpr float WarningDecalGroundTraceDown = 1000.0f;
+	constexpr float WarningDecalGroundOffset = 3.0f;
+	constexpr float MaxBlinkInterval = 0.5f;
+	constexpr float MinBlinkInterval = 0.08f;
+	constexpr float BombFlashAmount = 1.0f;
+}
+
 AGProjectBombActor::AGProjectBombActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
-	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
-	SetRootComponent(SceneRoot);
-
-	BombMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BombMesh"));
-	BombMesh->SetupAttachment(SceneRoot);
-	BombMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-
 	WarningDecal = CreateDefaultSubobject<UDecalComponent>(TEXT("WarningDecal"));
-	WarningDecal->SetupAttachment(SceneRoot);
-	WarningDecal->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
-	WarningDecal->DecalSize = FVector(DecalProjectionDepth, 0.0f, 0.0f);
+	WarningDecal->SetupAttachment(RootComponent);
+	WarningDecal->SetUsingAbsoluteScale(true);
+	WarningDecal->SetWorldRotation(FRotator(-90.0f, 0.0f, 0.0f));
+	WarningDecal->SetWorldScale3D(FVector::OneVector);
+	WarningDecal->DecalSize = FVector(DecalProjectionDepth, 1.0f, 1.0f);
 	WarningDecal->SetVisibility(false);
+	WarningDecal->SetHiddenInGame(true);
 }
 
 void AGProjectBombActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (BombMesh)
+	if (ItemMesh)
 	{
-		BombMaterial = BombMesh->CreateAndSetMaterialInstanceDynamic(0);
+		BombMaterial = ItemMesh->CreateAndSetMaterialInstanceDynamic(0);
 	}
 
 	if (WarningDecal && WarningDecalMaterial)
 	{
 		WarningDecal->SetDecalMaterial(WarningDecalMaterial);
+		WarningDecalMaterialInstance = WarningDecal->CreateDynamicMaterialInstance();
+		if (WarningDecalMaterialInstance)
+		{
+			WarningDecalMaterialInstance->SetScalarParameterValue(FuseProgressParameterName, 0.0f);
+		}
 	}
 
 	if (BombMaterial)
@@ -55,10 +70,14 @@ void AGProjectBombActor::BeginPlay()
 
 	if (WarningDecal)
 	{
-		WarningDecal->SetVisibility(bFuseStarted);
+		WarningDecal->SetVisibility(bFuseStarted, true);
+		WarningDecal->SetHiddenInGame(!bFuseStarted, true);
 	}
 
-	UpdateWarningDecal();
+	if (bFuseStarted)
+	{
+		UpdateWarningDecal();
+	}
 }
 
 void AGProjectBombActor::Tick(float DeltaSeconds)
@@ -72,7 +91,7 @@ void AGProjectBombActor::Tick(float DeltaSeconds)
 
 	ElapsedTime += DeltaSeconds;
 	UpdateWarningDecal();
-	UpdateBombBlink(DeltaSeconds);
+	UpdateBombBlink();
 
 	if (HasAuthority() && ElapsedTime >= FuseTime)
 	{
@@ -85,6 +104,39 @@ void AGProjectBombActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGProjectBombActor, bFuseStarted);
+}
+
+bool AGProjectBombActor::ShouldDestroyOnUse() const
+{
+	return false;
+}
+
+bool AGProjectBombActor::ShouldApplyThrowImpactDamage() const
+{
+	return false;
+}
+
+void AGProjectBombActor::OnThrowStarted(AGProjectCharacter* Thrower)
+{
+	if (!HasAuthority() || bFuseStarted || bExploded)
+	{
+		return;
+	}
+
+	SetSourceActor(Thrower);
+	StartFuse();
+}
+
+bool AGProjectBombActor::Use_Implementation(AGProjectCharacter* Character)
+{
+	if (!HasAuthority() || bFuseStarted || bExploded)
+	{
+		return false;
+	}
+
+	SetSourceActor(Character);
+	StartFuse();
+	return true;
 }
 
 void AGProjectBombActor::SetSourceActor(AActor* InSourceActor)
@@ -120,8 +172,6 @@ void AGProjectBombActor::OnRep_FuseStarted()
 void AGProjectBombActor::StartFuseVisuals()
 {
 	ElapsedTime = 0.0f;
-	BlinkElapsedTime = 0.0f;
-	bBlinkOn = false;
 
 	if (BombMaterial)
 	{
@@ -130,7 +180,8 @@ void AGProjectBombActor::StartFuseVisuals()
 
 	if (WarningDecal)
 	{
-		WarningDecal->SetVisibility(true);
+		WarningDecal->SetVisibility(true, true);
+		WarningDecal->SetHiddenInGame(false, true);
 	}
 
 	UpdateWarningDecal();
@@ -144,11 +195,40 @@ void AGProjectBombActor::UpdateWarningDecal()
 	}
 
 	const float Alpha = FuseTime > 0.0f ? FMath::Clamp(ElapsedTime / FuseTime, 0.0f, 1.0f) : 1.0f;
-	const float CurrentRadius = FMath::Lerp(0.0f, ExplosionRadius, Alpha);
-	WarningDecal->DecalSize = FVector(DecalProjectionDepth, CurrentRadius, CurrentRadius);
+	const float MaxDiameter = FMath::Max(ExplosionRadius * 2.0f, 1.0f);
+	WarningDecal->SetWorldScale3D(FVector::OneVector);
+	WarningDecal->DecalSize = FVector(DecalProjectionDepth, MaxDiameter, MaxDiameter);
+	WarningDecal->SetWorldRotation(FRotator(-90.0f, 0.0f, 0.0f));
+
+	if (WarningDecalMaterialInstance)
+	{
+		WarningDecalMaterialInstance->SetScalarParameterValue(FuseProgressParameterName, Alpha);
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const FVector TraceStart = GetActorLocation() + FVector(0.0f, 0.0f, WarningDecalGroundTraceUp);
+	const FVector TraceEnd = GetActorLocation() - FVector(0.0f, 0.0f, WarningDecalGroundTraceDown);
+
+	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(BombWarningDecalGroundTrace), false, this);
+	QueryParams.AddIgnoredActor(this);
+
+	FHitResult GroundHit;
+	if (World->LineTraceSingleByChannel(GroundHit, TraceStart, TraceEnd, ECC_WorldStatic, QueryParams))
+	{
+		WarningDecal->SetWorldLocation(GroundHit.ImpactPoint + FVector(0.0f, 0.0f, WarningDecalGroundOffset));
+	}
+	else
+	{
+		WarningDecal->SetWorldLocation(GetActorLocation());
+	}
 }
 
-void AGProjectBombActor::UpdateBombBlink(float DeltaSeconds)
+void AGProjectBombActor::UpdateBombBlink()
 {
 	if (!BombMaterial)
 	{
@@ -157,15 +237,8 @@ void AGProjectBombActor::UpdateBombBlink(float DeltaSeconds)
 
 	const float Alpha = FuseTime > 0.0f ? FMath::Clamp(ElapsedTime / FuseTime, 0.0f, 1.0f) : 1.0f;
 	const float BlinkInterval = FMath::Lerp(MaxBlinkInterval, MinBlinkInterval, Alpha);
-
-	BlinkElapsedTime += DeltaSeconds;
-	if (BlinkElapsedTime < BlinkInterval)
-	{
-		return;
-	}
-
-	BlinkElapsedTime = 0.0f;
-	bBlinkOn = !bBlinkOn;
+	const float BlinkPhase = FMath::Fmod(ElapsedTime, BlinkInterval);
+	const bool bBlinkOn = BlinkPhase < BlinkInterval * 0.5f;
 
 	BombMaterial->SetScalarParameterValue(
 		BombFlashParameterName,

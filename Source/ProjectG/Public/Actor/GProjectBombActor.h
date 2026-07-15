@@ -4,21 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/GProjectAbilitySystemLibrary.h"
-#include "GameFramework/Actor.h"
+#include "Item/GProjectItemActorBase.h"
 #include "GProjectBombActor.generated.h"
 
+class AGProjectCharacter;
 class UDecalComponent;
 class UGameplayEffect;
 class UAbilitySystemComponent;
 class UMaterialInstanceDynamic;
 class UMaterialInterface;
 class UParticleSystem;
-class USceneComponent;
 class USoundBase;
-class UStaticMeshComponent;
 
 UCLASS()
-class PROJECTG_API AGProjectBombActor : public AActor
+class PROJECTG_API AGProjectBombActor : public AGProjectItemActorBase
 {
 	GENERATED_BODY()
 
@@ -27,6 +26,10 @@ public:
 
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ShouldDestroyOnUse() const override;
+	virtual bool ShouldApplyThrowImpactDamage() const override;
+	virtual void OnThrowStarted(AGProjectCharacter* Thrower) override;
+	virtual bool Use_Implementation(AGProjectCharacter* Character) override;
 
 	UFUNCTION(BlueprintCallable, Category = "Bomb")
 	void SetSourceActor(AActor* InSourceActor);
@@ -36,12 +39,6 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bomb")
-	TObjectPtr<USceneComponent> SceneRoot;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bomb")
-	TObjectPtr<UStaticMeshComponent> BombMesh;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Bomb|Warning")
 	TObjectPtr<UDecalComponent> WarningDecal;
@@ -64,21 +61,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Warning")
 	TObjectPtr<UMaterialInterface> WarningDecalMaterial;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Warning", meta = (ClampMin = "1.0"))
-	float DecalProjectionDepth = 256.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Blink")
-	FName BombFlashParameterName = TEXT("BombFlashAmount");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Blink", meta = (ClampMin = "0.01"))
-	float MaxBlinkInterval = 0.5f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Blink", meta = (ClampMin = "0.01"))
-	float MinBlinkInterval = 0.08f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Blink", meta = (ClampMin = "0.0"))
-	float BombFlashAmount = 1.0f;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Feedback")
 	TObjectPtr<USoundBase> ExplosionSound;
 
@@ -91,7 +73,7 @@ private:
 
 	void StartFuseVisuals();
 	void UpdateWarningDecal();
-	void UpdateBombBlink(float DeltaSeconds);
+	void UpdateBombBlink();
 	void Explode();
 	void ApplyExplosionToTarget(AActor* TargetActor);
 
@@ -104,12 +86,13 @@ private:
 	TObjectPtr<UMaterialInstanceDynamic> BombMaterial;
 
 	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> WarningDecalMaterialInstance;
+
+	UPROPERTY()
 	TObjectPtr<AActor> SourceActor;
 
 	float ElapsedTime = 0.0f;
-	float BlinkElapsedTime = 0.0f;
 	UPROPERTY(ReplicatedUsing = OnRep_FuseStarted)
 	bool bFuseStarted = false;
-	bool bBlinkOn = false;
 	bool bExploded = false;
 };
