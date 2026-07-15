@@ -31,7 +31,7 @@ protected:
         bool bReplicateEndAbility,
         bool bWasCancelled) override;
 
-    UPROPERTY(EditDefaultsOnly, Category = "UseItem")
+    UPROPERTY(EditDefaultsOnly, Category = "Interact")
     TObjectPtr<UAnimMontage> UseMontage;
 
 private:

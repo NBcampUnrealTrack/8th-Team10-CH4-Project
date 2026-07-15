@@ -15,9 +15,10 @@ class PROJECTG_API AGProjectWeaponItemActor : public AGProjectItemActorBase
 
 public:
 	virtual bool CanBePickedUpBy(const AGProjectCharacter* Character) const override;
-	virtual void HandleEquipped(AGProjectCharacter* Character) override;
+	virtual bool UsesWeaponSocket() const override;
+	virtual void HandleEquipped(AGProjectCharacter* Character, FName HoldSocketName) override;
 	virtual void HandleUnequipped(AGProjectCharacter* Character) override;
 
 private:
-	UGProjectWeaponDefinition* GetWeaponDefinition() const;
+	const UGProjectWeaponDefinition* GetWeaponDefinition() const;
 };

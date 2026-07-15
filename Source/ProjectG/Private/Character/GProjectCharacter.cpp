@@ -131,7 +131,16 @@ UGProjectLockOnComponent* AGProjectCharacter::GetLockOnComponent() const
 
 UGProjectItemHolderComponent* AGProjectCharacter::GetItemHolderComponent() const
 {
-	return FindComponentByClass<UGProjectItemHolderComponent>();
+	if (UGProjectItemHolderComponent* FoundComponent = FindComponentByClass<UGProjectItemHolderComponent>())
+	{
+		return FoundComponent;
+	}
+
+	return ItemHolderComponent &&
+		ItemHolderComponent->GetOwner() == this &&
+		ItemHolderComponent->GetWorld()
+		? ItemHolderComponent.Get()
+		: nullptr;
 }
 
 UGProjectComboData* AGProjectCharacter::GetActiveGroundComboData() const

@@ -36,9 +36,6 @@ public:
 	TObjectPtr<UGProjectComboData> DashComboData;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Socket")
-	FName AttachSocketName = TEXT("WeaponSocket");
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Socket")
 	FName TraceStartSocketName = TEXT("Trace_Start");
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Socket")

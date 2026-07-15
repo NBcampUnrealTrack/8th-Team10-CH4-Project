@@ -3,6 +3,28 @@
 #include "AbilitySystem/GProjectAbilitySystemComponent.h"
 
 #include "AbilitySystem/Abilities/GProjectGameplayAbility.h"
+#include "AbilitySystem/Abilities/GProjectPickupAbility.h"
+#include "AbilitySystem/Abilities/GProjectUseItemAbility.h"
+#include "GProjectGameplayTags.h"
+
+namespace
+{
+	bool DoesAbilityInputMatch(const UGameplayAbility* Ability, const FGameplayTag& InputTag)
+	{
+		if (Ability->IsA<UGProjectPickupAbility>())
+		{
+			return InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Interaction_Pickup);
+		}
+
+		if (Ability->IsA<UGProjectUseItemAbility>())
+		{
+			return InputTag.MatchesTagExact(GProjectGameplayTags::InputTag_Interaction_Interact);
+		}
+
+		const UGProjectGameplayAbility* ProjectAbility = Cast<UGProjectGameplayAbility>(Ability);
+		return ProjectAbility && ProjectAbility->StartupInputTag.MatchesTagExact(InputTag);
+	}
+}
 
 void UGProjectAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
@@ -13,13 +35,12 @@ void UGProjectAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag&
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
-		const UGProjectGameplayAbility* ProjectAbility = Cast<UGProjectGameplayAbility>(AbilitySpec.Ability);
-		if (!ProjectAbility)
+		if (!AbilitySpec.Ability)
 		{
 			continue;
 		}
 
-		if (ProjectAbility->StartupInputTag.MatchesTagExact(InputTag))
+		if (DoesAbilityInputMatch(AbilitySpec.Ability, InputTag))
 		{
 			AbilitySpecInputPressed(AbilitySpec);
 
@@ -40,13 +61,12 @@ void UGProjectAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
-		const UGProjectGameplayAbility* ProjectAbility = Cast<UGProjectGameplayAbility>(AbilitySpec.Ability);
-		if (!ProjectAbility)
+		if (!AbilitySpec.Ability)
 		{
 			continue;
 		}
 
-		if (ProjectAbility->StartupInputTag.MatchesTagExact(InputTag))
+		if (DoesAbilityInputMatch(AbilitySpec.Ability, InputTag))
 		{
 			AbilitySpecInputReleased(AbilitySpec);
 		}
@@ -62,13 +82,12 @@ void UGProjectAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& In
 
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
-		const UGProjectGameplayAbility* ProjectAbility = Cast<UGProjectGameplayAbility>(AbilitySpec.Ability);
-		if (!ProjectAbility)
+		if (!AbilitySpec.Ability)
 		{
 			continue;
 		}
 
-		if (!ProjectAbility->StartupInputTag.MatchesTagExact(InputTag))
+		if (!DoesAbilityInputMatch(AbilitySpec.Ability, InputTag))
 		{
 			continue;
 		}
