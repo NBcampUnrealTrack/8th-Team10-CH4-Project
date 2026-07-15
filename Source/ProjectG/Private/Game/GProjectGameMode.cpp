@@ -203,6 +203,35 @@ void AGProjectGameMode::DecreaseSpawnedItemCount()
 	CurrentSpawnedItems = FMath::Max(0, CurrentSpawnedItems - 1);
 }
 
+void AGProjectGameMode::HandleSeamlessTravelPlayer(AController*& Controller)
+{
+	Super::HandleSeamlessTravelPlayer(Controller);
+
+	APlayerController* PC = Cast<APlayerController>(Controller);
+
+	AssignTeam(PC);
+
+	AGProjectPlayerState* PS = Controller->GetPlayerState<AGProjectPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	AssignPlayerColor(PS);
+
+	if (HasMatchStarted())
+	{
+		return;
+	}
+
+	if (GetNumPlayers() < RequiredPlayers)
+	{
+		return;
+	}
+
+	StartMatch();
+}
+
 void AGProjectGameMode::HandleMatchHasStarted()
 {
 	Super::HandleMatchHasStarted();
