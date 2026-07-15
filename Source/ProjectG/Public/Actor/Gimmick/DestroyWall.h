@@ -21,6 +21,13 @@ protected:
 	virtual void BeginPlay() override;
 	
 	bool bIsSinking;
+	void ResetWall();
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USceneComponent* SceneRootComponent;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UBoxComponent* CollisionBox;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -34,8 +41,6 @@ private:
 
 	FTimeline SinkTimeline;
 	FVector StartLocation;
-	
-	void CheckRoundTime();
 	
 	FTimerHandle TimeCheckTimerHandle;
 	
