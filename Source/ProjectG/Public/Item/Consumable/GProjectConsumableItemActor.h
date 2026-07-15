@@ -1,0 +1,39 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Item/GProjectItemActorBase.h"
+#include "GProjectConsumableItemActor.generated.h"
+
+class UGameplayEffect;
+class UGProjectConsumableDefinition;
+class UNiagaraSystem;
+class USoundBase;
+
+UCLASS()
+class PROJECTG_API AGProjectConsumableItemActor : public AGProjectItemActorBase
+{
+	GENERATED_BODY()
+
+public:
+	virtual bool CanBePickedUpBy(const AGProjectCharacter* Character) const override;
+	virtual bool CanUse(const AGProjectCharacter* Character) const override;
+	virtual bool Use_Implementation(AGProjectCharacter* Character) override;
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
+	TArray<TSubclassOf<UGameplayEffect>> EffectsToApply;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable", meta = (ClampMin = "1.0"))
+	float EffectLevel = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable|Feedback")
+	TObjectPtr<UNiagaraSystem> UseEffect;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable|Feedback")
+	TObjectPtr<USoundBase> UseSound;
+
+private:
+	const UGProjectConsumableDefinition* GetConsumableDefinition() const;
+};

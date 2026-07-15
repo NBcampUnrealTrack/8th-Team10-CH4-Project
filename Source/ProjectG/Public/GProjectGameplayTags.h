@@ -27,6 +27,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Camera_Look);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_Interact);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_Pickup);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Interaction_UseItem);
 	//State
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Character_Dead);

@@ -38,16 +38,13 @@ protected:
 	TObjectPtr<UAnimMontage> ThrowMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Throw")
-	TSubclassOf<AGProjectThrownWeapon> ThrownWeaponClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Throw")
 	FName ThrowSocketName = TEXT("hand_r");
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throw|Tuning", meta = (ClampMin = "0.0"))
-	float ThrowSpeed = 1500.0f;
+	float ThrowSpawnForwardOffset = 80.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throw|Tuning", meta = (ClampMin = "0.0", ClampMax = "80.0"))
-	float ThrowAngle = 20.0f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throw|Tuning", meta = (ClampMin = "0.0"))
+	float ThrowSpeed = 1500.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throw|Tuning", meta = (ClampMin = "0.0"))
 	float ThrowGravityScale = 1.0f;

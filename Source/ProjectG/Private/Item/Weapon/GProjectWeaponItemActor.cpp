@@ -3,38 +3,48 @@
 #include "Item/Weapon/GProjectWeaponItemActor.h"
 
 #include "Character/GProjectCharacter.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Item/Weapon/GProjectCombatStyle.h"
 #include "Item/Weapon/GProjectWeaponDefinition.h"
 
 bool AGProjectWeaponItemActor::CanBePickedUpBy(const AGProjectCharacter* Character) const
 {
-	UGProjectWeaponDefinition* WeaponDefinition = GetWeaponDefinition();
-	return WeaponDefinition
-		&& Character
+	const UGProjectWeaponDefinition* WeaponDefinition = GetWeaponDefinition();
+
+	return Character
+		&& WeaponDefinition
 		&& WeaponDefinition->RequiredCharacterVariant == Character->GetCharacterVariant()
 		&& Super::CanBePickedUpBy(Character);
 }
 
-void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character)
+bool AGProjectWeaponItemActor::UsesWeaponSocket() const
 {
-	UGProjectWeaponDefinition* WeaponDefinition = GetWeaponDefinition();
-	if (!Character || !WeaponDefinition)
+	return true;
+}
+
+void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character, FName HoldSocketName)
+{
+	if (!Character)
 	{
 		return;
 	}
 
-	Super::HandleEquipped(Character);
+	const UGProjectWeaponDefinition* WeaponDefinition = GetWeaponDefinition();
+
+	Super::HandleEquipped(Character, HoldSocketName);
+
+	if (!WeaponDefinition)
+	{
+		Character->ResetActiveComboData();
+		Character->ResetAttackTraceSource();
+		Character->SetCombatStyle(EGProjectCombatStyle::Unarmed);
+		return;
+	}
 
 	if (!WeaponDefinition->HeldMesh.IsNull())
 	{
 		ItemMesh->SetStaticMesh(WeaponDefinition->HeldMesh.LoadSynchronous());
 	}
-
-	AttachToComponent(
-		Character->GetMesh(),
-		FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		WeaponDefinition->AttachSocketName);
 
 	Character->SetActiveComboData(
 		WeaponDefinition->GroundComboData,
@@ -57,10 +67,10 @@ void AGProjectWeaponItemActor::HandleUnequipped(AGProjectCharacter* Character)
 	}
 
 	Super::HandleUnequipped(Character);
-	ApplyDefinitionMesh();
+	ApplyItemMesh();
 }
 
-UGProjectWeaponDefinition* AGProjectWeaponItemActor::GetWeaponDefinition() const
+const UGProjectWeaponDefinition* AGProjectWeaponItemActor::GetWeaponDefinition() const
 {
 	return Cast<UGProjectWeaponDefinition>(ItemDefinition);
 }

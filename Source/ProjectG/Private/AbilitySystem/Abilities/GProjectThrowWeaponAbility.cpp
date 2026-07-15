@@ -6,9 +6,9 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "GProjectGameplayTags.h"
+#include "Item/GProjectItemActorBase.h"
 #include "Item/GProjectItemHolderComponent.h"
 #include "Item/Weapon/GProjectThrownWeapon.h"
-#include "Item/Weapon/GProjectWeaponItemActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UGProjectThrowWeaponAbility::UGProjectThrowWeaponAbility()
@@ -19,6 +19,8 @@ UGProjectThrowWeaponAbility::UGProjectThrowWeaponAbility()
 	FGameplayTagContainer AssetTags;
 	AssetTags.AddTag(GProjectGameplayTags::Ability_Combat_ThrowWeapon);
 	SetAssetTags(AssetTags);
+
+	StartupInputTag = GProjectGameplayTags::InputTag_Combat_ThrowWeapon;
 
 	ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Combat_Attacking);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
@@ -33,7 +35,7 @@ void UGProjectThrowWeaponAbility::ActivateAbility(
 	const FGameplayEventData* TriggerEventData)
 {
 	AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo());
-	if (!Character || !ThrowMontage || !ThrownWeaponClass)
+	if (!Character || !ThrowMontage)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -41,7 +43,7 @@ void UGProjectThrowWeaponAbility::ActivateAbility(
 
 	const UGProjectItemHolderComponent* ItemHolder =
 		Character->GetItemHolderComponent();
-	if (!ItemHolder || !Cast<AGProjectWeaponItemActor>(ItemHolder->GetHeldItem()))
+	if (!ItemHolder || !ItemHolder->GetHeldItem() || !ItemHolder->GetHeldItem()->CanBeThrown())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -134,7 +136,7 @@ void UGProjectThrowWeaponAbility::ThrowHeldWeapon()
 
 	UGProjectItemHolderComponent* ItemHolder =
 		Character->GetItemHolderComponent();
-	if (!ItemHolder || !Cast<AGProjectWeaponItemActor>(ItemHolder->GetHeldItem()))
+	if (!ItemHolder || !ItemHolder->GetHeldItem() || !ItemHolder->GetHeldItem()->CanBeThrown())
 	{
 		return;
 	}
@@ -146,13 +148,21 @@ void UGProjectThrowWeaponAbility::ThrowHeldWeapon()
 	}
 
 	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
-	const FVector SpawnLocation = CharacterMesh && !ThrowSocketName.IsNone()
+	const FVector SocketLocation = CharacterMesh && !ThrowSocketName.IsNone()
 		? CharacterMesh->GetSocketLocation(ThrowSocketName)
 		: Character->GetActorLocation();
 
-	FRotator LaunchRotation = Character->GetActorRotation();
-	LaunchRotation.Pitch = ThrowAngle;
-	LaunchRotation.Roll = 0.0f;
+	FVector ThrowDirection = Character->GetActorForwardVector();
+	ThrowDirection.Z = 0.0f;
+	if (!ThrowDirection.Normalize())
+	{
+		ThrowDirection = Character->GetActorRotation().Vector();
+		ThrowDirection.Z = 0.0f;
+		ThrowDirection.Normalize();
+	}
+
+	const FRotator LaunchRotation = ThrowDirection.Rotation();
+	const FVector SpawnLocation = SocketLocation + ThrowDirection * ThrowSpawnForwardOffset;
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = Character;
@@ -160,7 +170,7 @@ void UGProjectThrowWeaponAbility::ThrowHeldWeapon()
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	AGProjectThrownWeapon* ThrownWeapon = World->SpawnActor<AGProjectThrownWeapon>(
-		ThrownWeaponClass,
+		AGProjectThrownWeapon::StaticClass(),
 		SpawnLocation,
 		LaunchRotation,
 		SpawnParams);
@@ -177,16 +187,25 @@ void UGProjectThrowWeaponAbility::ThrowHeldWeapon()
 
 	ThrownWeapon->InitAndLaunch(
 		ThrownItem,
-		LaunchRotation.Vector() * ThrowSpeed,
+		ThrowDirection * ThrowSpeed,
 		LaunchDamageParams,
 		DamageGameplayEffectClass,
 		HitstunGameplayEffectClass,
 		ThrowGravityScale,
 		MaxFlightTime);
+	ThrownWeapon->ForceNetUpdate();
+	ThrownItem->OnThrowStarted(Character);
 }
 
 void UGProjectThrowWeaponAbility::OnMontageEnded()
 {
+	const AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (!bWeaponThrown && Avatar && Avatar->HasAuthority())
+	{
+		bWeaponThrown = true;
+		ThrowHeldWeapon();
+	}
+
 	FinishAbility();
 }
 
