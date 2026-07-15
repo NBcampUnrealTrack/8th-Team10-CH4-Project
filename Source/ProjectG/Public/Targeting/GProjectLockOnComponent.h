@@ -22,7 +22,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Lock On")
-	void StartLockOn();
+	bool StartLockOn();
 
 	UFUNCTION(BlueprintCallable, Category = "Lock On")
 	void ClearLockOn();
