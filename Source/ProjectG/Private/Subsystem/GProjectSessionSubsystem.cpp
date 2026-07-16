@@ -49,7 +49,7 @@ void UGProjectSessionSubsystem::LoginWithEOS()
 
 	FOnlineAccountCredentials Credentials;
 
-	//AccountPortal / Developer /  ExchangeCode
+	//accountportal / developer /  exchangecode
 	Credentials.Type = TEXT("accountportal");
 	Credentials.Id = TEXT("");
 	Credentials.Token = TEXT("");
@@ -75,32 +75,45 @@ void UGProjectSessionSubsystem::LoginWithEOS()
 	}
 }
 
-void UGProjectSessionSubsystem::OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error)
+void UGProjectSessionSubsystem::OnLoginComplete(
+	int32 LocalUserNum,
+	bool bWasSuccessful,
+	const FUniqueNetId& UserId,
+	const FString& Error
+)
 {
 	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
-	if (Subsystem)
+
+	if (!Subsystem)
 	{
-		IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
-		if (IdentityInterface.IsValid())
-		{
-			IdentityInterface->ClearOnLoginCompleteDelegate_Handle(LocalUserNum, LoginCompleteDelegateHandle);
-		}
+		UE_LOG(LogTemp, Error, TEXT("OnLoginComplete: Subsystem is null"));
+		HideLoading();
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
 	}
 
-
+	IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
+	if (IdentityInterface.IsValid())
+	{
+		IdentityInterface->ClearOnLoginCompleteDelegate_Handle(
+			LocalUserNum,
+			LoginCompleteDelegateHandle
+		);
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Subsystem: %s"), *Subsystem->GetSubsystemName().ToString());
 	UE_LOG(LogTemp, Warning, TEXT("UserId Valid: %s"), UserId.IsValid() ? TEXT("true") : TEXT("false"));
 
-	if (UserId.IsValid())
+	if (!bWasSuccessful || !UserId.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UserId: %s"), *UserId.ToString());
+		UE_LOG(LogTemp, Error, TEXT("EOS Login failed. Error: %s"), *Error);
+		HideLoading();
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
 	}
 
 	HideLoading();
-	UE_LOG(LogTemp, Log, TEXT("EOS Login Complete. Success: %d, Error: %s"), bWasSuccessful, *Error);
-
-	OnLoginCompleteEvent.Broadcast(bWasSuccessful);
+	OnLoginCompleteEvent.Broadcast(true);
 }
 
 void UGProjectSessionSubsystem::CreateGameSession(
@@ -189,27 +202,41 @@ void UGProjectSessionSubsystem::CreateGameSession(
 	UE_LOG(LogTemp, Warning, TEXT("Create LAN: %d"), SessionSettings.bIsLANMatch);
 	UE_LOG(LogTemp, Warning, TEXT("Create MaxPlayers: %d"), SessionSettings.NumPublicConnections);
 
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!LocalPlayer)
+	IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
+	if (!IdentityInterface.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("CreateSession failed: LocalPlayer is null"));
+		UE_LOG(LogTemp, Error, TEXT("CreateSession failed: IdentityInterface invalid"));
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 		HideLoading();
 		OnCreateSessionCompleteEvent.Broadcast(false);
 		return;
 	}
 
-	FUniqueNetIdRepl UserId = LocalPlayer->GetPreferredUniqueNetId();
-	if (!UserId.IsValid())
+	const int32 LocalUserNum = 0;
+
+	if (Subsystem->GetSubsystemName() != TEXT("NULL"))
 	{
-		UE_LOG(LogTemp, Error, TEXT("CreateSession failed: UserId invalid. Are you logged in?"));
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
-		HideLoading();
-		OnCreateSessionCompleteEvent.Broadcast(false);
-		return;
+		if (IdentityInterface->GetLoginStatus(LocalUserNum) != ELoginStatus::LoggedIn)
+		{
+			UE_LOG(LogTemp, Error, TEXT("CreateSession failed: EOS user is not logged in"));
+			SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+			HideLoading();
+			OnCreateSessionCompleteEvent.Broadcast(false);
+			return;
+		}
+
+		TSharedPtr<const FUniqueNetId> NetId = IdentityInterface->GetUniquePlayerId(LocalUserNum);
+		if (!NetId.IsValid())
+		{
+			UE_LOG(LogTemp, Error, TEXT("CreateSession failed: EOS UniquePlayerId invalid"));
+			SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+			HideLoading();
+			OnCreateSessionCompleteEvent.Broadcast(false);
+			return;
+		}
 	}
 
-	if (!SessionInterface->CreateSession(*UserId, NAME_GameSession, SessionSettings))
+	if (!SessionInterface->CreateSession(LocalUserNum, NAME_GameSession, SessionSettings))
 	{
 		UE_LOG(LogTemp, Error, TEXT("CreateSession call failed"));
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
@@ -266,8 +293,25 @@ void UGProjectSessionSubsystem::FindGameSessions()
 	SessionSearch->MaxSearchResults = 100;
 	SessionSearch->bIsLanQuery = (Subsystem->GetSubsystemName() == "NULL");
 
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+	const ULocalPlayer* LocalPlayer = GetWorld() ? GetWorld()->GetFirstLocalPlayerFromController() : nullptr;
+	if (!LocalPlayer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: LocalPlayer is null"));
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		HideLoading();
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		return;
+	}
+
 	FUniqueNetIdRepl UserId = LocalPlayer->GetPreferredUniqueNetId();
+	if (!UserId.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: UserId invalid"));
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		HideLoading();
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		return;
+	}
 
 	SessionSearch->QuerySettings.Set(
 		SEARCH_LOBBIES,
