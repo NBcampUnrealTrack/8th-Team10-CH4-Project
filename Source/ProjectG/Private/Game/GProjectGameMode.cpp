@@ -323,6 +323,8 @@ void AGProjectGameMode::BeginRoundFight()
 
 	GS->SetRoundPhase(ERoundPhase::Playing);
 	GS->SetRemainMatchTime(RoundDuration);
+	
+	GS->SetRoundDuration(RoundDuration);
 
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
 	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
@@ -371,11 +373,11 @@ void AGProjectGameMode::StartRound()
 	}
 
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-
 	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
 
 	GS->SetRemainMatchTime(RoundDuration);
-
+	GS->SetRoundDuration(RoundDuration);
+	
 	GS->SetRoundPhase(ERoundPhase::Countdown);
 
 	CurrentRoundCountdownValue = FMath::Max(RoundCountdownStartValue, 1);

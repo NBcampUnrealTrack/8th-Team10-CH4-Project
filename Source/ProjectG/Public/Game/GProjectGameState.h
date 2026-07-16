@@ -109,6 +109,9 @@ public:
 	FGProjectKillFeedReceivedSignature OnKillFeedReceived;
 
 	FGProjectRoundCountdownChangedSignature OnRoundCountdownChanged;
+	
+	int32 GetRoundDuration() const { return RoundDuration; }
+	void SetRoundDuration(int32 NewDuration);
 
 private:
 	UPROPERTY(ReplicatedUsing = OnRep_RemainMatchTime)
@@ -159,4 +162,12 @@ private:
 
 	//UPROPERTY(ReplicatedUsing = OnRep_RoundCountdownValue)
 	//int32 RoundCountdownValue = -1;
+	
+protected:
+
+	UPROPERTY(Transient, ReplicatedUsing = OnRep_RoundDuration)
+	int32 RoundDuration;
+
+	UFUNCTION()
+	void OnRep_RoundDuration();
 };

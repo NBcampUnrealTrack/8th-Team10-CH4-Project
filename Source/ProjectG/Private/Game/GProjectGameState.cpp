@@ -41,6 +41,8 @@ void AGProjectGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 	DOREPLIFETIME(AGProjectGameState, BlueTeamRoundWins);
 
+	DOREPLIFETIME(AGProjectGameState, RoundDuration); 
+	
 	//DOREPLIFETIME(AGProjectGameState, RoundCountdownValue);
 }
 
@@ -225,4 +227,16 @@ void AGProjectGameState::BroadcastRoundCountdown(const int32 CountdownValue)
 void AGProjectGameState::MulticastReceiveChatMessage_Implementation(int32 SenderPlayerID, const FString& SenderName, const FString& Message)
 {
 	OnChatMessageReceived.Broadcast(SenderPlayerID, SenderName, Message);
+}
+
+void AGProjectGameState::SetRoundDuration(int32 NewDuration)
+{
+	if (!HasAuthority()) return;
+    
+	RoundDuration = NewDuration;
+}
+
+void AGProjectGameState::OnRep_RoundDuration()
+{
+	
 }
