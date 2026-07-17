@@ -96,6 +96,19 @@ void UGProjectRoundResultWidget::ShowRoundResult(const FGProjectRoundResultData&
 
 	SetVisibility(ESlateVisibility::HitTestInvisible);
 
+	StopAllAnimations();
+
+	if (PanelMoveAnimation)
+	{
+		PlayAnimation(
+			PanelMoveAnimation,
+			0.0f,
+			1,
+			EUMGSequencePlayMode::Forward,
+			1.0f
+		);
+	}
+
 	if (UWidgetAnimation* ImpactIntro =
 		FindWidgetAnimationByName(this, TEXT("RoundResultImpactIntro")))
 	{
