@@ -125,24 +125,27 @@ void UGProjectItemHolderComponent::ServerUseHeldItem_Implementation()
 void UGProjectItemHolderComponent::UseHeldItemInternal()
 {
 	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character || !HeldItem || !HeldItem->Use(Character))
+	if (!Character || !IsValid(HeldItem) || !HeldItem->Use(Character))
 	{
 		return;
 	}
-
 	AGProjectItemActorBase* UsedItem = HeldItem;
 	HeldItem = nullptr;
 	bHeldItemReleasedForThrow = false;
 	LocallyAttachedItem = nullptr;
-	UsedItem->HandleUnequipped(Character);
-	if (UsedItem->ShouldDestroyOnUse())
+
+	if (IsValid(UsedItem))
 	{
-		UsedItem->Destroy();
-	}
-	else
-	{
-		UsedItem->SetPickupEnabled(false);
-		UsedItem->ForceNetUpdate();
+		UsedItem->HandleUnequipped(Character);
+		if (UsedItem->ShouldDestroyOnUse())
+		{
+			UsedItem->Destroy();
+		}
+		else
+		{
+			UsedItem->SetPickupEnabled(false);
+			UsedItem->ForceNetUpdate();
+		}
 	}
 	Character->ForceNetUpdate();
 }

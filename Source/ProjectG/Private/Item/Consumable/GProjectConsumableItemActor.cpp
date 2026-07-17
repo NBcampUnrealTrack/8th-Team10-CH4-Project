@@ -111,3 +111,16 @@ const UGProjectConsumableDefinition* AGProjectConsumableItemActor::GetConsumable
 {
 	return Cast<UGProjectConsumableDefinition>(GetItemDefinition());
 }
+
+UAnimMontage* AGProjectConsumableItemActor::GetUseMontage() const
+{
+	if (UseMontage)
+	{
+		return UseMontage;
+	}
+	if (const UGProjectConsumableDefinition* Def = GetConsumableDefinition())
+	{
+		return Def->UseMontage;
+	}
+	return nullptr;
+}
