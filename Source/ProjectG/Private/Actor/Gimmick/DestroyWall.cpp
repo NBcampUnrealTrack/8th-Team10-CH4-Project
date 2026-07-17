@@ -12,7 +12,6 @@ ADestroyWall::ADestroyWall()
     MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComponent"));
     RootComponent = MeshComponent;
     
-    MaxRoundTime = 30;
     bIsSinking = false;
 }
 
@@ -50,21 +49,37 @@ void ADestroyWall::Tick(float DeltaTime)
 
 void ADestroyWall::OnMatchTimeUpdated(int32 NewRemainTime)
 {
-    if (NewRemainTime >= MaxRoundTime && bIsSinking)
+    AGProjectGameState* GS = Cast<AGProjectGameState>(UGameplayStatics::GetGameState(GetWorld()));
+    if (!GS) 
+    {
+        return;
+    }
+    
+    int32 CurrentMaxRoundTime = GS->GetRoundDuration();
+    
+    if (CurrentMaxRoundTime <= 0)
+    {
+        return;
+    }
+    
+    if (NewRemainTime >= CurrentMaxRoundTime && bIsSinking)
     {
         ResetWall();
         return;
     }
-
-    if (bIsSinking) return;
-
-    if (NewRemainTime <= 0 || NewRemainTime >= MaxRoundTime) 
+    
+    if (bIsSinking) 
+    {
+        return;
+    }
+    
+    if (NewRemainTime <= 0 || NewRemainTime >= CurrentMaxRoundTime) 
     {
         return; 
     }
     
-    int32 TargetRemainTime = FMath::RoundToInt(MaxRoundTime * DestroyTimeRatio);
-
+    int32 TargetRemainTime = FMath::RoundToInt(CurrentMaxRoundTime * DestroyTimeRatio);
+    
     if (NewRemainTime <= TargetRemainTime)
     {
         bIsSinking = true;
@@ -73,7 +88,16 @@ void ADestroyWall::OnMatchTimeUpdated(int32 NewRemainTime)
         if (SinkCurve)
         {
             SinkTimeline.PlayFromStart();
-        }
+            
+            if (DestroySound)
+            {
+                UGameplayStatics::PlaySoundAtLocation(
+                    this, 
+                    DestroySound, 
+                    GetActorLocation()
+                );
+            }
+        }     
     }
 }
 

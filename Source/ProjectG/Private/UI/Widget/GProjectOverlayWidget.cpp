@@ -25,6 +25,7 @@
 #include "UI/Widget/GProjectMatchHeaderWidget.h"
 #include "UI/Widget/GProjectKillFeedWidget.h"
 #include "UI/Widget/GProjectRoundCountdownWidget.h"
+#include "UI/Widget/GProjectRoundResultWidget.h"
 
 void UGProjectOverlayWidget::NativeWidgetControllerSet()
 {
@@ -60,6 +61,9 @@ void UGProjectOverlayWidget::NativeWidgetControllerSet()
 
 	OverlayController->OnRoundCountdownChanged.RemoveAll(this);
 	OverlayController->OnRoundCountdownChanged.AddUObject(this, &ThisClass::HandleRoundCountdownChanged);
+
+	OverlayController->OnRoundResultUIReceived.RemoveAll(this);
+	OverlayController->OnRoundResultUIReceived.AddUObject(this, &ThisClass::HandleRoundResultUIReceived);
 }
 
 void UGProjectOverlayWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -76,6 +80,8 @@ void UGProjectOverlayWidget::NativeDestruct()
 		OverlayController->OnKillFeedReceived.RemoveAll(this);
 
 		OverlayController->OnRoundCountdownChanged.RemoveAll(this);
+
+		OverlayController->OnRoundResultUIReceived.RemoveAll(this);
 	}
 
 	PlayerBoxesByPlayerId.Reset();
@@ -253,6 +259,11 @@ void UGProjectOverlayWidget::UpdateLockOnIndicator()
 
 void UGProjectOverlayWidget::HandleRoundPhaseUIChanged(ERoundPhase NewPhase,int32 CurrentRound)
 {
+	if (RoundResultWidget && NewPhase != ERoundPhase::RoundResult)
+	{
+		RoundResultWidget->HideRoundResult();
+	}
+
 	switch (NewPhase)
 	{
 	case ERoundPhase::Intermission:
@@ -410,4 +421,14 @@ void UGProjectOverlayWidget::HandleRoundCountdownChanged(const int32 CountdownVa
 	}
 
 	RoundCountdownWidget->ShowCountdown(CountdownValue);
+}
+
+void UGProjectOverlayWidget::HandleRoundResultUIReceived(const FGProjectRoundResultData& RoundResultData)
+{
+	if (!RoundResultWidget)
+	{
+		return;
+	}
+
+	RoundResultWidget->ShowRoundResult(RoundResultData);
 }

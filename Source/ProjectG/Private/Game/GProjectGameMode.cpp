@@ -12,7 +12,7 @@
 #include "Item/GProjectItemActorBase.h"
 #include "Item/GProjectItemHolderComponent.h"
 #include "Item/SpawnItem/SpawnBase.h"
-
+#include "AbilitySystem/GProjectAttributeSet.h"
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -108,11 +108,23 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 		return;
 	}
 
-	const EGProjectTeam Winner = DeadTeam == EGProjectTeam::Red ? EGProjectTeam::Blue : EGProjectTeam::Red;
+	const EGProjectTeam Winner = 
+		DeadTeam == EGProjectTeam::Red 
+		? EGProjectTeam::Blue : EGProjectTeam::Red;
 
-	GS->AddTeamRoundWin(Winner);
+	const ERoundResult RoundResult =
+		Winner == EGProjectTeam::Red
+		? ERoundResult::RedWin : ERoundResult::BlueWin;
 
-	FinishRound();
+	const float RedTeamTotalHP = CalculateTeamTotalHealth(EGProjectTeam::Red);
+	const float BlueTeamTotalHP = CalculateTeamTotalHealth(EGProjectTeam::Blue);
+
+	FinishRoundWithResult(
+		RoundResult,
+		ERoundEndReason::Elimination,
+		RedTeamTotalHP,
+		BlueTeamTotalHP
+	);
 }
 
 void AGProjectGameMode::BeginPlay()
@@ -264,6 +276,10 @@ void AGProjectGameMode::HandleMatchHasEnded()
 	GetWorldTimerManager().ClearTimer(
 		RoundCountdownTimerHandle
 	);
+
+	GetWorldTimerManager().ClearTimer(
+		RoundResultTimerHandle
+	);
 }
 
 void AGProjectGameMode::TickRoundCountdown()
@@ -323,6 +339,8 @@ void AGProjectGameMode::BeginRoundFight()
 
 	GS->SetRoundPhase(ERoundPhase::Playing);
 	GS->SetRemainMatchTime(RoundDuration);
+	
+	GS->SetRoundDuration(RoundDuration);
 
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
 	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
@@ -356,6 +374,195 @@ void AGProjectGameMode::BeginRoundFight()
 	);
 }
 
+void AGProjectGameMode::FinishRoundByHealth(const ERoundEndReason Reason)
+{
+	const float RedTeamTotalHP = CalculateTeamTotalHealth(EGProjectTeam::Red);
+
+	const float BlueTeamTotalHP = CalculateTeamTotalHealth(EGProjectTeam::Blue);
+
+	const ERoundResult Result =
+		DetermineResultFromHealth(
+			RedTeamTotalHP,
+			BlueTeamTotalHP
+		);
+
+	FinishRoundWithResult(
+		Result,
+		Reason,
+		RedTeamTotalHP,
+		BlueTeamTotalHP
+	);
+}
+
+void AGProjectGameMode::FinishRoundWithResult(
+	const ERoundResult Result,
+	const ERoundEndReason Reason,
+	const float RedTeamTotalHP,
+	const float BlueTeamTotalHP)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::Playing)
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
+
+	GetWorldTimerManager().ClearTimer(RoundTransitionTimerHandle);
+
+	GetWorldTimerManager().ClearTimer(RoundResultTimerHandle);
+
+	if (Result == ERoundResult::RedWin)
+	{
+		GS->AddTeamRoundWin(EGProjectTeam::Red);
+	}
+	else if (Result == ERoundResult::BlueWin)
+	{
+		GS->AddTeamRoundWin(EGProjectTeam::Blue);
+	}
+
+	FGProjectRoundResultData ResultData;
+	ResultData.Result = Result;
+	ResultData.Reason = Reason;
+	ResultData.RedTeamTotalHP = RedTeamTotalHP;
+	ResultData.BlueTeamTotalHP = BlueTeamTotalHP;
+	ResultData.RedTeamRoundWins = GS->GetRedTeamRoundWins();
+	ResultData.BlueTeamRoundWins = GS->GetBlueTeamRoundWins();
+	ResultData.Round = GS->GetCurrentRound();
+
+	GS->SetRoundPhase(ERoundPhase::RoundResult);
+
+	GS->BroadcastRoundResult(ResultData);
+
+	GetWorldTimerManager().SetTimer(
+		RoundResultTimerHandle,
+		this,
+		&ThisClass::ContinueAfterRoundResult,
+		RoundResultDisplayDuration,
+		false
+	);
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("[RoundResult] Round=%d Result=%d Reason=%d RedHP=%.1f BlueHP=%.1f Score=%d:%d"),
+		ResultData.Round,
+		static_cast<int32>(ResultData.Result),
+		static_cast<int32>(ResultData.Reason),
+		ResultData.RedTeamTotalHP,
+		ResultData.BlueTeamTotalHP,
+		ResultData.RedTeamRoundWins,
+		ResultData.BlueTeamRoundWins
+	);
+}
+
+void AGProjectGameMode::ContinueAfterRoundResult()
+{
+	if (!IsMatchInProgress())
+	{
+		return;
+	}
+
+	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	if (HasTeamWonMatch())
+	{
+		GS->SetRoundPhase(ERoundPhase::Finished);
+
+		GetWorldTimerManager().SetTimer(
+			RoundTransitionTimerHandle,
+			this,
+			&ThisClass::FinishMatchAfterDelay,
+			RoundTransitionDuration,
+			false
+		);
+
+		return;
+	}
+
+	GS->SetRoundPhase(ERoundPhase::Intermission);
+
+	GetWorldTimerManager().SetTimer(
+		RoundTransitionTimerHandle,
+		this,
+		&ThisClass::StartNextRound,
+		RoundTransitionDuration,
+		false
+	);
+}
+
+float AGProjectGameMode::CalculateTeamTotalHealth(const EGProjectTeam Team) const
+{
+	const AGProjectGameState* GS = GetGameState<AGProjectGameState>();
+
+	if (!GS || Team == EGProjectTeam::None)
+	{
+		return 0.0f;
+	}
+
+	float TotalHealth = 0.0f;
+
+	for (APlayerState* BasePlayerState : GS->PlayerArray)
+	{
+		const AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(BasePlayerState);
+
+		if (!PS || PS->GetTeam() != Team)
+		{
+			continue;
+		}
+
+		const AGProjectCharacter* Character = Cast<AGProjectCharacter>(PS->GetPawn());
+
+		if (Character && Character->IsDead())
+		{
+			continue;
+		}
+
+		const UGProjectAttributeSet* AttributeSet = PS->GetAttributeSet();
+
+		if (!AttributeSet)
+		{
+			continue;
+		}
+
+		TotalHealth += FMath::Max(AttributeSet->GetHealth(), 0.0f);
+	}
+
+	return TotalHealth;
+}
+
+ERoundResult AGProjectGameMode::DetermineResultFromHealth(const float RedTeamTotalHP, const float BlueTeamTotalHP) const
+{
+	if (FMath::IsNearlyEqual(
+		RedTeamTotalHP,
+		BlueTeamTotalHP,
+		0.01f
+	))
+	{
+		return ERoundResult::Draw;
+	}
+
+	return RedTeamTotalHP > BlueTeamTotalHP
+		? ERoundResult::RedWin
+		: ERoundResult::BlueWin;
+}
+
 void AGProjectGameMode::StartRound()
 {
 	if (!IsMatchInProgress())
@@ -371,11 +578,11 @@ void AGProjectGameMode::StartRound()
 	}
 
 	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-
 	GetWorldTimerManager().ClearTimer(RoundCountdownTimerHandle);
 
 	GS->SetRemainMatchTime(RoundDuration);
-
+	GS->SetRoundDuration(RoundDuration);
+	
 	GS->SetRoundPhase(ERoundPhase::Countdown);
 
 	CurrentRoundCountdownValue = FMath::Max(RoundCountdownStartValue, 1);
@@ -393,36 +600,7 @@ void AGProjectGameMode::StartRound()
 
 void AGProjectGameMode::FinishRound()
 {
-	AGProjectGameState* GS = GetGameState<AGProjectGameState>();
-	if (!GS) return;
-	if (GS->GetRoundPhase() != ERoundPhase::Playing) return;
-	
-	GetWorldTimerManager().ClearTimer(MatchTimerHandle);
-	GetWorldTimerManager().ClearTimer(ItemSpawnTimerHandle);
-
-	if (HasTeamWonMatch())
-	{
-		GS->SetRoundPhase(ERoundPhase::Finished);
-		GetWorldTimerManager().SetTimer(
-		   RoundTransitionTimerHandle, 
-		   this, 
-		   &ThisClass::FinishMatchAfterDelay, 
-		   RoundTransitionDuration, 
-		   false
-		);
-
-		return;
-	}
-
-	GS->SetRoundPhase(ERoundPhase::Intermission);
-
-	GetWorldTimerManager().SetTimer(
-	   RoundTransitionTimerHandle,
-	   this,
-	   &ThisClass::StartNextRound,
-	   RoundTransitionDuration,
-	   false
-	);
+	FinishRoundByHealth(ERoundEndReason::TimeUp);
 }
 
 void AGProjectGameMode::ClearPreviousRoundItems()
@@ -508,7 +686,7 @@ void AGProjectGameMode::TickMatchTimer()
 		MatchTimerHandle
 	);
 
-	FinishRound();
+	FinishRoundByHealth(ERoundEndReason::TimeUp);
 }
 
 void AGProjectGameMode::FinishMatchAfterDelay()
