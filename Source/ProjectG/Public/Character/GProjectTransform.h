@@ -57,3 +57,4 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Combat")
 	TObjectPtr<UGProjectComboData> DashComboData;
 };
+//

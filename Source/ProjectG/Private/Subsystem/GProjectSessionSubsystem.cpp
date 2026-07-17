@@ -371,7 +371,7 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 			FString OwnerName = SessionResult.Session.OwningUserName;
 
 			// Room Name
-			FString FinalRoomName = CustomRoomName.IsEmpty() ? FString::Printf(TEXT("%s's Room"), *OwnerName) : CustomRoomName;
+			FString FinalRoomName = CustomRoomName.IsEmpty() ? FString::Printf(TEXT("Game Room")) : CustomRoomName;
 
 			DisplayNames.Add(FinalRoomName);
 		}
@@ -383,6 +383,17 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 
 void UGProjectSessionSubsystem::JoinGameSession(int32 SessionIndex)
 {
+	if (!SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (ExistingSession != nullptr)
+	{
+		SessionInterface->DestroySession(NAME_GameSession);
+	}
+
 	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
 	if (!Subsystem)
 	{
@@ -576,4 +587,72 @@ APlayerController* UGProjectSessionSubsystem::GetOwningPlayerController() const
 {
 	UWorld* World = GetWorld();
 	return World ? World->GetFirstPlayerController() : nullptr;
+}
+
+
+void UGProjectSessionSubsystem::DestroyGameSession()
+{
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+	if (!Subsystem) return;
+
+	SessionInterface = Subsystem->GetSessionInterface();
+	if (!SessionInterface.IsValid()) return;
+
+	ShowLoading();
+
+	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnDestroySessionComplete)
+	);
+
+	if (!SessionInterface->DestroySession(NAME_GameSession))
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+		HideLoading();
+		OnDestroySessionCompleteEvent.Broadcast(false);
+	}
+}
+
+void UGProjectSessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	if (SessionInterface.IsValid())
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+	}
+
+	HideLoading();
+
+	if (PendingExitPlayer.IsValid())
+	{
+		PendingExitPlayer->ClientTravel(TEXT("/Game/Level/MenuMap"), ETravelType::TRAVEL_Absolute);
+		PendingExitPlayer.Reset();
+	}
+}
+
+void UGProjectSessionSubsystem::ExitMatch(APlayerController* RequestingPlayer)
+{
+	PendingExitPlayer = RequestingPlayer;
+
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+	if (!Subsystem) return;
+
+	SessionInterface = Subsystem->GetSessionInterface();
+	if (!SessionInterface.IsValid()) return;
+
+	ShowLoading();
+
+	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnDestroySessionComplete)
+	);
+
+	if (!SessionInterface->DestroySession(NAME_GameSession))
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+		HideLoading();
+
+		if (PendingExitPlayer.IsValid())
+		{
+			PendingExitPlayer->ClientTravel(TEXT("/Game/Level/MenuMap"), ETravelType::TRAVEL_Absolute);
+			PendingExitPlayer.Reset();
+		}
+	}
 }

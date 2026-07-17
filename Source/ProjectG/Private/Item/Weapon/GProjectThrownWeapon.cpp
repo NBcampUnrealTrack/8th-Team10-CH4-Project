@@ -68,11 +68,7 @@ void AGProjectThrownWeapon::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	else if (!HasAuthority() && CarriedItem)
 	{
-		CarriedItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		CarriedItem->SetReplicateMovement(true);
-		CarriedItem->SetWorldPhysicsEnabled(true);
-		CarriedItem->SetPickupEnabled(true);
-		CarriedItem->SetActorHiddenInGame(false);
+		CarriedItem->DetachItemVisual();
 		CarriedItem = nullptr;
 	}
 

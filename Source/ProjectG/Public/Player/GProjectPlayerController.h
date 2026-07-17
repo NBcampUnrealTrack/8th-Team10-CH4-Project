@@ -30,6 +30,9 @@ public:
 
 	void CloseChat();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRequestReturnToLobby();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
