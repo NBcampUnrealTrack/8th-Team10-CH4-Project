@@ -29,6 +29,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	FRotator AttachRotationOffset = FRotator::ZeroRotator;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	FVector AttachLocationOffset = FVector::ZeroVector;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Combo")
 	TObjectPtr<UGProjectComboData> GroundComboData;
 

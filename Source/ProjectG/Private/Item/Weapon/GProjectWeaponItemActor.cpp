@@ -47,6 +47,7 @@ void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character, FNa
 	}
 
 	ItemMesh->SetRelativeRotation(WeaponDefinition->AttachRotationOffset);
+	ItemMesh->SetRelativeLocation(WeaponDefinition->AttachLocationOffset);
 
 	Character->SetActiveComboData(
 		WeaponDefinition->GroundComboData,
