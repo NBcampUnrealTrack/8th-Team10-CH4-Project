@@ -12,6 +12,7 @@ class USphereComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
 class UTexture2D;
+class UAnimMontage;
 
 UCLASS(Abstract)
 class PROJECTG_API AGProjectItemActorBase : public AActor
@@ -35,6 +36,7 @@ public:
 	virtual bool ShouldDestroyOnUse() const;
 	virtual bool CanBeThrown() const;
 	virtual bool ShouldApplyThrowImpactDamage() const;
+	virtual UAnimMontage* GetUseMontage() const;
 	virtual void OnThrowStarted(AGProjectCharacter* Thrower);
 	virtual void OnThrowLanded();
 	virtual void HandleEquipped(AGProjectCharacter* Character, FName HoldSocketName);

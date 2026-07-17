@@ -87,6 +87,17 @@ bool AGProjectConsumableItemActor::Use_Implementation(AGProjectCharacter* Charac
 	return true;
 }
 
+UAnimMontage* AGProjectConsumableItemActor::GetUseMontage() const
+{
+	if (UseMontage)
+	{
+		return UseMontage;
+	}
+
+	const UGProjectConsumableDefinition* ConsumableDefinition = GetConsumableDefinition();
+	return ConsumableDefinition ? ConsumableDefinition->UseMontage : nullptr;
+}
+
 void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(
 	UNiagaraSystem* InUseEffect,
 	USoundBase* InUseSound,

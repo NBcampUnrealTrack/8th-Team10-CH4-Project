@@ -36,9 +36,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable|Feedback")
 	TObjectPtr<USoundBase> UseSound;
 
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastPlayUseFeedback(const FVector& Location, const FRotator& Rotation);
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
 	TObjectPtr<UAnimMontage> UseMontage;
 

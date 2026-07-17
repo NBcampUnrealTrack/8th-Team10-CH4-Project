@@ -130,6 +130,11 @@ bool AGProjectItemActorBase::ShouldApplyThrowImpactDamage() const
 	return true;
 }
 
+UAnimMontage* AGProjectItemActorBase::GetUseMontage() const
+{
+	return nullptr;
+}
+
 void AGProjectItemActorBase::OnThrowStarted(AGProjectCharacter* Thrower)
 {
 }
