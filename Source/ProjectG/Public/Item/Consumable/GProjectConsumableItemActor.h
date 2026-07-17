@@ -10,6 +10,7 @@ class UGameplayEffect;
 class UGProjectConsumableDefinition;
 class UNiagaraSystem;
 class USoundBase;
+class UAnimMontage;
 
 UCLASS()
 class PROJECTG_API AGProjectConsumableItemActor : public AGProjectItemActorBase
@@ -20,6 +21,7 @@ public:
 	virtual bool CanBePickedUpBy(const AGProjectCharacter* Character) const override;
 	virtual bool CanUse(const AGProjectCharacter* Character) const override;
 	virtual bool Use_Implementation(AGProjectCharacter* Character) override;
+	virtual UAnimMontage* GetUseMontage() const override;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
@@ -36,6 +38,9 @@ protected:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayUseFeedback(const FVector& Location, const FRotator& Rotation);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Consumable")
+	TObjectPtr<UAnimMontage> UseMontage;
 
 private:
 	const UGProjectConsumableDefinition* GetConsumableDefinition() const;

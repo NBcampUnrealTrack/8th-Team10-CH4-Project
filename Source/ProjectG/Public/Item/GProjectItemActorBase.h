@@ -12,6 +12,7 @@ class USphereComponent;
 class UStaticMesh;
 class UStaticMeshComponent;
 class UTexture2D;
+class UAnimMontage;
 
 UCLASS(Abstract)
 class PROJECTG_API AGProjectItemActorBase : public AActor
@@ -37,6 +38,7 @@ public:
 	virtual void OnThrowLanded();
 	virtual void HandleEquipped(AGProjectCharacter* Character, FName HoldSocketName);
 	virtual void HandleUnequipped(AGProjectCharacter* Character);
+	virtual UAnimMontage* GetUseMontage() const { return nullptr; }
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Item")
 	bool Use(AGProjectCharacter* Character);
