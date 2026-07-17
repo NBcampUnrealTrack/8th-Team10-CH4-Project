@@ -4,6 +4,24 @@
 #include "UI/Widget/GProjectMatchResultWidget.h"
 
 #include "Components/TextBlock.h"
+#include "Components/Button.h"
+#include "Components/HorizontalBox.h"
+#include "Player/GProjectPlayerController.h"
+#include "Subsystem/GProjectSessionSubsystem.h"
+
+void UGProjectMatchResultWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+
+	if (ReturnButton)
+	{
+		ReturnButton->OnClicked.AddDynamic(this, &ThisClass::OnReturnButtonClicked);
+	}
+	if (ExitButton)
+	{
+		ExitButton->OnClicked.AddDynamic(this, &ThisClass::OnExitButtonClicked);
+	}
+}
 
 void UGProjectMatchResultWidget::ShowResult(
 	bool bVictory,
@@ -66,9 +84,50 @@ void UGProjectMatchResultWidget::ShowResult(
 			)
 		);
 	}
+
+	if (APlayerController* PC = GetOwningPlayer())
+	{
+		if (PC->HasAuthority())
+		{
+			if (ReturnButton) ReturnButton->SetVisibility(ESlateVisibility::Visible);
+			if (WaitingHostText) WaitingHostText->SetVisibility(ESlateVisibility::Collapsed);
+		}
+		else
+		{
+			if (ReturnButton) ReturnButton->SetVisibility(ESlateVisibility::Collapsed);
+			if (WaitingHostText)
+			{
+				WaitingHostText->SetVisibility(ESlateVisibility::Visible);
+			}
+		}
+
+		PC->SetShowMouseCursor(true);
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(TakeWidget());
+		PC->SetInputMode(InputMode);
+	}
 }
 
 void UGProjectMatchResultWidget::HideResult()
 {
 	SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UGProjectMatchResultWidget::OnReturnButtonClicked()
+{
+	if (AGProjectPlayerController* PC = Cast<AGProjectPlayerController>(GetOwningPlayer()))
+	{
+		PC->ServerRequestReturnToLobby();
+	}
+}
+
+void UGProjectMatchResultWidget::OnExitButtonClicked()
+{
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UGProjectSessionSubsystem* SessionSubsystem = GI->GetSubsystem<UGProjectSessionSubsystem>())
+		{
+			SessionSubsystem->ExitMatch(GetOwningPlayer());
+		}
+	}
 }

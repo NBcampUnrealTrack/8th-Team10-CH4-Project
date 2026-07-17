@@ -545,3 +545,12 @@ void AGProjectPlayerController::ServerChangeSpectateTarget_Implementation(int32 
 		SetViewTargetWithBlend(LivingCharacters[CurrentSpectateIndex], 0.3f);
 	}
 }
+
+
+void AGProjectPlayerController::ServerRequestReturnToLobby_Implementation()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->ServerTravel(TEXT("/Game/Level/LobbyMap?listen"));
+	}
+}
