@@ -1,7 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Item/GProjectItemHolderComponent.h"
-
 #include "Character/GProjectCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/OverlapResult.h"
@@ -10,329 +9,328 @@
 
 UGProjectItemHolderComponent::UGProjectItemHolderComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-	SetIsReplicatedByDefault(true);
+    PrimaryComponentTick.bCanEverTick = false;
+    SetIsReplicatedByDefault(true);
 }
 
-void UGProjectItemHolderComponent::GetLifetimeReplicatedProps(
-	TArray<FLifetimeProperty>& OutLifetimeProps) const
+void UGProjectItemHolderComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UGProjectItemHolderComponent, HeldItem);
-	DOREPLIFETIME(UGProjectItemHolderComponent, bHeldItemReleasedForThrow);
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(UGProjectItemHolderComponent, HeldItem);
 }
 
 void UGProjectItemHolderComponent::OnRep_HeldItem()
 {
-	if (!HeldItem && bHeldItemReleasedForThrow)
-	{
-		ClearLocalAttachment();
-		return;
-	}
-
-	ApplyHeldItemAttachment();
+    if (!HeldItem) { ClearLocalAttachment(); return; }
+    ApplyHeldItemAttachment();
 }
 
 void UGProjectItemHolderComponent::TryPickupNearby()
 {
-	if (GetOwner() && GetOwner()->HasAuthority())
-	{
-		TryPickupNearbyInternal();
-		return;
-	}
-
-	ServerTryPickupNearby();
+    if (GetOwner() && GetOwner()->HasAuthority()) TryPickupNearbyInternal();
+    else ServerTryPickupNearby();
 }
 
 void UGProjectItemHolderComponent::PickupItem(AGProjectItemActorBase* Item)
 {
-	if (GetOwner() && GetOwner()->HasAuthority())
-	{
-		PickupItemInternal(Item);
-		return;
-	}
-
-	ServerPickupItem(Item);
-}
-
-void UGProjectItemHolderComponent::UseHeldItem()
-{
-	if (GetOwner() && GetOwner()->HasAuthority())
-	{
-		UseHeldItemInternal();
-		return;
-	}
-
-	ServerUseHeldItem();
+    if (GetOwner() && GetOwner()->HasAuthority()) PickupItemInternal(Item);
+    else ServerPickupItem(Item);
 }
 
 void UGProjectItemHolderComponent::DropHeldItem()
 {
-	if (GetOwner() && GetOwner()->HasAuthority())
-	{
-		DropHeldItemInternal();
-		return;
-	}
-
-	ServerDropHeldItem();
+    if (GetOwner() && GetOwner()->HasAuthority()) DropHeldItemInternal();
+    else ServerDropHeldItem();
 }
 
 AGProjectItemActorBase* UGProjectItemHolderComponent::ReleaseHeldItem()
 {
-	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character || !Character->HasAuthority() || !HeldItem)
-	{
-		return nullptr;
-	}
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    if (!Character || !Character->HasAuthority() || !HeldItem) return nullptr;
 
-	AGProjectItemActorBase* ReleasedItem = HeldItem;
-	HeldItem = nullptr;
-	bHeldItemReleasedForThrow = true;
-	LocallyAttachedItem = nullptr;
+    AGProjectItemActorBase* ReleasedItem = HeldItem;
+    HeldItem = nullptr;
+    LocallyAttachedItem = nullptr;
 
-	ReleasedItem->HandleUnequipped(Character);
-	ReleasedItem->ForceNetUpdate();
-	Character->ForceNetUpdate();
+    ReleasedItem->DetachFromHolder(Character);
+    ReleasedItem->ForceNetUpdate();
+    Character->ForceNetUpdate();
 
-	return ReleasedItem;
+    return ReleasedItem;
 }
 
-bool UGProjectItemHolderComponent::HasNearbyPickup()
-{
-	return FindClosestPickup() != nullptr;
-}
-
+bool UGProjectItemHolderComponent::HasNearbyPickup() { return FindClosestPickup() != nullptr; }
 void UGProjectItemHolderComponent::ServerTryPickupNearby_Implementation()
 {
-	TryPickupNearbyInternal();
+    TryPickupNearbyInternal();
 }
 
 void UGProjectItemHolderComponent::TryPickupNearbyInternal()
 {
-	PickupItemInternal(FindClosestPickup());
+    AGProjectItemActorBase* ClosestItem = FindClosestPickup();
+    PickupItemInternal(ClosestItem);
 }
 
 void UGProjectItemHolderComponent::ServerPickupItem_Implementation(AGProjectItemActorBase* Item)
 {
-	PickupItemInternal(Item);
-}
-
-void UGProjectItemHolderComponent::ServerUseHeldItem_Implementation()
-{
-	UseHeldItemInternal();
-}
-
-void UGProjectItemHolderComponent::UseHeldItemInternal()
-{
-	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character || !IsValid(HeldItem) || !HeldItem->Use(Character))
-	{
-		return;
-	}
-	AGProjectItemActorBase* UsedItem = HeldItem;
-	HeldItem = nullptr;
-	bHeldItemReleasedForThrow = false;
-	LocallyAttachedItem = nullptr;
-
-	if (IsValid(UsedItem))
-	{
-		UsedItem->HandleUnequipped(Character);
-		if (UsedItem->ShouldDestroyOnUse())
-		{
-			UsedItem->Destroy();
-		}
-		else
-		{
-			UsedItem->SetPickupEnabled(false);
-			UsedItem->ForceNetUpdate();
-		}
-	}
-	Character->ForceNetUpdate();
+    PickupItemInternal(Item);
 }
 
 void UGProjectItemHolderComponent::ServerDropHeldItem_Implementation()
 {
-	DropHeldItemInternal();
+    DropHeldItemInternal();
+}
+
+void UGProjectItemHolderComponent::UseHeldItem()
+{
+    if (GetOwner() && GetOwner()->HasAuthority()) UseHeldItemInternal();
+    else ServerUseHeldItem();
+}
+
+void UGProjectItemHolderComponent::ServerUseHeldItem_Implementation() { UseHeldItemInternal(); }
+
+void UGProjectItemHolderComponent::UseHeldItemInternal()
+{
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    if (!Character || !HeldItem || !HeldItem->Use(Character)) return;
+
+    AGProjectItemActorBase* UsedItem = HeldItem;
+    HeldItem = nullptr;
+    LocallyAttachedItem = nullptr;
+    UsedItem->DetachFromHolder(Character);
+    
+    if (UsedItem->ShouldDestroyOnUse()) UsedItem->Destroy();
+    else
+    {
+       UsedItem->SetPickupEnabled(false);
+       UsedItem->ForceNetUpdate();
+    }
+    Character->ForceNetUpdate();
 }
 
 AGProjectCharacter* UGProjectItemHolderComponent::GetOwnerCharacter() const
 {
-	return Cast<AGProjectCharacter>(GetOwner());
+    return Cast<AGProjectCharacter>(GetOwner());
 }
 
-AGProjectItemActorBase* UGProjectItemHolderComponent::FindClosestPickup() const
+void UGProjectItemHolderComponent::ApplyHeldItemAttachment()
 {
-	AGProjectCharacter* Character = GetOwnerCharacter();
-	UWorld* World = GetWorld();
-	if (!Character || !World)
-	{
-		return nullptr;
-	}
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    if (!Character) return;
 
-	AGProjectItemActorBase* ClosestItem = nullptr;
-	float ClosestDistanceSquared = TNumericLimits<float>::Max();
+    if (LocallyAttachedItem && LocallyAttachedItem != HeldItem)
+    {
+        LocallyAttachedItem->DetachItemVisual();
+        
+        if (Character->HasAuthority())
+        {
+            LocallyAttachedItem->DetachFromHolder(Character);
+        }
+        
+        LocallyAttachedItem = nullptr;
+    }
 
-	TArray<FOverlapResult> OverlapResults;
-	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+    if (HeldItem)
+    {
+        HeldItem->HandleEquipped(Character, GetHoldSocketName(HeldItem));
+    }
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(PickupItemOverlap), false, Character);
-	const bool bHasOverlap = World->OverlapMultiByObjectType(
-		OverlapResults,
-		Character->GetActorLocation(),
-		FQuat::Identity,
-		ObjectQueryParams,
-		FCollisionShape::MakeSphere(PickupSearchRadius),
-		QueryParams);
-	if (!bHasOverlap)
-	{
-		return nullptr;
-	}
+    LocallyAttachedItem = HeldItem;
+}
 
-	TSet<AGProjectItemActorBase*> CheckedItems;
-	for (const FOverlapResult& OverlapResult : OverlapResults)
-	{
-		AGProjectItemActorBase* Item = Cast<AGProjectItemActorBase>(OverlapResult.GetActor());
-		if (!Item || CheckedItems.Contains(Item))
-		{
-			continue;
-		}
-		CheckedItems.Add(Item);
+void UGProjectItemHolderComponent::ClearLocalAttachment()
+{
+    if (!LocallyAttachedItem) return;
+    LocallyAttachedItem->DetachItemVisual();
+    LocallyAttachedItem = nullptr;
+}
 
-		if (!Item->CanBePickedUpBy(Character))
-		{
-			continue;
-		}
-
-		const float DistanceSquared = FVector::DistSquared2D(
-			Character->GetActorLocation(),
-			Item->GetPickupLocation());
-		if (DistanceSquared < ClosestDistanceSquared)
-		{
-			ClosestDistanceSquared = DistanceSquared;
-			ClosestItem = Item;
-		}
-	}
-
-	return ClosestItem;
+FName UGProjectItemHolderComponent::GetHoldSocketName(const AGProjectItemActorBase* Item) const
+{
+    static const FName ItemSocketName(TEXT("HandGrip_L"));
+    return Item && Item->UsesWeaponSocket() ? WeaponSocketName : ItemSocketName;
 }
 
 void UGProjectItemHolderComponent::PickupItemInternal(AGProjectItemActorBase* Item)
 {
 	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character || !Character->HasAuthority() || !Item || !Item->CanBePickedUpBy(Character))
-	{
-		return;
-	}
 
-	if (HeldItem == Item)
+	if (!Character)
 	{
-		return;
-	}
+        return;
+    }
+    if (!Character->HasAuthority())
+    {
+        return;
+    }
+    if (!Item)
+    {
+        return;
+    }
+    if (!Item->CanBePickedUpBy(Character))
+    {
+        return;
+    }
+    if (HeldItem == Item)
+    {
+        return;
+    }
+    
+    if (HeldItem)
+    {
+        AGProjectItemActorBase* PreviousItem = HeldItem;
 
-	if (HeldItem)
-	{
-		DropHeldItemInternal();
-	}
+        HeldItem = nullptr; 
+        LocallyAttachedItem = nullptr;
 
-	HeldItem = Item;
-	bHeldItemReleasedForThrow = false;
+        const FVector DropOrigin =
+            Character->GetActorLocation() +
+            Character->GetActorRightVector() * -90.0f +
+            Character->GetActorForwardVector() * -40.0f +
+            FVector(0.0f, 0.0f, 60.0f);
+        PreviousItem->BlockPickupBriefly();
+        DropItemToGround(PreviousItem, Item, DropOrigin);
+        PreviousItem->ForceNetUpdate();
+    }
+
+    HeldItem = Item;
+ 
 	ApplyHeldItemAttachment();
 	HeldItem->ForceNetUpdate();
 	Character->ForceNetUpdate();
 }
 
-void UGProjectItemHolderComponent::ApplyHeldItemAttachment()
+
+FVector UGProjectItemHolderComponent::GetDropLocationGround(const FVector& StartOrigin, AActor* IgnoreActor1, AActor* IgnoreActor2) const
 {
-	AGProjectCharacter* Character = GetOwnerCharacter();
-	if (!Character)
-	{
-		return;
-	}
+    UWorld* World = GetWorld();
+    if (!World) return StartOrigin;
 
-	if (LocallyAttachedItem && LocallyAttachedItem != HeldItem)
-	{
-		if (Character->HasAuthority())
-		{
-			LocallyAttachedItem->HandleUnequipped(Character);
-		}
-		else
-		{
-			ClearLocalAttachment();
-		}
-	}
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(ItemDropGroundTrace), false, GetOwner());
+    if (IgnoreActor1) QueryParams.AddIgnoredActor(IgnoreActor1);
+    if (IgnoreActor2) QueryParams.AddIgnoredActor(IgnoreActor2);
 
-	if (HeldItem)
-	{
-		HeldItem->HandleEquipped(Character, GetHoldSocketName(HeldItem));
-	}
-
-	LocallyAttachedItem = HeldItem;
+    FHitResult GroundHit;
+    if (World->LineTraceSingleByChannel(GroundHit, StartOrigin, StartOrigin - FVector(0.0f, 0.0f, 500.0f), ECC_WorldStatic, QueryParams))
+    {
+       return GroundHit.ImpactPoint + FVector(0.0f, 0.0f, 20.0f);
+    }
+    return StartOrigin;
 }
 
-void UGProjectItemHolderComponent::ClearLocalAttachment()
+FVector UGProjectItemHolderComponent::GetDropLocationForItem(
+    AGProjectItemActorBase* ItemToDrop,
+    AGProjectItemActorBase* IgnoreIncomingItem,
+    const FVector& DropOrigin) const
 {
-	if (!LocallyAttachedItem)
-	{
-		return;
-	}
+    FVector DropLocation = GetDropLocationGround(DropOrigin, ItemToDrop, IgnoreIncomingItem);
 
-	LocallyAttachedItem->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-	LocallyAttachedItem = nullptr;
+    UStaticMeshComponent* ItemMesh = ItemToDrop ? ItemToDrop->GetItemMesh() : nullptr;
+    if (!ItemMesh)
+    {
+        return DropLocation;
+    }
+
+    const float HalfHeight = FMath::Max(ItemMesh->Bounds.BoxExtent.Z, 20.0f);
+    DropLocation.Z += HalfHeight + 5.0f;
+    return DropLocation;
 }
 
-FName UGProjectItemHolderComponent::GetHoldSocketName(const AGProjectItemActorBase* Item) const
+void UGProjectItemHolderComponent::DropItemToGround(
+    AGProjectItemActorBase* ItemToDrop,
+    AGProjectItemActorBase* IgnoreIncomingItem,
+    const FVector& DropOrigin)
 {
-	return Item && Item->UsesWeaponSocket() ? WeaponSocketName : ItemSocketName;
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    if (!Character || !ItemToDrop)
+    {
+        return;
+    }
+
+	if (LocallyAttachedItem == ItemToDrop)
+	{
+	   LocallyAttachedItem = nullptr;
+    }
+
+    ItemToDrop->DetachFromHolder(Character);
+
+    const FVector DropLocation = GetDropLocationForItem(ItemToDrop, IgnoreIncomingItem, DropOrigin);
+    ItemToDrop->SetActorLocation(DropLocation, false, nullptr, ETeleportType::TeleportPhysics);
+    ItemToDrop->SetPickupEnabled(true);
+    ItemToDrop->SetWorldPhysicsEnabled(true);
+    if (UStaticMeshComponent* ItemMesh = ItemToDrop->GetItemMesh())
+    {
+        ItemMesh->SetPhysicsLinearVelocity(FVector::ZeroVector);
+        ItemMesh->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+	}
+	ItemToDrop->ForceNetUpdate();
 }
 
 void UGProjectItemHolderComponent::DropHeldItemInternal()
 {
-	AGProjectCharacter* Character = GetOwnerCharacter();
-	UWorld* World = GetWorld();
-	if (!Character || !HeldItem || !World)
-	{
-		return;
-	}
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    if (!Character || !HeldItem)
+    {
+        return;
+    }
 
-	AGProjectItemActorBase* DroppedItem = HeldItem;
-	HeldItem = nullptr;
-	bHeldItemReleasedForThrow = false;
-	LocallyAttachedItem = nullptr;
-	DroppedItem->HandleUnequipped(Character);
+    AGProjectItemActorBase* DroppedItem = HeldItem;
+    HeldItem = nullptr;
 
-	const FVector DropOrigin = Character->GetActorLocation() +
-		Character->GetActorForwardVector() * 120.0f +
-		FVector(0.0f, 0.0f, 40.0f);
+    const FVector DropOrigin = Character->GetActorLocation() +
+       Character->GetActorForwardVector() * 120.0f +
+       FVector(0.0f, 0.0f, 40.0f);
 
-	FVector DropLocation = DropOrigin;
+    DropItemToGround(DroppedItem, nullptr, DropOrigin);
+    Character->ForceNetUpdate();
+}
 
-	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(DropItemGroundTrace), false, Character);
-	QueryParams.AddIgnoredActor(DroppedItem);
+AGProjectItemActorBase* UGProjectItemHolderComponent::FindClosestPickup() const
+{
+    AGProjectCharacter* Character = GetOwnerCharacter();
+    UWorld* World = GetWorld();
+    if (!Character || !World) return nullptr;
 
-	FHitResult GroundHit;
-	const FVector TraceEnd = DropOrigin - FVector(0.0f, 0.0f, 500.0f);
-	if (World->LineTraceSingleByChannel(GroundHit, DropOrigin, TraceEnd, ECC_WorldStatic, QueryParams))
-	{
-		DropLocation = GroundHit.ImpactPoint + FVector(0.0f, 0.0f, 20.0f);
-	}
+    TArray<FOverlapResult> OverlapResults;
+    FCollisionObjectQueryParams ObjectQueryParams;
+    ObjectQueryParams.AddObjectTypesToQuery(ECC_PhysicsBody);
+    ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
 
-	DroppedItem->SetActorLocation(
-		DropLocation,
-		false,
-		nullptr,
-		ETeleportType::TeleportPhysics);
-	DroppedItem->SetPickupEnabled(true);
+    FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(PickupItemOverlap), false, Character);
+    const bool bHasOverlap = World->OverlapMultiByObjectType(
+       OverlapResults,
+       Character->GetActorLocation(),
+       FQuat::Identity,
+       ObjectQueryParams,
+       FCollisionShape::MakeSphere(PickupSearchRadius),
+       QueryParams);
+       
+    if (!bHasOverlap)
+    {
+        return nullptr;
+    }
 
-	if (UStaticMeshComponent* ItemMesh = DroppedItem->GetItemMesh())
-	{
-		ItemMesh->AddImpulse(
-			Character->GetActorForwardVector() * 300.0f + FVector(0.0f, 0.0f, 150.0f),
-			NAME_None,
-			true);
-	}
+    AGProjectItemActorBase* ClosestItem = nullptr;
+    float ClosestDistanceSquared = TNumericLimits<float>::Max();
+    TSet<AGProjectItemActorBase*> CheckedItems;
 
-	DroppedItem->ForceNetUpdate();
-	Character->ForceNetUpdate();
+    for (const FOverlapResult& OverlapResult : OverlapResults)
+    {
+       AGProjectItemActorBase* Item = Cast<AGProjectItemActorBase>(OverlapResult.GetActor());
+       if (!Item || CheckedItems.Contains(Item)) continue;
+       CheckedItems.Add(Item);
+
+       const float DistanceSquared = FVector::DistSquared2D(Character->GetActorLocation(), Item->GetPickupLocation());
+       const bool bCanPickup = Item->CanBePickedUpBy(Character);
+
+       if (!bCanPickup) continue;
+
+       if (DistanceSquared < ClosestDistanceSquared)
+       {
+          ClosestDistanceSquared = DistanceSquared;
+          ClosestItem = Item;
+       }
+    }
+
+    return ClosestItem;
 }

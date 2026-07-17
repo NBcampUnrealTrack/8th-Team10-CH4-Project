@@ -78,38 +78,13 @@ bool AGProjectConsumableItemActor::Use_Implementation(AGProjectCharacter* Charac
 		return false;
 	}
 
-	UseEffect = ResolvedUseEffect;
-	UseSound = ResolvedUseSound;
-
 	MulticastPlayUseFeedback(
-		Character->GetActorLocation(),
+		ResolvedUseEffect,
+		ResolvedUseSound,
+		Character->GetActorLocation() + FVector(0.0f, 0.0f, 50.0f),
 		Character->GetActorRotation());
 
 	return true;
-}
-
-void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(const FVector& Location, const FRotator& Rotation)
-{
-	if (UseEffect)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-			GetWorld(),
-			UseEffect,
-			Location + FVector(0.0f, 0.0f, 50.0f),
-			Rotation);
-	}
-	if (UseSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(
-			this,
-			UseSound,
-			Location);
-	}
-}
-
-const UGProjectConsumableDefinition* AGProjectConsumableItemActor::GetConsumableDefinition() const
-{
-	return Cast<UGProjectConsumableDefinition>(GetItemDefinition());
 }
 
 UAnimMontage* AGProjectConsumableItemActor::GetUseMontage() const
@@ -118,9 +93,36 @@ UAnimMontage* AGProjectConsumableItemActor::GetUseMontage() const
 	{
 		return UseMontage;
 	}
-	if (const UGProjectConsumableDefinition* Def = GetConsumableDefinition())
+
+	const UGProjectConsumableDefinition* ConsumableDefinition = GetConsumableDefinition();
+	return ConsumableDefinition ? ConsumableDefinition->UseMontage : nullptr;
+}
+
+void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(
+	UNiagaraSystem* InUseEffect,
+	USoundBase* InUseSound,
+	FVector Location,
+	FRotator Rotation)
+{
+	if (InUseEffect)
 	{
-		return Def->UseMontage;
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+			GetWorld(),
+			InUseEffect,
+			Location,
+			Rotation);
 	}
-	return nullptr;
+
+	if (InUseSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			this,
+			InUseSound,
+			Location);
+	}
+}
+
+const UGProjectConsumableDefinition* AGProjectConsumableItemActor::GetConsumableDefinition() const
+{
+	return Cast<UGProjectConsumableDefinition>(GetItemDefinition());
 }
