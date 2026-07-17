@@ -33,6 +33,9 @@ void UGProjectOverlayWidgetController::BindCallbacksToDependencies()
 
 		GameState->OnRoundCountdownChanged.RemoveAll(this);
 		GameState->OnRoundCountdownChanged.AddUObject(this, &ThisClass::HandleRoundCountdownChanged);
+
+		GameState->OnRoundResultReceived.RemoveAll(this);
+		GameState->OnRoundResultReceived.AddUObject(this, &ThisClass::HandleRoundResultReceived);
 	}
 
 	BindTeamCallbacks();
@@ -54,6 +57,16 @@ void UGProjectOverlayWidgetController::BroadcastInitialValues()
 		OnRoundPhaseUIChanged.Broadcast(GS->GetRoundPhase(), GS->GetCurrentRound());
 
 		OnTeamScoreUIChanged.Broadcast(GS->GetRedTeamRoundWins(), GS->GetBlueTeamRoundWins());
+
+		if (GS->GetRoundPhase() == ERoundPhase::RoundResult)
+		{
+			const FGProjectRoundResultData& RoundResultData = GS->GetLastRoundResultData();
+
+			if (RoundResultData.Result != ERoundResult::None)
+			{
+				OnRoundResultUIReceived.Broadcast(RoundResultData);
+			}
+		}
 	}
 }
 
@@ -148,20 +161,37 @@ void UGProjectOverlayWidgetController::HandlePlayerTeamChanged(EGProjectTeam New
 	OnPlayerListChanged.Broadcast();
 }
 
-void UGProjectOverlayWidgetController::HandleRoundPhaseChanged(ERoundPhase NewPhase)
+void UGProjectOverlayWidgetController::HandleRoundPhaseChanged(const ERoundPhase NewPhase)
 {
 	if (!PlayerController)
 	{
 		return;
 	}
 
-	const AGProjectGameState* GS = PlayerController->GetWorld()->GetGameState<AGProjectGameState>();
+	const AGProjectGameState* GS =
+		PlayerController
+		->GetWorld()
+		->GetGameState<AGProjectGameState>();
+
 	if (!GS)
 	{
 		return;
 	}
 
-	OnRoundPhaseUIChanged.Broadcast(NewPhase, GS->GetCurrentRound());
+	OnRoundPhaseUIChanged.Broadcast(
+		NewPhase,
+		GS->GetCurrentRound()
+	);
+
+	if (NewPhase == ERoundPhase::RoundResult)
+	{
+		const FGProjectRoundResultData& RoundResultData = GS->GetLastRoundResultData();
+
+		if (RoundResultData.Result != ERoundResult::None)
+		{
+			OnRoundResultUIReceived.Broadcast(RoundResultData);
+		}
+	}
 }
 
 void UGProjectOverlayWidgetController::HandleTeamRoundWinsChanged(int32 RedTeamWins, int32 BlueTeamWins)
@@ -193,4 +223,29 @@ void UGProjectOverlayWidgetController::HandleKillFeedReceived(
 void UGProjectOverlayWidgetController::HandleRoundCountdownChanged(const int32 CountdownValue)
 {
 	OnRoundCountdownChanged.Broadcast(CountdownValue);
+}
+
+void UGProjectOverlayWidgetController::HandleRoundResultReceived(const FGProjectRoundResultData& RoundResultData)
+{
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	const AGProjectGameState* GS =
+		PlayerController
+		->GetWorld()
+		->GetGameState<AGProjectGameState>();
+
+	if (!GS)
+	{
+		return;
+	}
+
+	if (GS->GetRoundPhase() != ERoundPhase::RoundResult)
+	{
+		return;
+	}
+
+	OnRoundResultUIReceived.Broadcast(RoundResultData);
 }
