@@ -16,8 +16,53 @@ enum class ERoundPhase : uint8
 	Waiting,
 	Countdown,
 	Playing,
+	RoundResult,
 	Intermission,
 	Finished
+};
+
+UENUM(BlueprintType)
+enum class ERoundResult : uint8
+{
+	None,
+	RedWin,
+	BlueWin,
+	Draw
+};
+
+UENUM(BlueprintType)
+enum class ERoundEndReason : uint8
+{
+	None,
+	Elimination,
+	TimeUp
+};
+
+USTRUCT(BlueprintType)
+struct FGProjectRoundResultData
+{
+	GENERATED_BODY();
+
+	UPROPERTY(BlueprintReadOnly)
+	ERoundResult Result = ERoundResult::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	ERoundEndReason Reason = ERoundEndReason::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	float RedTeamTotalHP = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly)
+	float BlueTeamTotalHP = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 RedTeamRoundWins = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 BlueTeamRoundWins = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+	int32 Round = 0;
 };
 
 DECLARE_MULTICAST_DELEGATE_OneParam(
@@ -61,6 +106,11 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectRoundResultReceivedSignature,
+	const FGProjectRoundResultData&
+)
+
 UCLASS()
 class PROJECTG_API AGProjectGameState : public AGameState
 {
@@ -90,6 +140,10 @@ public:
 
 	void BroadcastRoundCountdown(int32 CountdownValue);
 
+	void BroadcastRoundResult(const FGProjectRoundResultData& RoundResultData);
+
+	const FGProjectRoundResultData& GetLastRoundResultData() const { return LastRoundResultData; }
+
 	int32 GetRedTeamRoundWins() const { return RedTeamRoundWins; }
 	int32 GetBlueTeamRoundWins() const { return BlueTeamRoundWins; }
 
@@ -109,6 +163,8 @@ public:
 	FGProjectKillFeedReceivedSignature OnKillFeedReceived;
 
 	FGProjectRoundCountdownChangedSignature OnRoundCountdownChanged;
+
+	FGProjectRoundResultReceivedSignature OnRoundResultReceived;
 	
 	int32 GetRoundDuration() const { return RoundDuration; }
 	void SetRoundDuration(int32 NewDuration);
@@ -135,6 +191,9 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_TeamRoundWins)
 	int32 BlueTeamRoundWins = 0;
 
+	UPROPERTY(ReplicatedUsing = OnRep_LastRoundResultData)
+	FGProjectRoundResultData LastRoundResultData;
+
 	UFUNCTION()
 	void OnRep_CurrentRound();
 
@@ -153,6 +212,9 @@ private:
 		const FString& VictimName,
 		int32 VictimColorIndex
 	);
+
+	UFUNCTION()
+	void OnRep_LastRoundResultData();
 
 	//UFUNCTION()
 	//void OnRep_RoundCountdownValue();
