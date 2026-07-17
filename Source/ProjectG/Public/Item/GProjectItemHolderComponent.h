@@ -42,9 +42,6 @@ public:
 	bool HasNearbyPickup();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Settings")
-	FName ItemSocketName = TEXT("ItemSocket");
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Settings")
 	FName WeaponSocketName = TEXT("WeaponSocket");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Settings", meta = (ClampMin = "0.0"))
@@ -72,15 +69,15 @@ private:
 	void PickupItemInternal(AGProjectItemActorBase* Item);
 	void UseHeldItemInternal();
 	void DropHeldItemInternal();
+	void DropItemToGround(AGProjectItemActorBase* ItemToDrop, AGProjectItemActorBase* IgnoreIncomingItem, const FVector& DropOrigin);
+	FVector GetDropLocationGround(const FVector& StartOrigin, AActor* IgnoreActor1 = nullptr, AActor* IgnoreActor2 = nullptr) const;
+	FVector GetDropLocationForItem(AGProjectItemActorBase* ItemToDrop, AGProjectItemActorBase* IgnoreIncomingItem, const FVector& DropOrigin) const;
 	void ApplyHeldItemAttachment();
 	void ClearLocalAttachment();
 	FName GetHoldSocketName(const AGProjectItemActorBase* Item) const;
 
 	UPROPERTY(ReplicatedUsing = OnRep_HeldItem, VisibleInstanceOnly, BlueprintReadOnly, Category = "Item", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<AGProjectItemActorBase> HeldItem;
-
-	UPROPERTY(Replicated)
-	bool bHeldItemReleasedForThrow = false;
 
 	UPROPERTY(Transient)
 	TObjectPtr<AGProjectItemActorBase> LocallyAttachedItem;

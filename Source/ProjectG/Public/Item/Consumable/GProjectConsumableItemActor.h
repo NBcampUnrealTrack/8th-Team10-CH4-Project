@@ -35,5 +35,8 @@ protected:
 	TObjectPtr<USoundBase> UseSound;
 
 private:
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayUseFeedback(UNiagaraSystem* InUseEffect, USoundBase* InUseSound, FVector Location, FRotator Rotation);
+
 	const UGProjectConsumableDefinition* GetConsumableDefinition() const;
 };
