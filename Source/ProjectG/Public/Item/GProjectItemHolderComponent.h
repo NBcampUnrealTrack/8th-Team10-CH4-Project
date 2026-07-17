@@ -45,7 +45,7 @@ public:
 	FName WeaponSocketName = TEXT("WeaponSocket");
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Settings", meta = (ClampMin = "0.0"))
-	float PickupSearchRadius = 250.0f;
+	float PickupSearchRadius = 150.0f;
 
 private:
 	UFUNCTION()

@@ -42,11 +42,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Movement")
 	float SprintSpeed = 450.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Movement")
+	float DashingSpeedThreshold = 400.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Death")
 	TObjectPtr<UAnimMontage> DeathMontage;
-
-	/*UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Death")
-	float DeathDissolveDelay = 3.0f;*/
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Combat")
 	TObjectPtr<UGProjectComboData> GroundComboData;

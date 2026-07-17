@@ -10,6 +10,7 @@ class AGProjectPlayerState;
 
 enum class EGProjectTeam : uint8;
 enum class ERoundPhase : uint8;
+struct FGProjectRoundResultData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGProjectOnPlayerListChangedSignature);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnMatchTimeChangedSignature, int32, RemainTime);
@@ -48,6 +49,11 @@ DECLARE_MULTICAST_DELEGATE_OneParam(
 	int32
 );
 
+DECLARE_MULTICAST_DELEGATE_OneParam(
+	FGProjectRoundResultUIReceivedSignature,
+	const FGProjectRoundResultData&
+);
+
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectOverlayWidgetController : public UGProjectWidgetController
 {
@@ -77,6 +83,8 @@ public:
 
 	FGProjectRoundCountdownUIChangedSignature OnRoundCountdownChanged;
 
+	FGProjectRoundResultUIReceivedSignature OnRoundResultUIReceived;
+
 private:
 	void HandlePlayerListChanged();
 	void HandleMatchTimeChanged(int32 RemainTime);
@@ -100,4 +108,6 @@ private:
 	);
 
 	void HandleRoundCountdownChanged(int32 CountdownValue);
+
+	void HandleRoundResultReceived(const FGProjectRoundResultData& RoundResultData);
 };

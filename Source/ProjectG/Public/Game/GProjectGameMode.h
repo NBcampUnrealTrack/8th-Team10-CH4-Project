@@ -13,6 +13,8 @@ class APlayerController;
 class AGProjectPlayerState;
 
 enum class EGProjectTeam : uint8;
+enum class ERoundResult : uint8;
+enum class ERoundEndReason : uint8;
 
 UCLASS()
 class PROJECTG_API AGProjectGameMode : public AGameMode
@@ -31,6 +33,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void HandleSeamlessTravelPlayer(AController*& Controller) override;
 
 	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
@@ -55,6 +58,21 @@ protected:
 	void TickRoundCountdown();
 	void BeginRoundFight();
 
+	void FinishRoundByHealth(ERoundEndReason Reason);
+
+	void FinishRoundWithResult(
+		ERoundResult Result,
+		ERoundEndReason Reason,
+		float RedTeamTotalHP,
+		float BlueTeamTotalHP
+	);
+
+	void ContinueAfterRoundResult();
+
+	float CalculateTeamTotalHealth(EGProjectTeam Team) const;
+
+	ERoundResult DetermineResultFromHealth(float RedTeamTotalHP, float BlueTeamTotalHP) const;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Match")
 	int32 RequiredPlayers = 2;
 
@@ -66,6 +84,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Round")
 	float RoundTransitionDuration = 3.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Round")
+	float RoundResultDisplayDuration = 2.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawning")
 	TArray<UItemSpawnDataAsset*> ItemPool;
@@ -78,11 +99,14 @@ protected:
 	
 	FTimerHandle ItemSpawnTimerHandle;
 	
-	UFUNCTION(BlueprintCallable, Category = "Spawning")
-	void SpawnRandomItem();
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning|Balance")
+	int32 StartItemSpawnCount = 5;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Settings", meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawning|Balance", meta = (AllowPrivateAccess = "true"))
 	float ItemSpawnInterval = 10.0f;
+	
+	UFUNCTION(BlueprintCallable, Category = "Spawning|Balance")
+	void SpawnRandomItem();
 	
 	UPROPERTY()
 	TArray<ASpawnBase*> SpawnZones;
@@ -96,6 +120,7 @@ private:
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
 	FTimerHandle RoundCountdownTimerHandle;
+	FTimerHandle RoundResultTimerHandle;
 
 	int CurrentRoundCountdownValue = 0;
 };

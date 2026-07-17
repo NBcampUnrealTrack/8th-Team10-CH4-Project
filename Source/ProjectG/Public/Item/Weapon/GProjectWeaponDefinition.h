@@ -26,6 +26,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	TSoftObjectPtr<UStaticMesh> HeldMesh;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	FRotator AttachRotationOffset = FRotator::ZeroRotator;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Combo")
 	TObjectPtr<UGProjectComboData> GroundComboData;
 

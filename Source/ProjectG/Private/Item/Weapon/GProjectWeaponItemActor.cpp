@@ -46,6 +46,8 @@ void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character, FNa
 		ItemMesh->SetStaticMesh(WeaponDefinition->HeldMesh.LoadSynchronous());
 	}
 
+	ItemMesh->SetRelativeRotation(WeaponDefinition->AttachRotationOffset);
+
 	Character->SetActiveComboData(
 		WeaponDefinition->GroundComboData,
 		WeaponDefinition->AirComboData,

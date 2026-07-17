@@ -2,22 +2,134 @@
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "OnlineSessionSettings.h"
+#include "Online/OnlineSessionNames.h"
+#include "Interfaces/OnlineIdentityInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Blueprint/UserWidget.h"
 
-UGProjectSessionSubsystem::UGProjectSessionSubsystem()
+void UGProjectSessionSubsystem::LoginWithEOS()
 {
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+	if (!Subsystem)
+	{
+		UE_LOG(LogTemp, Error, TEXT("LoginWithEOS failed: Subsystem is null"));
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
+	}
 
+	if (Subsystem->GetSubsystemName() == TEXT("NULL"))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("NULL subsystem: skip login"));
+		OnLoginCompleteEvent.Broadcast(true);
+		return;
+	}
+
+	IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
+	if (!IdentityInterface.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("LoginWithEOS failed: IdentityInterface is invalid"));
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	if (IdentityInterface->GetLoginStatus(0) == ELoginStatus::LoggedIn)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Already Logged In to EOS"));
+		OnLoginCompleteEvent.Broadcast(true);
+		return;
+	}
+
+	LoginCompleteDelegateHandle = IdentityInterface->AddOnLoginCompleteDelegate_Handle(
+		0,
+		FOnLoginCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnLoginComplete)
+	);
+
+	ShowLoading();
+
+	FOnlineAccountCredentials Credentials;
+
+	//accountportal / developer /  exchangecode
+	Credentials.Type = TEXT("accountportal");
+	Credentials.Id = TEXT("");
+	Credentials.Token = TEXT("");
+
+	/*FString AuthType;
+	FString AuthLogin;
+	FString AuthPassword;
+
+	FParse::Value(FCommandLine::Get(), TEXT("auth_type="), AuthType);
+	FParse::Value(FCommandLine::Get(), TEXT("auth_login="), AuthLogin);
+	FParse::Value(FCommandLine::Get(), TEXT("auth_password="), AuthPassword);
+
+	Credentials.Type = AuthType.IsEmpty() ? TEXT("developer") : AuthType;
+	Credentials.Id = AuthLogin;
+	Credentials.Token = AuthPassword;*/
+
+	if (!IdentityInterface->Login(0, Credentials))
+	{
+		UE_LOG(LogTemp, Error, TEXT("IdentityInterface->Login call failed"));
+		IdentityInterface->ClearOnLoginCompleteDelegate_Handle(0, LoginCompleteDelegateHandle);
+		HideLoading();
+		OnLoginCompleteEvent.Broadcast(false);
+	}
 }
 
-void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FName SessionNameSetting)
+void UGProjectSessionSubsystem::OnLoginComplete(
+	int32 LocalUserNum,
+	bool bWasSuccessful,
+	const FUniqueNetId& UserId,
+	const FString& Error
+)
 {
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+
+	if (!Subsystem)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OnLoginComplete: Subsystem is null"));
+		HideLoading();
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
+	if (IdentityInterface.IsValid())
+	{
+		IdentityInterface->ClearOnLoginCompleteDelegate_Handle(
+			LocalUserNum,
+			LoginCompleteDelegateHandle
+		);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Subsystem: %s"), *Subsystem->GetSubsystemName().ToString());
+	UE_LOG(LogTemp, Warning, TEXT("UserId Valid: %s"), UserId.IsValid() ? TEXT("true") : TEXT("false"));
+
+	if (!bWasSuccessful || !UserId.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("EOS Login failed. Error: %s"), *Error);
+		HideLoading();
+		OnLoginCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	HideLoading();
+	OnLoginCompleteEvent.Broadcast(true);
+}
+
+void UGProjectSessionSubsystem::CreateGameSession(
+	int32 MaxPublicConnections,
+	FName SessionNameSetting,
+	const FString& RoomName,
+	const FString& BattleMapPath
+) {
 	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
 	if (!Subsystem)
 	{
 		OnCreateSessionCompleteEvent.Broadcast(false);
 		return;
 	}
+
+	GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::White, FString::Printf(TEXT("OSS is %s"), *Subsystem->GetSubsystemName().ToString()));
 
 	SessionInterface = Subsystem->GetSessionInterface();
 	if (!SessionInterface.IsValid())
@@ -30,28 +142,25 @@ void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FN
 	if (ExistingSession != nullptr)
 	{
 		SessionInterface->DestroySession(NAME_GameSession);
-		OnCreateSessionCompleteEvent.Broadcast(false);
-		return;
 	}
 
 	CreateSessionCompleteDelegateHandle =
 		SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
-			FOnCreateSessionCompleteDelegate::CreateUObject(
-				this,
-				&UGProjectSessionSubsystem::OnCreateSessionComplete
-			)
+			FOnCreateSessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnCreateSessionComplete)
 		);
 
-			ShowLoading();
+
+	ShowLoading();
+
+	CachedMaxPlayersForTravel = MaxPublicConnections;
+	CachedBattleMapPathForTravel = BattleMapPath;
 
 	FOnlineSessionSettings SessionSettings;
-	SessionSettings.bIsLANMatch = Subsystem->GetSubsystemName() == "NULL";
+	SessionSettings.bIsLANMatch = (Subsystem->GetSubsystemName() == "NULL");
 	SessionSettings.NumPublicConnections = MaxPublicConnections;
-	SessionSettings.bAllowInvites = true;
-	SessionSettings.bAllowJoinInProgress = true;
 	SessionSettings.bShouldAdvertise = true;
 	SessionSettings.bUsesPresence = true;
-	SessionSettings.bAllowJoinViaPresence = true;
+	SessionSettings.bUseLobbiesIfAvailable = true;
 
 	SessionSettings.Set(
 		FName(TEXT("MaxPlayersCustom")),
@@ -65,13 +174,75 @@ void UGProjectSessionSubsystem::CreateGameSession(int32 MaxPublicConnections, FN
 		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
 	);
 
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!LocalPlayer ||
-		!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionSettings))
+	SessionSettings.Set(
+		FName(TEXT("ROOM_NAME")),
+		RoomName,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+
+	SessionSettings.Set(
+		FName(TEXT("BATTLE_MAP_PATH")),
+		BattleMapPath,
+		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
+	);
+
+	SessionSettings.Set(
+		FName("MATCH_TYPE"),
+		FString("Default"),
+		EOnlineDataAdvertisementType::ViaOnlineService
+	);
+
+	FString MatchType;
+	SessionSettings.Get(FName(TEXT("MATCH_TYPE")), MatchType);
+
+	UE_LOG(LogTemp, Warning, TEXT("Create MATCH_TYPE: %s"), *MatchType);
+	UE_LOG(LogTemp, Warning, TEXT("Create Advertise: %d"), SessionSettings.bShouldAdvertise);
+	UE_LOG(LogTemp, Warning, TEXT("Create UseLobbies: %d"), SessionSettings.bUseLobbiesIfAvailable);
+	UE_LOG(LogTemp, Warning, TEXT("Create Presence: %d"), SessionSettings.bUsesPresence);
+	UE_LOG(LogTemp, Warning, TEXT("Create LAN: %d"), SessionSettings.bIsLANMatch);
+	UE_LOG(LogTemp, Warning, TEXT("Create MaxPlayers: %d"), SessionSettings.NumPublicConnections);
+
+	IOnlineIdentityPtr IdentityInterface = Subsystem->GetIdentityInterface();
+	if (!IdentityInterface.IsValid())
 	{
+		UE_LOG(LogTemp, Error, TEXT("CreateSession failed: IdentityInterface invalid"));
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 		HideLoading();
 		OnCreateSessionCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	const int32 LocalUserNum = 0;
+
+	if (Subsystem->GetSubsystemName() != TEXT("NULL"))
+	{
+		if (IdentityInterface->GetLoginStatus(LocalUserNum) != ELoginStatus::LoggedIn)
+		{
+			UE_LOG(LogTemp, Error, TEXT("CreateSession failed: EOS user is not logged in"));
+			SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+			HideLoading();
+			OnCreateSessionCompleteEvent.Broadcast(false);
+			return;
+		}
+
+		TSharedPtr<const FUniqueNetId> NetId = IdentityInterface->GetUniquePlayerId(LocalUserNum);
+		if (!NetId.IsValid())
+		{
+			UE_LOG(LogTemp, Error, TEXT("CreateSession failed: EOS UniquePlayerId invalid"));
+			SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+			HideLoading();
+			OnCreateSessionCompleteEvent.Broadcast(false);
+			return;
+		}
+	}
+
+	if (!SessionInterface->CreateSession(LocalUserNum, NAME_GameSession, SessionSettings))
+	{
+		UE_LOG(LogTemp, Error, TEXT("CreateSession call failed"));
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+		HideLoading();
+		OnCreateSessionCompleteEvent.Broadcast(false);
+		return;
 	}
 }
 
@@ -88,11 +259,14 @@ void UGProjectSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool 
 	{
 		ShowLoading();
 
+		FString OptionsString = FString::Printf(TEXT("listen?MaxPlayersCustom=%d?BATTLE_MAP_PATH=%s"),
+			CachedMaxPlayersForTravel, *CachedBattleMapPathForTravel);
+
 		UGameplayStatics::OpenLevel(
 			GetWorld(),
 			LobbyMapPath,
 			true,
-			"listen"
+			OptionsString
 		);
 	}
 	else
@@ -104,17 +278,9 @@ void UGProjectSessionSubsystem::OnCreateSessionComplete(FName SessionName, bool 
 void UGProjectSessionSubsystem::FindGameSessions()
 {
 	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
-	if (!Subsystem)
-	{
-		return;
-	}
+	if (!Subsystem) return;
 
 	SessionInterface = Subsystem->GetSessionInterface();
-	if (!SessionInterface.IsValid())
-	{
-		return;
-	}
-
 	if (!SessionInterface.IsValid()) return;
 
 	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(
@@ -124,27 +290,66 @@ void UGProjectSessionSubsystem::FindGameSessions()
 	ShowLoading();
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
-	SessionSearch->MaxSearchResults = 10000;
-	SessionSearch->bIsLanQuery = (IOnlineSubsystem::Get()->GetSubsystemName() == "NULL");
+	SessionSearch->MaxSearchResults = 100;
+	SessionSearch->bIsLanQuery = (Subsystem->GetSubsystemName() == "NULL");
 
-	SessionSearch->QuerySettings.Set(FName(TEXT("PRESENCE")), true, EOnlineComparisonOp::Equals);
+	const ULocalPlayer* LocalPlayer = GetWorld() ? GetWorld()->GetFirstLocalPlayerFromController() : nullptr;
+	if (!LocalPlayer)
+	{
+		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: LocalPlayer is null"));
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		HideLoading();
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		return;
+	}
 
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SessionSearch.ToSharedRef()))
+	FUniqueNetIdRepl UserId = LocalPlayer->GetPreferredUniqueNetId();
+	if (!UserId.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: UserId invalid"));
+		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
+		HideLoading();
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		return;
+	}
+
+	SessionSearch->QuerySettings.Set(
+		SEARCH_LOBBIES,
+		true,
+		EOnlineComparisonOp::Equals
+	);
+
+	SessionSearch->QuerySettings.Set(
+		FName(TEXT("MATCH_TYPE")),
+		FString(TEXT("Default")),
+		EOnlineComparisonOp::Equals
+	);
+
+	UE_LOG(LogTemp, Warning, TEXT("Find OSS: %s"), *Subsystem->GetSubsystemName().ToString());
+	UE_LOG(LogTemp, Warning, TEXT("Find LAN: %d"), SessionSearch->bIsLanQuery);
+	UE_LOG(LogTemp, Warning, TEXT("Find MaxResults: %d"), SessionSearch->MaxSearchResults);
+	UE_LOG(LogTemp, Warning, TEXT("Find SEARCH_LOBBIES: true"));
+	UE_LOG(LogTemp, Warning, TEXT("Find SEARCH_PRESENCE: true"));
+	UE_LOG(LogTemp, Warning, TEXT("Find MATCH_TYPE: Default"));
+
+	UE_LOG(LogTemp, Warning, TEXT("SearchParams Num: %d"),
+		SessionSearch->QuerySettings.SearchParams.Num());
+
+	bool bStarted = SessionInterface->FindSessions(*UserId, SessionSearch.ToSharedRef());
+
+	UE_LOG(LogTemp, Warning, TEXT("SessionInterface->Fin Started: %d"), bStarted);
+
+	if (!bStarted)
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		HideLoading();
 		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		return;
 	}
 }
 
 void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 {
-	if (SessionInterface.IsValid())
-	{
-		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
-	}
-
 	UE_LOG(LogTemp, Warning, TEXT("FindSessions Success: %d"), bWasSuccessful);
 	UE_LOG(LogTemp, Warning, TEXT("SearchResults Num: %d"), SessionSearch.IsValid() ? SessionSearch->SearchResults.Num() : -1);
 
@@ -159,11 +364,16 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 		for (int32 i = 0; i < SessionSearch->SearchResults.Num(); ++i)
 		{
 			auto& SessionResult = SessionSearch->SearchResults[i];
-			FString MapName;
-			SessionResult.Session.SessionSettings.Get(FName(TEXT("MAPNAME")), MapName);
+
+			FString CustomRoomName;
+			SessionResult.Session.SessionSettings.Get(FName(TEXT("ROOM_NAME")), CustomRoomName);
 
 			FString OwnerName = SessionResult.Session.OwningUserName;
-			DisplayNames.Add(FString::Printf(TEXT("%s's Room (%s)"), *OwnerName, *MapName));
+
+			// Room Name
+			FString FinalRoomName = CustomRoomName.IsEmpty() ? FString::Printf(TEXT("Game Room")) : CustomRoomName;
+
+			DisplayNames.Add(FinalRoomName);
 		}
 	}
 	HideLoading();
@@ -173,6 +383,17 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 
 void UGProjectSessionSubsystem::JoinGameSession(int32 SessionIndex)
 {
+	if (!SessionInterface.IsValid())
+	{
+		return;
+	}
+
+	FNamedOnlineSession* ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
+	if (ExistingSession != nullptr)
+	{
+		SessionInterface->DestroySession(NAME_GameSession);
+	}
+
 	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
 	if (!Subsystem)
 	{
@@ -199,12 +420,43 @@ void UGProjectSessionSubsystem::JoinGameSession(int32 SessionIndex)
 	ShowLoading();
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionSearch->SearchResults[SessionIndex]))
+	if (!LocalPlayer)
 	{
 		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
 		HideLoading();
 		OnJoinSessionCompleteEvent.Broadcast(false);
+		return;
 	}
+
+	FUniqueNetIdRepl UserId = LocalPlayer->GetPreferredUniqueNetId();
+
+	UE_LOG(
+		LogTemp,
+		Warning,
+		TEXT("Join UserId Valid: %s"),
+		UserId.IsValid() ? TEXT("true") : TEXT("false")
+	);
+
+	if (!UserId.IsValid())
+	{
+		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
+		HideLoading();
+		OnJoinSessionCompleteEvent.Broadcast(false);
+		return;
+	}
+
+	if (!SessionInterface->JoinSession(
+		*UserId,
+		NAME_GameSession,
+		SessionSearch->SearchResults[SessionIndex]
+	))
+	{
+		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
+		HideLoading();
+		OnJoinSessionCompleteEvent.Broadcast(false);
+		return;
+	}
+
 }
 
 void UGProjectSessionSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
@@ -335,4 +587,72 @@ APlayerController* UGProjectSessionSubsystem::GetOwningPlayerController() const
 {
 	UWorld* World = GetWorld();
 	return World ? World->GetFirstPlayerController() : nullptr;
+}
+
+
+void UGProjectSessionSubsystem::DestroyGameSession()
+{
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+	if (!Subsystem) return;
+
+	SessionInterface = Subsystem->GetSessionInterface();
+	if (!SessionInterface.IsValid()) return;
+
+	ShowLoading();
+
+	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnDestroySessionComplete)
+	);
+
+	if (!SessionInterface->DestroySession(NAME_GameSession))
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+		HideLoading();
+		OnDestroySessionCompleteEvent.Broadcast(false);
+	}
+}
+
+void UGProjectSessionSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	if (SessionInterface.IsValid())
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+	}
+
+	HideLoading();
+
+	if (PendingExitPlayer.IsValid())
+	{
+		PendingExitPlayer->ClientTravel(TEXT("/Game/Level/MenuMap"), ETravelType::TRAVEL_Absolute);
+		PendingExitPlayer.Reset();
+	}
+}
+
+void UGProjectSessionSubsystem::ExitMatch(APlayerController* RequestingPlayer)
+{
+	PendingExitPlayer = RequestingPlayer;
+
+	IOnlineSubsystem* Subsystem = Online::GetSubsystem(GetWorld());
+	if (!Subsystem) return;
+
+	SessionInterface = Subsystem->GetSessionInterface();
+	if (!SessionInterface.IsValid()) return;
+
+	ShowLoading();
+
+	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+		FOnDestroySessionCompleteDelegate::CreateUObject(this, &UGProjectSessionSubsystem::OnDestroySessionComplete)
+	);
+
+	if (!SessionInterface->DestroySession(NAME_GameSession))
+	{
+		SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+		HideLoading();
+
+		if (PendingExitPlayer.IsValid())
+		{
+			PendingExitPlayer->ClientTravel(TEXT("/Game/Level/MenuMap"), ETravelType::TRAVEL_Absolute);
+			PendingExitPlayer.Reset();
+		}
+	}
 }
