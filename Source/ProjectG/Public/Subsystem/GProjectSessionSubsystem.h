@@ -16,6 +16,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnCreateSessionComplete, bo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGProjectOnFindSessionsComplete, const TArray<FString>&, SessionNames, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnJoinSessionComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnLoginComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnDestroySessionComplete, bool, bWasSuccessful);
+
 UCLASS()
 class PROJECTG_API UGProjectSessionSubsystem : public UGameInstanceSubsystem
 {
@@ -30,6 +32,8 @@ public:
 	);
 	void FindGameSessions();
 	void JoinGameSession(int32 SessionIndex);
+	void DestroyGameSession();
+	void ExitMatch(APlayerController* RequestingPlayer);
 
 	UFUNCTION(BlueprintCallable, Category = "Online")
 	void LoginWithEOS();
@@ -50,6 +54,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Online")
 	FGProjectOnLoginComplete OnLoginCompleteEvent;
 
+	UPROPERTY(BlueprintAssignable, Category = "Session")
+	FGProjectOnDestroySessionComplete OnDestroySessionCompleteEvent;
+
 	UFUNCTION(BlueprintCallable, Category = "Loading")
 	void ShowLoading();
 
@@ -64,6 +71,7 @@ protected:
 	void OnFindSessionsComplete(bool bWasSuccessful);
 	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
 	void OnLoginComplete(int32 LocalUserNum, bool bWasSuccessful, const FUniqueNetId& UserId, const FString& Error);
+	void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful);
 
 private:
 	IOnlineSessionPtr SessionInterface;
@@ -73,6 +81,7 @@ private:
 	FDelegateHandle FindSessionsCompleteDelegateHandle;
 	FDelegateHandle JoinSessionCompleteDelegateHandle;
 	FDelegateHandle LoginCompleteDelegateHandle;
+	FDelegateHandle DestroySessionCompleteDelegateHandle;
 
 	FName LobbyMapPath = TEXT("/Game/Level/LobbyMap");
 
@@ -88,4 +97,6 @@ private:
 	int32 CachedMaxPlayersForTravel;
 	FString CachedBattleMapPathForTravel;
 	FText CachedPlayerName;
+
+	TWeakObjectPtr<APlayerController> PendingExitPlayer;
 };
