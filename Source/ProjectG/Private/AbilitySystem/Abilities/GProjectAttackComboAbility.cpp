@@ -585,7 +585,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		LastHitTimestamps.Add(TargetPtr, CurrentTime);
 
 		if (ACharacter* TargetCharacter = Cast<ACharacter>(Target);
-			!DamageParams.KnockbackForce.IsNearlyZero() || DamageParams.AirborneLaunchForce > 0.0f)
+			TargetCharacter && (!DamageParams.KnockbackForce.IsNearlyZero() || DamageParams.AirborneLaunchForce > 0.0f))
 		{
 			FVector LaunchVelocity = DamageParams.KnockbackForce;
 			LaunchVelocity.Z = DamageParams.AirborneLaunchForce > 0.0f
