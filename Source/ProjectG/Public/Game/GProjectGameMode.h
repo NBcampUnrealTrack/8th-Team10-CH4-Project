@@ -11,6 +11,7 @@
 class ASpawnBase;
 class APlayerController;
 class AGProjectPlayerState;
+class AGProjectCageActor;
 
 enum class EGProjectTeam : uint8;
 enum class ERoundResult : uint8;
@@ -116,6 +117,8 @@ protected:
 
 private:
 	void AssignTeam(APlayerController* NewPlayer);
+
+	void OpenCagesForTeam(EGProjectTeam Team);
 
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
