@@ -25,6 +25,7 @@ public:
 
 protected:
 
+	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 
 	UPROPERTY(meta = (BindWidget))

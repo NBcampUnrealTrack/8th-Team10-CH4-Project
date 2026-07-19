@@ -18,6 +18,54 @@ void UGProjectPlayerBoxWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
+	if (GetClass()->GetName().Contains(TEXT("WBP_PlayerBox_New")))
+	{
+		const FLinearColor Outline(0.0f, 0.02f, 0.05f, 0.95f);
+		const FLinearColor Track(0.015f, 0.035f, 0.055f, 0.95f);
+
+		if (NameText)
+		{
+			NameText->SetColorAndOpacity(FSlateColor(FLinearColor(0.88f, 0.95f, 1.0f, 1.0f)));
+			NameText->SetJustification(ETextJustify::Center);
+			NameText->SetShadowOffset(FVector2D(1.5f, 2.0f));
+			NameText->SetShadowColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, 0.7f));
+
+			FSlateFontInfo NameFont = NameText->GetFont();
+			NameFont.Size = 19;
+			NameFont.OutlineSettings.OutlineSize = 1;
+			NameFont.OutlineSettings.OutlineColor = Outline;
+			NameText->SetFont(NameFont);
+		}
+
+		auto StyleBar = [&Track](UProgressBar* Bar, const FLinearColor& FillColor)
+		{
+			if (!Bar)
+			{
+				return;
+			}
+
+			FProgressBarStyle Style = Bar->GetWidgetStyle();
+			Style.BackgroundImage.TintColor = FSlateColor(Track);
+			Style.FillImage.TintColor = FSlateColor(FillColor);
+			Style.MarqueeImage.TintColor = FSlateColor(FillColor);
+			Bar->SetWidgetStyle(Style);
+		};
+
+		StyleBar(HPBar, FLinearColor(0.10f, 0.88f, 0.48f, 1.0f));
+		StyleBar(HPBar_Yellow, FLinearColor(1.0f, 0.68f, 0.12f, 0.9f));
+		StyleBar(SPBar, FLinearColor(0.08f, 0.66f, 0.96f, 1.0f));
+
+		if (PortraitImage)
+		{
+			PortraitImage->SetColorAndOpacity(FLinearColor::White);
+		}
+
+		if (DeathMark)
+		{
+			DeathMark->SetColorAndOpacity(FLinearColor(1.0f, 0.12f, 0.10f, 0.9f));
+		}
+	}
+
 	SetDeathMarkVisible(false);
 	RefreshHealth();
 	RefreshSP();
