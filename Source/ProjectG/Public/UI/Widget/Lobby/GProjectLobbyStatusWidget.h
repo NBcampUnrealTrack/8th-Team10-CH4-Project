@@ -17,6 +17,8 @@ public:
 	void SetSlotInfo(const FString& InPlayerName, const FString& InStatus);
 
 protected:
+	virtual void NativePreConstruct() override;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<class UTextBlock> PlayerNameText;
 
