@@ -5,15 +5,29 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/CollisionProfile.h"
 #include "Materials/MaterialInterface.h"
+#include "Net/UnrealNetwork.h"
 #include "UObject/ConstructorHelpers.h"
 
 AGCageDoorActor::AGCageDoorActor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
+	SetReplicateMovement(true);
+
+	PhysicsRoot = CreateDefaultSubobject<UBoxComponent>(TEXT("CagePhysicsRoot"));
+	SetRootComponent(PhysicsRoot);
+	PhysicsRoot->SetBoxExtent(FVector(100.7f, 100.7f, 8.0f));
+	PhysicsRoot->SetMobility(EComponentMobility::Movable);
+	PhysicsRoot->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+	PhysicsRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PhysicsRoot->SetLinearDamping(4.0f);
+	PhysicsRoot->SetAngularDamping(10.0f);
+	PhysicsRoot->SetEnableGravity(false);
+	PhysicsRoot->SetSimulatePhysics(false);
 
 	FrameMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CageFrame"));
-	SetRootComponent(FrameMesh);
-	FrameMesh->SetMobility(EComponentMobility::Static);
+	FrameMesh->SetupAttachment(PhysicsRoot);
+	FrameMesh->SetMobility(EComponentMobility::Movable);
 	FrameMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	DoorHinge = CreateDefaultSubobject<USceneComponent>(TEXT("DoorHinge"));
@@ -30,6 +44,7 @@ AGCageDoorActor::AGCageDoorActor()
 	auto SetupFrameCollision = [this](UBoxComponent* Box, const FVector& Location, const FVector& Extent)
 	{
 		Box->SetupAttachment(FrameMesh);
+		Box->SetMobility(EComponentMobility::Movable);
 		Box->SetRelativeLocation(Location);
 		Box->SetBoxExtent(Extent);
 		Box->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
@@ -99,12 +114,16 @@ AGCageDoorActor::AGCageDoorActor()
 void AGCageDoorActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	SynchronizeDoorCollision();
+	if (!bCageFalling)
+	{
+		SynchronizeDoorCollision();
+	}
 }
 
 void AGCageDoorActor::BeginPlay()
 {
 	Super::BeginPlay();
+	ApplyCagePhysicsState();
 	SynchronizeDoorCollision();
 	bTargetOpen = bStartOpen;
 	if (bStartOpen)
@@ -116,18 +135,105 @@ void AGCageDoorActor::BeginPlay()
 void AGCageDoorActor::Tick(const float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	SynchronizeDoorCollision();
 
 	const float TargetYaw = bTargetOpen ? OpenAngle : 0.0f;
 	const float CurrentYaw = DoorHinge->GetRelativeRotation().Yaw;
 	const float NewYaw = FMath::FInterpConstantTo(CurrentYaw, TargetYaw, DeltaSeconds, OpenSpeed);
 	DoorHinge->SetRelativeRotation(FRotator(0.0f, NewYaw, 0.0f));
 
+	if (bCageFalling)
+	{
+		// The server physics body owns the root transform while falling.
+		return;
+	}
+
+	SynchronizeDoorCollision();
+
 	// Once the door has swung clear of the opening, its broad box collision is
 	// no longer useful and can catch a character capsule near the hinge.
 	const bool bDoorClearOfEntrance = bTargetOpen && FMath::Abs(NewYaw) >= 70.0f;
 	DoorCollision->SetCollisionEnabled(
 		bDoorClearOfEntrance ? ECollisionEnabled::NoCollision : ECollisionEnabled::QueryAndPhysics);
+}
+
+void AGCageDoorActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AGCageDoorActor, bCageFalling);
+}
+
+void AGCageDoorActor::StartCageFall()
+{
+	if (!HasAuthority())
+	{
+		// Stage destruction is server-authoritative. A server-owned cage cannot
+		// accept an RPC from an arbitrary client that does not own this actor.
+		return;
+	}
+
+	if (bCageFalling)
+	{
+		return;
+	}
+
+	bCageFalling = true;
+	ApplyCagePhysicsState();
+	ForceNetUpdate();
+}
+
+void AGCageDoorActor::OnRep_CageFalling()
+{
+	ApplyCagePhysicsState();
+}
+
+void AGCageDoorActor::ApplyCagePhysicsState()
+{
+	if (!IsValid(PhysicsRoot))
+	{
+		return;
+	}
+
+	// During a fall these shapes remain queryable so character movement can
+	// still sweep against the cage floor and walls, but they do not participate
+	// in the Chaos rigid-body solver. PhysicsRoot alone owns cage physics.
+	const ECollisionEnabled::Type InternalCollision = bCageFalling
+		? ECollisionEnabled::QueryOnly
+		: ECollisionEnabled::QueryAndPhysics;
+
+	BackWallCollision->SetCollisionEnabled(InternalCollision);
+	LeftWallCollision->SetCollisionEnabled(InternalCollision);
+	RightWallCollision->SetCollisionEnabled(InternalCollision);
+	FloorCollision->SetCollisionEnabled(InternalCollision);
+	// Cage1_Frame is intentionally open at the top.
+	CeilingCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	DoorCollision->SetCollisionEnabled(InternalCollision);
+
+	if (!bCageFalling)
+	{
+		PhysicsRoot->SetSimulatePhysics(false);
+		PhysicsRoot->SetEnableGravity(false);
+		PhysicsRoot->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		return;
+	}
+
+	// The server owns the rigid-body simulation. Clients follow replicated
+	// actor movement and use the root only for non-physical queries.
+	if (HasAuthority())
+	{
+		// A Blueprint archetype can retain the old NoCollision setting even when
+		// the native component defaults change. Reapply the complete profile at
+		// the moment simulation starts so Chaos receives a physics-enabled body.
+		PhysicsRoot->SetCollisionProfileName(UCollisionProfile::BlockAll_ProfileName);
+		PhysicsRoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		PhysicsRoot->SetEnableGravity(true);
+		PhysicsRoot->SetSimulatePhysics(true);
+		PhysicsRoot->WakeAllRigidBodies();
+		return;
+	}
+
+	PhysicsRoot->SetSimulatePhysics(false);
+	PhysicsRoot->SetEnableGravity(false);
+	PhysicsRoot->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 }
 
 void AGCageDoorActor::SynchronizeDoorCollision()

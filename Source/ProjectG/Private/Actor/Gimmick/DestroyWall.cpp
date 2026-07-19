@@ -1,6 +1,8 @@
 #include "Actor/Gimmick/DestroyWall.h"
+#include "Actor/GCageDoorActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "Curves/CurveFloat.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/GProjectGameState.h"
 
@@ -84,7 +86,7 @@ void ADestroyWall::OnMatchTimeUpdated(int32 NewRemainTime)
     {
         bIsSinking = true;
         SetActorTickEnabled(true);
-        
+
         if (SinkCurve)
         {
             SinkTimeline.PlayFromStart();
@@ -117,6 +119,29 @@ void ADestroyWall::HandleTimelineProgress(float Value)
     }
     else
     {
+		// The first three seconds only shake the intact floor. Starting physics
+		// here prevents the cage from going to sleep before its support moves.
+		// Every stage piece may call this; StartCageFall is idempotent.
+		if (HasAuthority())
+		{
+			const FBox WallBounds = GetComponentsBoundingBox(true);
+			for (TActorIterator<AGCageDoorActor> It(GetWorld()); It; ++It)
+			{
+				const FBox CageBounds = It->GetComponentsBoundingBox(true);
+				const FVector CageLocation = It->GetActorLocation();
+				const bool bInsideWallFootprint =
+					CageLocation.X >= WallBounds.Min.X && CageLocation.X <= WallBounds.Max.X &&
+					CageLocation.Y >= WallBounds.Min.Y && CageLocation.Y <= WallBounds.Max.Y;
+				const float VerticalGap = CageBounds.Min.Z - WallBounds.Max.Z;
+				const bool bStandingOnWall = VerticalGap >= -20.0f && VerticalGap <= 150.0f;
+
+				if (bInsideWallFootprint && bStandingOnWall)
+				{
+					It->StartCageFall();
+				}
+			}
+		}
+
         FVector TargetLocation = StartLocation - FVector(0.0f, 0.0f, 1500.0f);
         FVector CurrentLocation = FMath::Lerp(StartLocation, TargetLocation, Value);
         SetActorLocation(CurrentLocation);

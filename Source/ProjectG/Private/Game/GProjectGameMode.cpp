@@ -17,6 +17,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Actor/AGProjectCageActor.h"
 
 AGProjectGameMode::AGProjectGameMode()
 {
@@ -75,6 +76,7 @@ void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
 	}
 
 	const EGProjectTeam DeadTeam = DeadPlayerState->GetTeam();
+	OpenCagesForTeam(DeadTeam);
 	if (DeadTeam == EGProjectTeam::None)
 	{
 		return;
@@ -946,4 +948,44 @@ void AGProjectGameMode::AssignTeam(APlayerController* NewPlayer)
 	NewPlayerState->SetTeam(NewTeam);
 
 	const TCHAR* TeamName = NewTeam == EGProjectTeam::Red ? TEXT("Red") : TEXT("Blue");
+}
+
+void AGProjectGameMode::OpenCagesForTeam(EGProjectTeam Team)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (Team == EGProjectTeam::None)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (TActorIterator<AGProjectCageActor> It(World); It; ++It)
+	{
+		AGProjectCageActor* CageActor = *It;
+		if (!IsValid(CageActor))
+		{
+			continue;
+		}
+
+		if (!CageActor->ShouldOpenWhenTeamMemberDies())
+		{
+			continue;
+		}
+
+		if (CageActor->GetCageTeam() != Team)
+		{
+			continue;
+		}
+
+		CageActor->OpenDoor();
+	}
 }

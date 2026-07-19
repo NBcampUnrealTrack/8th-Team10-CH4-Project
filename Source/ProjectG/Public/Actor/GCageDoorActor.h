@@ -20,6 +20,7 @@ public:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Cage Door")
 	void OpenDoor();
@@ -33,7 +34,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Cage Door")
 	bool IsDoorOpen() const { return bTargetOpen; }
 
+	UFUNCTION(BlueprintCallable, Category = "Cage Physics")
+	void StartCageFall();
+
+	UFUNCTION(BlueprintPure, Category = "Cage Physics")
+	bool IsCageFalling() const { return bCageFalling; }
+
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cage Physics")
+	TObjectPtr<UBoxComponent> PhysicsRoot;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cage Door")
 	TObjectPtr<UStaticMeshComponent> FrameMesh;
 
@@ -72,9 +82,16 @@ protected:
 
 private:
 	void SynchronizeDoorCollision();
+	void ApplyCagePhysicsState();
+
+	UFUNCTION()
+	void OnRep_CageFalling();
 
 	UFUNCTION()
 	void HandleDoorClicked(UPrimitiveComponent* TouchedComponent, FKey ButtonPressed);
+
+	UPROPERTY(ReplicatedUsing = OnRep_CageFalling)
+	bool bCageFalling = false;
 
 	bool bTargetOpen = false;
 };
