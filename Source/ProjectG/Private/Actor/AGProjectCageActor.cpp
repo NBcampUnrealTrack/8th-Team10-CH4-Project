@@ -20,14 +20,11 @@ AGProjectCageActor::AGProjectCageActor()
 
 	CagePhysicsRoot->SetMobility(EComponentMobility::Movable);
 	CagePhysicsRoot->SetBoxExtent(FVector(150.0f, 150.0f, 150.0f));
-	CagePhysicsRoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	CagePhysicsRoot->SetCollisionObjectType(ECC_WorldDynamic);
-	CagePhysicsRoot->SetCollisionResponseToAllChannels(ECR_Block);
-	CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-	CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	CagePhysicsRoot->SetIsReplicated(true);
 	CagePhysicsRoot->SetSimulatePhysics(false);
 	CagePhysicsRoot->SetEnableGravity(true);
-	CagePhysicsRoot->SetIsReplicated(true);
+
+	SetupPhysicsRootCollision();
 
 	CageFrameMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("CageFrameMesh"));
 	CageFrameMesh->SetupAttachment(CagePhysicsRoot);
@@ -49,72 +46,59 @@ AGProjectCageActor::AGProjectCageActor()
 
 	BackWallCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("BackWallCollision"));
 	BackWallCollision->SetupAttachment(CagePhysicsRoot);
-	BackWallCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(BackWallCollision);
 
 	LeftWallCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("LeftWallCollision"));
 	LeftWallCollision->SetupAttachment(CagePhysicsRoot);
-	LeftWallCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(LeftWallCollision);
 
 	RightWallCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("RightWallCollision"));
 	RightWallCollision->SetupAttachment(CagePhysicsRoot);
-	RightWallCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(RightWallCollision);
 
 	FloorCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("FloorCollision"));
 	FloorCollision->SetupAttachment(CagePhysicsRoot);
-	FloorCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(FloorCollision);
 
 	CeilingCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("CeilingCollision"));
 	CeilingCollision->SetupAttachment(CagePhysicsRoot);
-	CeilingCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(CeilingCollision);
 
 	DoorCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorCollision"));
 	DoorCollision->SetupAttachment(DoorPivot);
-	DoorCollision->SetCollisionProfileName(TEXT("BlockAll"));
+	SetupPawnBlockerCollision(DoorCollision);
 }
 
 void AGProjectCageActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitialActorTransform = GetActorTransform();
+
 	if (DoorPivot)
 	{
-		ClosedDoorPivotRotation = DoorPivot->GetRelativeRotation();
+		InitialDoorPivotRotation = DoorPivot->GetRelativeRotation();
 	}
+
+	SetupPhysicsRootCollision();
+
+	SetupPawnBlockerCollision(BackWallCollision);
+	SetupPawnBlockerCollision(LeftWallCollision);
+	SetupPawnBlockerCollision(RightWallCollision);
+	SetupPawnBlockerCollision(FloorCollision);
+	SetupPawnBlockerCollision(CeilingCollision);
+	SetupPawnBlockerCollision(DoorCollision);
 
 	ApplyDoorCollisionState();
 
-	if (bSimulatePhysicsFromStart && CagePhysicsRoot)
+	if (bSimulatePhysicsFromStart)
 	{
-		CagePhysicsRoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		CagePhysicsRoot->SetCollisionObjectType(ECC_WorldDynamic);
-		CagePhysicsRoot->SetCollisionResponseToAllChannels(ECR_Block);
-		CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-		CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
-		CagePhysicsRoot->SetEnableGravity(true);
-
-		if (HasAuthority())
-		{
-			CagePhysicsRoot->SetSimulatePhysics(true);
-			CagePhysicsRoot->WakeAllRigidBodies();
-		}
+		SetCagePhysicsEnabled(true);
 	}
 
-	if (HasAuthority() && bOpenByTimer)
+	if (HasAuthority())
 	{
-		if (AutoOpenDelay <= 0.0f)
-		{
-			OpenDoor();
-		}
-		else
-		{
-			GetWorldTimerManager().SetTimer(
-				AutoOpenTimerHandle,
-				this,
-				&ThisClass::HandleAutoOpenTimer,
-				AutoOpenDelay,
-				false
-			);
-		}
+		StartAutoOpenTimer();
 	}
 }
 
@@ -122,10 +106,19 @@ void AGProjectCageActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const float TargetRoll = GetTargetDoorRoll();
+	if (!DoorPivot)
+	{
+		return;
+	}
+
+	FRotator TargetRotation = InitialDoorPivotRotation;
+
+	if (bIsOpen)
+	{
+		TargetRotation.Roll += OpenRoll;
+	}
 
 	const FRotator CurrentRotation = DoorPivot->GetRelativeRotation();
-	const FRotator TargetRotation = FRotator(0.0f, 0.0f, TargetRoll);
 
 	const FRotator NewRotation = FMath::RInterpTo(
 		CurrentRotation,
@@ -190,19 +183,111 @@ void AGProjectCageActor::ToggleDoor()
 	}
 }
 
+void AGProjectCageActor::StartCollapse()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(AutoOpenTimerHandle);
+
+	SetCagePhysicsEnabled(true);
+
+	if (CagePhysicsRoot)
+	{
+		CagePhysicsRoot->WakeAllRigidBodies();
+
+		if (CollapseImpulseStrength > 0.0f)
+		{
+			CagePhysicsRoot->AddImpulse(FVector::DownVector * CollapseImpulseStrength, NAME_None, true);
+		}
+	}
+
+	ForceNetUpdate();
+}
+
+void AGProjectCageActor::ResetCageForNewRound()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	GetWorldTimerManager().ClearTimer(AutoOpenTimerHandle);
+
+	bIsOpen = false;
+
+	SetCagePhysicsEnabled(false);
+
+	SetActorTransform(
+		InitialActorTransform,
+		false,
+		nullptr,
+		ETeleportType::TeleportPhysics
+	);
+
+	if (DoorPivot)
+	{
+		DoorPivot->SetRelativeRotation(InitialDoorPivotRotation);
+	}
+
+	SetupPhysicsRootCollision();
+
+	SetupPawnBlockerCollision(BackWallCollision);
+	SetupPawnBlockerCollision(LeftWallCollision);
+	SetupPawnBlockerCollision(RightWallCollision);
+	SetupPawnBlockerCollision(FloorCollision);
+	SetupPawnBlockerCollision(CeilingCollision);
+	SetupPawnBlockerCollision(DoorCollision);
+
+	ApplyDoorCollisionState();
+
+	if (bSimulatePhysicsFromStart)
+	{
+		SetCagePhysicsEnabled(true);
+	}
+
+	StartAutoOpenTimer();
+
+	ForceNetUpdate();
+}
+
 void AGProjectCageActor::HandleAutoOpenTimer()
 {
 	OpenDoor();
 }
 
+void AGProjectCageActor::StartAutoOpenTimer()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!bOpenByTimer)
+	{
+		return;
+	}
+
+	if (AutoOpenDelay <= 0.0f)
+	{
+		OpenDoor();
+		return;
+	}
+
+	GetWorldTimerManager().SetTimer(
+		AutoOpenTimerHandle,
+		this,
+		&ThisClass::HandleAutoOpenTimer,
+		AutoOpenDelay,
+		false
+	);
+}
+
 void AGProjectCageActor::OnRep_IsOpen()
 {
 	ApplyDoorCollisionState();
-}
-
-float AGProjectCageActor::GetTargetDoorRoll() const
-{
-	return bIsOpen ? OpenRoll : 0.0f;
 }
 
 void AGProjectCageActor::ApplyDoorCollisionState()
@@ -218,8 +303,93 @@ void AGProjectCageActor::ApplyDoorCollisionState()
 	}
 	else
 	{
-		DoorCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+		SetupPawnBlockerCollision(DoorCollision);
 	}
+}
+
+void AGProjectCageActor::SetupPhysicsRootCollision()
+{
+	if (!CagePhysicsRoot)
+	{
+		return;
+	}
+
+	CagePhysicsRoot->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	CagePhysicsRoot->SetCollisionObjectType(ECC_WorldDynamic);
+
+	CagePhysicsRoot->SetCollisionResponseToAllChannels(ECR_Block);
+	CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	CagePhysicsRoot->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+}
+
+void AGProjectCageActor::SetupPawnBlockerCollision(UBoxComponent* CollisionBox)
+{
+	if (!CollisionBox)
+	{
+		return;
+	}
+
+	CollisionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionBox->SetCollisionObjectType(ECC_WorldDynamic);
+
+	CollisionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+}
+
+void AGProjectCageActor::SetCagePhysicsEnabled(bool bEnable)
+{
+	if (!CagePhysicsRoot)
+	{
+		return;
+	}
+
+	SetupPhysicsRootCollision();
+
+	CagePhysicsRoot->SetEnableGravity(true);
+	CagePhysicsRoot->SetLinearDamping(LinearDamping);
+	CagePhysicsRoot->SetAngularDamping(AngularDamping);
+	CagePhysicsRoot->SetMassOverrideInKg(NAME_None, PhysicsMassKg, true);
+
+	LockPhysicsRotation();
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	if (!bEnable)
+	{
+		if (CagePhysicsRoot->IsSimulatingPhysics())
+		{
+			CagePhysicsRoot->SetPhysicsLinearVelocity(FVector::ZeroVector);
+			CagePhysicsRoot->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+		}
+
+		CagePhysicsRoot->SetSimulatePhysics(false);
+		return;
+	}
+
+	CagePhysicsRoot->SetSimulatePhysics(true);
+	CagePhysicsRoot->WakeAllRigidBodies();
+}
+
+void AGProjectCageActor::LockPhysicsRotation()
+{
+	if (!CagePhysicsRoot)
+	{
+		return;
+	}
+
+	if (!bLockCageRotation)
+	{
+		return;
+	}
+
+	CagePhysicsRoot->BodyInstance.bLockXRotation = true;
+	CagePhysicsRoot->BodyInstance.bLockYRotation = true;
+	CagePhysicsRoot->BodyInstance.bLockZRotation = true;
+
+	CagePhysicsRoot->SetAngularDamping(AngularDamping);
 }
 
 void AGProjectCageActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -227,5 +397,4 @@ void AGProjectCageActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGProjectCageActor, bIsOpen);
-
 }
