@@ -8,6 +8,7 @@
 #include "Game/GProjectGameState.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
+#include "GProjectGameplayTags.h"
 #include "Player/GProjectPlayerState.h"
 
 namespace
@@ -110,11 +111,19 @@ void UGProjectAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 			AGProjectPlayerState* VictimPlayerState = TargetCharacter->GetPlayerState<AGProjectPlayerState>();
 
 			const FGameplayEffectContextHandle Context = Data.EffectSpec.GetContext();
+			const bool bEnvironmentDamage = Data.EffectSpec.GetSetByCallerMagnitude(
+				GProjectGameplayTags::Data_Combat_EnvironmentDamage,
+				false,
+				0.0f) > 0.0f;
 
-			AGProjectPlayerState* KillerPlayerState = ResolvePlayerState(Context.GetOriginalInstigator());
-			if (!KillerPlayerState)
+			AGProjectPlayerState* KillerPlayerState = nullptr;
+			if (!bEnvironmentDamage)
 			{
-				KillerPlayerState = ResolvePlayerState(Context.GetEffectCauser());
+				KillerPlayerState = ResolvePlayerState(Context.GetOriginalInstigator());
+				if (!KillerPlayerState)
+				{
+					KillerPlayerState = ResolvePlayerState(Context.GetEffectCauser());
+				}
 			}
 
 			if (UWorld* World = TargetCharacter->GetWorld())

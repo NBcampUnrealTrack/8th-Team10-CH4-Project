@@ -3,12 +3,10 @@
 #pragma once
 
 #include "AbilitySystem/GProjectAbilitySystemLibrary.h"
-#include "AbilitySystemInterface.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "GProjectTrainProjectile.generated.h"
 
-class UAbilitySystemComponent;
 class UAudioComponent;
 class UBoxComponent;
 class UGameplayEffect;
@@ -18,14 +16,12 @@ class USkeletalMeshComponent;
 class USoundBase;
 
 UCLASS()
-class PROJECTG_API AGProjectTrainProjectile : public AActor, public IAbilitySystemInterface
+class PROJECTG_API AGProjectTrainProjectile : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	AGProjectTrainProjectile();
-
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	void InitTrain(
 		const FVector& LaunchVelocity,
@@ -47,9 +43,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Train")
 	TObjectPtr<UAudioComponent> LoopAudioComponent;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Train")
-	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Train|Collision")
 	FVector CollisionBoxExtent = FVector(250.0f, 100.0f, 100.0f);

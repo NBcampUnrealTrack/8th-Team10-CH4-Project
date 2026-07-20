@@ -44,6 +44,11 @@ void UGProjectExecCalc_Damage::Execute_Implementation(
 		DamageStatics().AttackPowerDef,
 		EvaluationParameters,
 		AttackPower);
+	const float AttackPowerMultiplier = Spec.GetSetByCallerMagnitude(
+		GProjectGameplayTags::Data_Combat_AttackPowerMultiplier,
+		false,
+		1.0f);
+	AttackPower *= FMath::Max(AttackPowerMultiplier, 0.0f);
 
 	float Defense = 0.0f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(

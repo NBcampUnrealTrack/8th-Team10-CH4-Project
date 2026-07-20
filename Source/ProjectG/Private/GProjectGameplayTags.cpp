@@ -70,5 +70,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Event_Interaction_UseItem, "Event.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_Damage, "Data.Combat.Damage");
+	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_AttackPowerMultiplier, "Data.Combat.AttackPowerMultiplier");
+	UE_DEFINE_GAMEPLAY_TAG(Data_Combat_EnvironmentDamage, "Data.Combat.EnvironmentDamage");
 	UE_DEFINE_GAMEPLAY_TAG(Data_Resource_SP_Modifier, "Data.Resource.SP.Modifier");
 }

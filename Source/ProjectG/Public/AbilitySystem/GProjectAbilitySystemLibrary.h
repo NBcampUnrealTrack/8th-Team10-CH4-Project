@@ -64,6 +64,11 @@ public:
 		TSubclassOf<UGameplayEffect> DamageEffectClass);
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
+	static FGameplayEffectContextHandle ApplyEnvironmentDamageEffect(
+		const FGProjectDamageEffectParams& DamageEffectParams,
+		TSubclassOf<UGameplayEffect> DamageEffectClass);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
 	static void ApplyHitstunEffect(
 		const FGProjectDamageEffectParams& DamageEffectParams,
 		TSubclassOf<UGameplayEffect> HitstunEffectClass);

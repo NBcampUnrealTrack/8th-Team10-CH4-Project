@@ -3,12 +3,12 @@
 #include "Actor/Gimmick/GProjectTrainProjectile.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
-#include "AbilitySystemComponent.h"
 #include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "GameplayEffect.h"
 
 AGProjectTrainProjectile::AGProjectTrainProjectile()
 {
@@ -41,24 +41,11 @@ AGProjectTrainProjectile::AGProjectTrainProjectile()
 	LoopAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("LoopAudioComponent"));
 	LoopAudioComponent->SetupAttachment(RootComponent);
 	LoopAudioComponent->bAutoActivate = false;
-
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
-	AbilitySystemComponent->SetIsReplicated(true);
-}
-
-UAbilitySystemComponent* AGProjectTrainProjectile::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent;
 }
 
 void AGProjectTrainProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	}
 
 	TrainCollision->SetBoxExtent(CollisionBoxExtent);
 
@@ -86,7 +73,7 @@ void AGProjectTrainProjectile::InitTrain(
 	}
 
 	DamageParams = InDamageParams;
-	DamageParams.SourceAbilitySystemComponent = AbilitySystemComponent;
+	DamageParams.SourceAbilitySystemComponent = nullptr;
 	DamageGameplayEffectClass = InDamageGameplayEffectClass;
 
 	ProjectileMovement->Velocity = LaunchVelocity;
@@ -129,7 +116,7 @@ bool AGProjectTrainProjectile::CanHitTarget(AActor* Target) const
 void AGProjectTrainProjectile::ApplyTrainHit(AActor* Target)
 {
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Target);
-	if (!TargetASC || !DamageParams.SourceAbilitySystemComponent || !DamageGameplayEffectClass)
+	if (!TargetASC || !DamageGameplayEffectClass)
 	{
 		return;
 	}
@@ -146,7 +133,7 @@ void AGProjectTrainProjectile::ApplyTrainHit(AActor* Target)
 		HitDamageParams.KnockbackForce = KnockbackDirection * HitDamageParams.KnockbackForceMagnitude;
 	}
 
-	UGProjectAbilitySystemLibrary::ApplyDamageEffect(
+	UGProjectAbilitySystemLibrary::ApplyEnvironmentDamageEffect(
 		HitDamageParams,
 		DamageGameplayEffectClass);
 

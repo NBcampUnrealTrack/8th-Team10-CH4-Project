@@ -44,7 +44,45 @@ FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(
 	}
 
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_Damage, DamageEffectParams.BaseDamage);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_AttackPowerMultiplier, 1.0f);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_EnvironmentDamage, 0.0f);
 	DamageEffectParams.TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	PlayCameraShakeFeedback(DamageEffectParams);
+
+	return EffectContextHandle;
+}
+
+FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyEnvironmentDamageEffect(
+	const FGProjectDamageEffectParams& DamageEffectParams,
+	TSubclassOf<UGameplayEffect> DamageEffectClass)
+{
+	UAbilitySystemComponent* TargetASC = DamageEffectParams.TargetAbilitySystemComponent;
+	if (!TargetASC || !DamageEffectClass)
+	{
+		return FGameplayEffectContextHandle();
+	}
+
+	if (TargetASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Character_Invulnerable))
+	{
+		return FGameplayEffectContextHandle();
+	}
+
+	FGameplayEffectContextHandle EffectContextHandle = TargetASC->MakeEffectContext();
+
+	const FGameplayEffectSpecHandle SpecHandle = TargetASC->MakeOutgoingSpec(
+		DamageEffectClass,
+		1.0f,
+		EffectContextHandle);
+
+	if (!SpecHandle.IsValid())
+	{
+		return FGameplayEffectContextHandle();
+	}
+
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_Damage, DamageEffectParams.BaseDamage);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_AttackPowerMultiplier, 0.0f);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_EnvironmentDamage, 1.0f);
+	TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 	PlayCameraShakeFeedback(DamageEffectParams);
 
 	return EffectContextHandle;
