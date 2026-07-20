@@ -165,10 +165,10 @@ protected:
 	TArray<TObjectPtr<UMaterialInterface>> DeathDissolveMaterials;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
-	float WalkSpeed = 450.0f;
+	float WalkSpeed = 350.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
-	float SprintSpeed = 750.0f;
+	float SprintSpeed = 650.0f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Sprint", meta = (ClampMin = "0.0"))
 	float DashingSpeedThreshold = 650.0f;
@@ -259,8 +259,8 @@ private:
 
 	bool bDissolving = false;
 	float DissolveElapsed = 0.0f;
-	float DefaultWalkSpeed = 450.0f;
-	float DefaultSprintSpeed = 750.0f;
+	float DefaultWalkSpeed = 350.0f;
+	float DefaultSprintSpeed = 650.0f;
 	float DefaultDashingSpeedThreshold = 650.0f;
 	FTimerHandle DeathDissolveTimer;
 

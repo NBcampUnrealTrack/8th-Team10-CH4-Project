@@ -17,6 +17,11 @@
 #include "GameFramework/Character.h"
 #include "GProjectGameplayTags.h"
 
+namespace
+{
+	constexpr float EquippedWeaponBaseDamageBonus = 3.0f;
+}
+
 UGProjectAttackComboAbility::UGProjectAttackComboAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -504,6 +509,11 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		}
 
 		FGProjectDamageEffectParams DamageParams = CurrentComboStep->DamageParams;
+		if (Character && Character->GetCombatStyle() != EGProjectCombatStyle::Unarmed)
+		{
+			DamageParams.BaseDamage += EquippedWeaponBaseDamageBonus;
+		}
+
 		DamageParams.SourceAbilitySystemComponent = SourceASC;
 		DamageParams.TargetAbilitySystemComponent = TargetASC;
 		UGProjectAbilitySystemLibrary::SetKnockbackDirection(

@@ -22,7 +22,6 @@ UGProjectKnockdownAbility::UGProjectKnockdownAbility()
 	SetAssetTags(AssetTags);
 
 	ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
-	ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Character_Invulnerable);
 	ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Character_Dead);
 
 	FAbilityTriggerData Trigger;
