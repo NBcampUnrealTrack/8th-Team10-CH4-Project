@@ -67,6 +67,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Feedback")
 	TObjectPtr<UParticleSystem> ExplosionEffect;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Bomb|Feedback")
+	FVector ExplosionEffectScale = FVector::OneVector;
+
 private:
 	UFUNCTION()
 	void OnRep_FuseStarted();

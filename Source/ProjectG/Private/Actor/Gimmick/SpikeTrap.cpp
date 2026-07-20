@@ -227,8 +227,16 @@ void ASpikeTrap::ApplyDamageToOverlappingTargets()
 		DamageParams.SourceAbilitySystemComponent = AbilitySystemComponent;
 		DamageParams.TargetAbilitySystemComponent = TargetASC;
 		DamageParams.BaseDamage = DamageAmount;
+		DamageParams.HitstunTime = HitstunTime;
 
-		UGProjectAbilitySystemLibrary::ApplyDamageEffect(DamageParams, SpikeDamageEffectClass);
+		const FGameplayEffectContextHandle DamageContext = UGProjectAbilitySystemLibrary::ApplyDamageEffect(DamageParams, SpikeDamageEffectClass);
+		if (!DamageContext.IsValid())
+		{
+			continue;
+		}
+
+		UGProjectAbilitySystemLibrary::ApplyHitstunEffect(DamageParams, HitstunGameplayEffectClass);
+		UGProjectAbilitySystemLibrary::SendHitReactEvent(DamageParams);
 	}
 }
 

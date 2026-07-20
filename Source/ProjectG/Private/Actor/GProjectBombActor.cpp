@@ -76,20 +76,26 @@ void AGProjectBombActor::BeginPlay()
 
 	if (bFuseStarted)
 	{
+		SetActorTickEnabled(true);
 		UpdateWarningDecal();
 	}
 }
 
 void AGProjectBombActor::Tick(float DeltaSeconds)
 {
-	Super::Tick(DeltaSeconds);
+	if (!bFuseStarted)
+	{
+		Super::Tick(DeltaSeconds);
+		return;
+	}
 
-	if (!bFuseStarted || bExploded)
+	if (bExploded)
 	{
 		return;
 	}
 
 	ElapsedTime += DeltaSeconds;
+
 	UpdateWarningDecal();
 	UpdateBombBlink();
 
@@ -157,6 +163,7 @@ void AGProjectBombActor::StartFuse()
 	}
 
 	bFuseStarted = true;
+	SetActorTickEnabled(true);
 	StartFuseVisuals();
 	ForceNetUpdate();
 }
@@ -165,6 +172,7 @@ void AGProjectBombActor::OnRep_FuseStarted()
 {
 	if (bFuseStarted)
 	{
+		SetActorTickEnabled(true);
 		StartFuseVisuals();
 	}
 }
@@ -359,6 +367,7 @@ void AGProjectBombActor::MulticastPlayExplosionFeedback_Implementation()
 			this,
 			ExplosionEffect,
 			GetActorLocation(),
-			GetActorRotation());
+			GetActorRotation(),
+			ExplosionEffectScale);
 	}
 }
