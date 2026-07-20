@@ -20,6 +20,7 @@
 namespace
 {
 	constexpr float EquippedWeaponBaseDamageBonus = 3.0f;
+	constexpr float ComboKnockbackForceBonus = 100.0f;
 }
 
 UGProjectAttackComboAbility::UGProjectAttackComboAbility()
@@ -509,6 +510,7 @@ void UGProjectAttackComboAbility::ApplyCurrentStepHit()
 		}
 
 		FGProjectDamageEffectParams DamageParams = CurrentComboStep->DamageParams;
+		DamageParams.KnockbackForceMagnitude += ComboKnockbackForceBonus;
 		if (Character && Character->GetCombatStyle() != EGProjectCombatStyle::Unarmed)
 		{
 			DamageParams.BaseDamage += EquippedWeaponBaseDamageBonus;
