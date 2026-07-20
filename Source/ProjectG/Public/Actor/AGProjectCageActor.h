@@ -31,6 +31,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Cage")
 	void ToggleDoor();
 
+	UFUNCTION(BlueprintCallable, Category = "Cage")
+	void StartCollapse();
+
+	UFUNCTION(BlueprintCallable, Category = "Cage")
+	void ResetCageForNewRound();
+
 	UFUNCTION(BlueprintPure, Category = "Cage")
 	EGProjectTeam GetCageTeam() const { return CageTeam; }
 
@@ -89,8 +95,20 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Cage|Open", meta = (ClampMin = "0.1"))
 	float DoorInterpSpeed = 5.0f;
 
-	UPROPERTY(EditAnywhere, Category = "Cage|Collapse")
-	bool bDisableGameplayCollisionsOnCollapse = true;
+	UPROPERTY(EditAnywhere, Category = "Cage|Physics")
+	bool bSimulatePhysicsFromStart = true;
+
+	UPROPERTY(EditAnywhere, Category = "Cage|Physics")
+	bool bLockCageRotation = true;
+
+	UPROPERTY(EditAnywhere, Category = "Cage|Physics", meta = (ClampMin = "1.0"))
+	float PhysicsMassKg = 300.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Cage|Physics", meta = (ClampMin = "0.0"))
+	float LinearDamping = 0.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Cage|Physics", meta = (ClampMin = "0.0"))
+	float AngularDamping = 20.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Cage|Collapse")
 	float CollapseImpulseStrength = 0.0f;
@@ -98,19 +116,23 @@ private:
 	UPROPERTY(ReplicatedUsing = OnRep_IsOpen)
 	bool bIsOpen = false;
 
-	UPROPERTY(EditAnywhere, Category = "Cage|Physics")
-	bool bSimulatePhysicsFromStart = true;
-
-	FRotator ClosedDoorPivotRotation = FRotator::ZeroRotator;
-
 	FTimerHandle AutoOpenTimerHandle;
+
+	FTransform InitialActorTransform;
+	FRotator InitialDoorPivotRotation = FRotator::ZeroRotator;
 
 	UFUNCTION()
 	void OnRep_IsOpen();
 
 	void HandleAutoOpenTimer();
 
+	void StartAutoOpenTimer();
+
 	void ApplyDoorCollisionState();
 
-	float GetTargetDoorRoll() const;
+	void SetupPhysicsRootCollision();
+	void SetupPawnBlockerCollision(UBoxComponent* CollisionBox);
+
+	void SetCagePhysicsEnabled(bool bEnable);
+	void LockPhysicsRotation();
 };

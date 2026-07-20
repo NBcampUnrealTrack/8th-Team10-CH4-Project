@@ -221,7 +221,8 @@ bool AGProjectPlayerController::IsGameplayInputBlocked()
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Hitstun) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Knockdown) ||
 			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Combat_Parrying) ||
-			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Interaction_Pickup);
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Interaction_Pickup) ||
+			ASC->HasMatchingGameplayTag(GProjectGameplayTags::State_Interaction_UseItem);
 	}
 
 	return false;
