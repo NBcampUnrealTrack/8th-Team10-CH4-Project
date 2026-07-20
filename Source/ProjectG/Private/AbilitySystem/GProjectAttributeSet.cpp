@@ -52,7 +52,7 @@ UGProjectAttributeSet::UGProjectAttributeSet()
 	InitSP(100.0f);
 	InitMaxSP(100.0f);
 	InitMoveSpeed(600.0f);
-	InitAttackPower(10.0f);
+	InitAttackPower(0.0f);
 	InitDefense(0.0f);
 	InitKnockbackPower(1.0f);
 	InitKnockbackResistance(0.0f);

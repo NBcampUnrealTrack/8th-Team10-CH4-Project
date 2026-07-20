@@ -52,6 +52,11 @@ void AGProjectLobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 
+	if (bIsStartingGame)
+	{
+		return;
+	}
+
 	RefreshAllSlots();
 	UpdatePlayerCountUI();
 
@@ -70,6 +75,11 @@ void AGProjectLobbyGameMode::BeginPlay()
 
 void AGProjectLobbyGameMode::UpdatePlayerCountUI()
 {
+	if (bIsStartingGame)
+	{
+		return;
+	}
+
 	if (!IsCurrentMapLobby())
 	{
 		return;
@@ -143,36 +153,27 @@ void AGProjectLobbyGameMode::StartGame()
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("StartGame Called"));
-
 	if (bIsStartingGame)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Blocked: bIsStartingGame true"));
 		return;
 	}
 
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Blocked: World null"));
 		return;
 	}
 
 	FString FinalBattleMapPath = BattleMapPath;
 
-	UE_LOG(LogTemp, Warning, TEXT("BattleMapPath: %s"), *BattleMapPath);
-	UE_LOG(LogTemp, Warning, TEXT("FinalBattleMapPath: %s"), *FinalBattleMapPath);
-
 	if (FinalBattleMapPath.IsEmpty())
 	{
-		UE_LOG(LogTemp, Error, TEXT("Blocked: FinalBattleMapPath empty"));
 		return;
 	}
 
 	bIsStartingGame = true;
 
 	FString TravelURL = FString::Printf(TEXT("%s?listen"), *FinalBattleMapPath);
-	UE_LOG(LogTemp, Warning, TEXT("ServerTravel URL: %s"), *TravelURL);
 
 	World->ServerTravel(TravelURL);
 }
@@ -248,6 +249,11 @@ void AGProjectLobbyGameMode::InitializeLobbySlots()
 
 void AGProjectLobbyGameMode::RefreshAllSlots()
 {
+	if (bIsStartingGame)
+	{
+		return;
+	}
+
 	if (!IsCurrentMapLobby())
 	{
 		return;
@@ -341,6 +347,11 @@ void AGProjectLobbyGameMode::RefreshLobbyStateAndUI()
 {
 	UWorld* World = GetWorld();
 	if (!World) return;
+
+	if (bIsStartingGame)
+	{
+		return;
+	}
 
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &AGProjectLobbyGameMode::RefreshAllSlots));
 	World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this, &AGProjectLobbyGameMode::UpdatePlayerCountUI));
