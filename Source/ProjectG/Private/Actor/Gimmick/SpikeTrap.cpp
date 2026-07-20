@@ -72,11 +72,6 @@ void ASpikeTrap::BeginPlay()
 				UnderlyingWallInitialLocation = Wall->GetActorLocation();
 			}
 		}
-
-		UE_LOG(LogTemp, Warning, TEXT("[SpikeTrap %s] Floor trace hit %s, resolved DestroyWall %s"),
-			*GetName(),
-			HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("nothing"),
-			UnderlyingDestroyWall.IsValid() ? *UnderlyingDestroyWall->GetName() : TEXT("none"));
 	}
 
 	if (HasAuthority())
