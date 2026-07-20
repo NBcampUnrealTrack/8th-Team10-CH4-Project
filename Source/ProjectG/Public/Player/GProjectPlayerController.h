@@ -99,6 +99,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendChatMessage(const FString& Message);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetPlayerName(const FString& InName);
 	
 	UFUNCTION(Server, Reliable)
 	void ServerChangeSpectateTarget(int32 Direction);

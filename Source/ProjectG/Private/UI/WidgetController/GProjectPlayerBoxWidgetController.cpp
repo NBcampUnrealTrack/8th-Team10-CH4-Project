@@ -20,6 +20,7 @@ void UGProjectPlayerBoxWidgetController::BroadcastInitialValues()
 	OnMaxHealthChanged.Broadcast(AS->GetMaxHealth());
 	OnSPChanged.Broadcast(AS->GetSP());
 	OnMaxSPChanged.Broadcast(AS->GetMaxSP());
+	OnPlayerNameChanged.Broadcast(GetPlayerName());
 }
 
 void UGProjectPlayerBoxWidgetController::BindCallbacksToDependencies()
@@ -39,6 +40,12 @@ void UGProjectPlayerBoxWidgetController::BindCallbacksToDependencies()
 		this, &ThisClass::SPChanged);
 	ASC->GetGameplayAttributeValueChangeDelegate(AS->GetMaxSPAttribute()).AddUObject(
 		this, &ThisClass::MaxSPChanged);
+
+	if (AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(PlayerState))
+	{
+		PS->OnPlayerNameChanged.RemoveAll(this);
+		PS->OnPlayerNameChanged.AddUObject(this, &ThisClass::PlayerNameChanged);
+	}
 }
 
 FText UGProjectPlayerBoxWidgetController::GetPlayerName() const
@@ -65,4 +72,9 @@ void UGProjectPlayerBoxWidgetController::SPChanged(const FOnAttributeChangeData&
 void UGProjectPlayerBoxWidgetController::MaxSPChanged(const FOnAttributeChangeData& Data)
 {
 	OnMaxSPChanged.Broadcast(Data.NewValue);
+}
+
+void UGProjectPlayerBoxWidgetController::PlayerNameChanged(const FString& NewName)
+{
+	OnPlayerNameChanged.Broadcast(FText::FromString(NewName));
 }

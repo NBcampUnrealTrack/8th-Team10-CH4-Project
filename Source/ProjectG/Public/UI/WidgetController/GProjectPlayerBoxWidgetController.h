@@ -8,6 +8,8 @@
 
 struct FOnAttributeChangeData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnPlayerNameChangedSignature, const FText&, NewName);
+
 UCLASS(BlueprintType, Blueprintable)
 class PROJECTG_API UGProjectPlayerBoxWidgetController : public UGProjectWidgetController
 {
@@ -18,6 +20,9 @@ public:
 	virtual void BindCallbacksToDependencies() override;
 
 	FText GetPlayerName() const;
+
+	UPROPERTY(BlueprintAssignable, Category = "PlayerBox")
+	FGProjectOnPlayerNameChangedSignature OnPlayerNameChanged;
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FGProjectOnAttributeChangedSignature OnHealthChanged;
@@ -36,4 +41,5 @@ private:
 	void MaxHealthChanged(const FOnAttributeChangeData& Data);
 	void SPChanged(const FOnAttributeChangeData& Data);
 	void MaxSPChanged(const FOnAttributeChangeData& Data);
+	void PlayerNameChanged(const FString& NewName);
 };

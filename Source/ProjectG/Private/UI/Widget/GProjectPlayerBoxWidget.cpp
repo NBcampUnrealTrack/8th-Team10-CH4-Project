@@ -94,6 +94,8 @@ void UGProjectPlayerBoxWidget::NativeWidgetControllerSet()
 	BoxController->OnSPChanged.AddDynamic(this, &ThisClass::SetSP);
 	BoxController->OnMaxSPChanged.RemoveDynamic(this, &ThisClass::SetMaxSP);
 	BoxController->OnMaxSPChanged.AddDynamic(this, &ThisClass::SetMaxSP);
+	BoxController->OnPlayerNameChanged.RemoveDynamic(this, &ThisClass::SetPlayerName);
+	BoxController->OnPlayerNameChanged.AddDynamic(this, &ThisClass::SetPlayerName);
 
 	SetPlayerName(BoxController->GetPlayerName());
 }
