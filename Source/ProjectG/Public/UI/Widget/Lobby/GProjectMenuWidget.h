@@ -37,7 +37,11 @@ protected:
 	void OnExitButtonClicked();
 	
 	UFUNCTION()
-	void OnFindSessionsCompleteUpdateUI(const TArray<FString>& SessionNames, bool bWasSuccessful);
+	void OnFindSessionsCompleteUpdateUI(
+		const TArray<FString>& SessionNames,
+		const TArray<FString>& MapNames,
+		bool bWasSuccessful
+	);
 
 	UFUNCTION()
 	void HandleSessionRowClicked(int32 SessionIndex);
