@@ -14,6 +14,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/WidgetTree.h"
 
 UGProjectMenuWidget::UGProjectMenuWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -76,6 +77,20 @@ void UGProjectMenuWidget::NativeConstruct()
 	InitMapDataFromTable();
 	UpdateMapSelectionUI();
 	UpdatePlayerSelectionUI();
+
+	if (!CommonClickSound) return;
+
+	TArray<UWidget*> AllWidgets;
+	WidgetTree->GetAllWidgets(AllWidgets);
+
+	for (UWidget* Widget : AllWidgets)
+	{
+		if (UButton* Button = Cast<UButton>(Widget))
+		{
+			Button->OnClicked.RemoveDynamic(this, &UGProjectMenuWidget::OnAnyButtonClicked);
+			Button->OnClicked.AddDynamic(this, &UGProjectMenuWidget::OnAnyButtonClicked);
+		}
+	}
 }
 
 void UGProjectMenuWidget::OnHostButtonClicked()
@@ -308,5 +323,13 @@ void UGProjectMenuWidget::OnProfileSettingsButtonClicked()
 		{
 			ProfileWidget->AddToViewport();
 		}
+	}
+}
+
+void UGProjectMenuWidget::OnAnyButtonClicked()
+{
+	if (CommonClickSound)
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), CommonClickSound);
 	}
 }

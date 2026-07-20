@@ -22,6 +22,7 @@
 AGProjectGameMode::AGProjectGameMode()
 {
 	bDelayedStart = true;
+	bUseSeamlessTravel = true;
 
 	DefaultPawnClass = AGProjectCharacter::StaticClass();
 	PlayerControllerClass = AGProjectPlayerController::StaticClass();
