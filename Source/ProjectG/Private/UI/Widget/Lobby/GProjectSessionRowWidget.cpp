@@ -38,7 +38,7 @@ void UGProjectSessionRowWidget::NativePreConstruct()
 	};
 
 	StyleLabel(RoomNameText);
-	StyleLabel(PlayerCountText);
+	StyleLabel(MapNameText);
 
 	if (JoinButton)
 	{
@@ -63,7 +63,7 @@ void UGProjectSessionRowWidget::NativeConstruct()
 	}
 }
 
-void UGProjectSessionRowWidget::SetupSessionRow(int32 InSessionIndex, const FString& InRoomName, int32 CurrentPlayers, int32 MaxPlayers)
+void UGProjectSessionRowWidget::SetupSessionRow(int32 InSessionIndex, const FString& InRoomName, const FString& InMapName)
 {
 	SessionIndex = InSessionIndex;
 
@@ -72,10 +72,9 @@ void UGProjectSessionRowWidget::SetupSessionRow(int32 InSessionIndex, const FStr
 		RoomNameText->SetText(FText::FromString(InRoomName));
 	}
 
-	if (PlayerCountText)
+	if (MapNameText)
 	{
-		FString CountStr = FString::Printf(TEXT("%d / %d"), CurrentPlayers, MaxPlayers);
-		PlayerCountText->SetText(FText::FromString(CountStr));
+		MapNameText->SetText(FText::FromString(InMapName));
 	}
 }
 

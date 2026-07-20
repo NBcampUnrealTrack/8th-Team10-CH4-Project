@@ -2,6 +2,7 @@
 #include "Subsystem/GProjectSessionSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "Misc/Paths.h"
 #include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
 #include "Interfaces/OnlineIdentityInterface.h"
@@ -118,7 +119,7 @@ void UGProjectSessionSubsystem::OnLoginComplete(
 
 void UGProjectSessionSubsystem::CreateGameSession(
 	int32 MaxPublicConnections,
-	FName SessionNameSetting,
+	const FString& BattleMapName,
 	const FString& RoomName,
 	const FString& BattleMapPath
 ) {
@@ -169,8 +170,8 @@ void UGProjectSessionSubsystem::CreateGameSession(
 	);
 
 	SessionSettings.Set(
-		FName(TEXT("MAPNAME")),
-		SessionNameSetting.ToString(),
+		FName(TEXT("MAP_NAME")),
+		BattleMapName,
 		EOnlineDataAdvertisementType::ViaOnlineServiceAndPing
 	);
 
@@ -299,7 +300,7 @@ void UGProjectSessionSubsystem::FindGameSessions()
 		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: LocalPlayer is null"));
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		HideLoading();
-		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), TArray<FString>(), false);
 		return;
 	}
 
@@ -309,7 +310,7 @@ void UGProjectSessionSubsystem::FindGameSessions()
 		UE_LOG(LogTemp, Error, TEXT("FindSessions failed: UserId invalid"));
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		HideLoading();
-		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), TArray<FString>(), false);
 		return;
 	}
 
@@ -343,7 +344,7 @@ void UGProjectSessionSubsystem::FindGameSessions()
 	{
 		SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 		HideLoading();
-		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), false);
+		OnFindSessionsCompleteEvent.Broadcast(TArray<FString>(), TArray<FString>(), false);
 		return;
 	}
 }
@@ -359,6 +360,7 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 	}
 
 	TArray<FString> DisplayNames;
+	TArray<FString> MapNames;
 	if (bWasSuccessful && SessionSearch.IsValid())
 	{
 		for (int32 i = 0; i < SessionSearch->SearchResults.Num(); ++i)
@@ -368,17 +370,33 @@ void UGProjectSessionSubsystem::OnFindSessionsComplete(bool bWasSuccessful)
 			FString CustomRoomName;
 			SessionResult.Session.SessionSettings.Get(FName(TEXT("ROOM_NAME")), CustomRoomName);
 
-			FString OwnerName = SessionResult.Session.OwningUserName;
+			FString CustomMapName;
+			if (!SessionResult.Session.SessionSettings.Get(FName(TEXT("MAP_NAME")), CustomMapName))
+			{
+				// Sessions created by older builds used the engine's MAPNAME key.
+				SessionResult.Session.SessionSettings.Get(FName(TEXT("MAPNAME")), CustomMapName);
+			}
+
+			if (CustomMapName.IsEmpty())
+			{
+				FString BattleMapPath;
+				if (SessionResult.Session.SessionSettings.Get(FName(TEXT("BATTLE_MAP_PATH")), BattleMapPath))
+				{
+					CustomMapName = FPaths::GetBaseFilename(BattleMapPath);
+				}
+			}
 
 			// Room Name
 			FString FinalRoomName = CustomRoomName.IsEmpty() ? FString::Printf(TEXT("Game Room")) : CustomRoomName;
+			FString FinalMapName = CustomMapName.IsEmpty() ? TEXT("Unknown Map") : CustomMapName;
 
 			DisplayNames.Add(FinalRoomName);
+			MapNames.Add(FinalMapName);
 		}
 	}
 	HideLoading();
 
-	OnFindSessionsCompleteEvent.Broadcast(DisplayNames, bWasSuccessful);
+	OnFindSessionsCompleteEvent.Broadcast(DisplayNames, MapNames, bWasSuccessful);
 }
 
 void UGProjectSessionSubsystem::JoinGameSession(int32 SessionIndex)
@@ -498,36 +516,6 @@ void UGProjectSessionSubsystem::Deinitialize()
 	SessionInterface.Reset();
 
 	Super::Deinitialize();
-}
-
-bool UGProjectSessionSubsystem::GetSessionPlayerCounts(
-	int32 SessionIndex,
-	int32& OutCurrentPlayers,
-	int32& OutMaxPlayers
-) const
-{
-	if (!SessionSearch.IsValid() || !SessionSearch->SearchResults.IsValidIndex(SessionIndex))
-	{
-		return false;
-	}
-
-	const FOnlineSessionSearchResult& Result = SessionSearch->SearchResults[SessionIndex];
-
-	int32 MaxPlayers = Result.Session.SessionSettings.NumPublicConnections;
-
-	int32 FoundMaxPlayers = 0;
-	if (Result.Session.SessionSettings.Get(FName(TEXT("MaxPlayersCustom")), FoundMaxPlayers))
-	{
-		MaxPlayers = FoundMaxPlayers;
-	}
-
-	const int32 OpenConnections = Result.Session.NumOpenPublicConnections;
-	const int32 CurrentPlayers = FMath::Max(1, MaxPlayers - OpenConnections);
-
-	OutCurrentPlayers = CurrentPlayers;
-	OutMaxPlayers = MaxPlayers;
-
-	return true;
 }
 
 void UGProjectSessionSubsystem::ShowLoading()

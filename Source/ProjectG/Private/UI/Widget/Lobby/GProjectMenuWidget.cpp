@@ -118,7 +118,7 @@ void UGProjectMenuWidget::OnConfirmHostButtonClicked()
 		UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
 		if (Subsystem)
 		{
-			Subsystem->CreateGameSession(CurrentMaxPlayers, FName(*TargetMapName), RoomName, TargetMapPath);
+			Subsystem->CreateGameSession(CurrentMaxPlayers, TargetMapName, RoomName, TargetMapPath);
 		}
 	}
 }
@@ -142,7 +142,11 @@ void UGProjectMenuWidget::OnExitButtonClicked()
 	UKismetSystemLibrary::QuitGame(this, GetOwningPlayer(), EQuitPreference::Quit, false);
 }
 
-void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(const TArray<FString>& SessionNames, bool bWasSuccessful)
+void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(
+	const TArray<FString>& SessionNames,
+	const TArray<FString>& MapNames,
+	bool bWasSuccessful
+)
 {
 	if (!SessionListScrollBox || !SessionRowWidgetClass) return;
 
@@ -155,30 +159,20 @@ void UGProjectMenuWidget::OnFindSessionsCompleteUpdateUI(const TArray<FString>& 
 			NoResultsBorder->SetVisibility(ESlateVisibility::Collapsed);
 		}
 
-		if (UGameInstance* GameInstance = GetGameInstance())
+		for (int32 i = 0; i < SessionNames.Num(); ++i)
 		{
-			UGProjectSessionSubsystem* Subsystem = GameInstance->GetSubsystem<UGProjectSessionSubsystem>();
-			if (Subsystem)
-			{
-				for (int32 i = 0; i < SessionNames.Num(); ++i)
-				{
-					UGProjectSessionRowWidget* RowWidget = CreateWidget<UGProjectSessionRowWidget>(this, SessionRowWidgetClass);
-					if (!RowWidget) continue;
+			UGProjectSessionRowWidget* RowWidget = CreateWidget<UGProjectSessionRowWidget>(this, SessionRowWidgetClass);
+			if (!RowWidget) continue;
 
-					FString RoomName = SessionNames[i];
-					int32 CurrentPlayers = 1;
-					int32 MaxPlayers = 2;
+			const FString& RoomName = SessionNames[i];
+			const FString MapName = MapNames.IsValidIndex(i) ? MapNames[i] : TEXT("Unknown Map");
 
-					Subsystem->GetSessionPlayerCounts(i, CurrentPlayers, MaxPlayers);
+			RowWidget->SetupSessionRow(i, RoomName, MapName);
 
-					RowWidget->SetupSessionRow(i, RoomName, CurrentPlayers, MaxPlayers);
+			RowWidget->OnSessionRowClicked.RemoveDynamic(this, &ThisClass::HandleSessionRowClicked);
+			RowWidget->OnSessionRowClicked.AddDynamic(this, &ThisClass::HandleSessionRowClicked);
 
-					RowWidget->OnSessionRowClicked.RemoveDynamic(this, &ThisClass::HandleSessionRowClicked);
-					RowWidget->OnSessionRowClicked.AddDynamic(this, &ThisClass::HandleSessionRowClicked);
-
-					SessionListScrollBox->AddChild(RowWidget);
-				}
-			}
+			SessionListScrollBox->AddChild(RowWidget);
 		}
 	}
 	else
