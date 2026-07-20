@@ -61,6 +61,11 @@ protected:
 	UFUNCTION()
 	void OnProfileSettingsButtonClicked();
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+	TObjectPtr<USoundBase> CommonClickSound;
+	UFUNCTION()
+	void OnAnyButtonClicked();
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI", Meta = (AllowPrivateAccess, BindWidget))
 	TObjectPtr<UBorder> HostSettingsBorder;

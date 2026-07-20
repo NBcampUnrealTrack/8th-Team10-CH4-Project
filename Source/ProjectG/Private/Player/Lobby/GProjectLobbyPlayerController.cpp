@@ -3,6 +3,7 @@
 #include "Player/Lobby/GProjectLobbyPlayerController.h"
 
 #include "Player/GProjectPlayerState.h"
+#include "Character/GProjectCharacter.h"
 #include "Game/Lobby/GProjectLobbyGameMode.h"
 #include "UI/Widget/GProjectLobbyWidget.h"
 #include "Subsystem/GProjectSessionSubsystem.h"
@@ -196,6 +197,12 @@ void AGProjectLobbyPlayerController::Server_ToggleReady_Implementation()
 		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Green, FString::Printf(TEXT("[%s] State: %s"), *PS->GetPlayerName(), *StateText));
 	}
 
+	if (AGProjectCharacter* Charac = Cast<AGProjectCharacter>(GetPawn()))
+	{
+		bool bShouldPlay = (TargetStatus == EGProjectPlayerLobbyStatus::Ready);
+		Charac->MulticastPlayLobbyMontage(bShouldPlay);
+	}
+
 	UWorld* World = GetWorld();
 	if (World)
 	{
@@ -260,5 +267,3 @@ void AGProjectLobbyPlayerController::ClientRefreshLobbyUI_Implementation()
 		LobbyUI->RefreshButtonState();
 	}
 }
-
-

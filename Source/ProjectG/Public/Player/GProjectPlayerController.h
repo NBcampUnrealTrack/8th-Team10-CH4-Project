@@ -30,6 +30,9 @@ public:
 
 	void CloseChat();
 
+	UFUNCTION(Server, Reliable)
+	void ServerRequestReturnToLobby();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
@@ -96,6 +99,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSendChatMessage(const FString& Message);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetPlayerName(const FString& InName);
 	
 	UFUNCTION(Server, Reliable)
 	void ServerChangeSpectateTarget(int32 Direction);

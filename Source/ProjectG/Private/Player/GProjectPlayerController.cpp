@@ -19,6 +19,7 @@
 #include "Game/GProjectGameState.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "UI/Widget/GProjectChatWidget.h"
+#include "Subsystem/GProjectPlayerInfoSubsystem.h"
 
 namespace
 {
@@ -85,6 +86,18 @@ void AGProjectPlayerController::CloseChat()
 void AGProjectPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (IsLocalController())
+	{
+		if (UGameInstance* GameInstance = GetGameInstance())
+		{
+			if (UGProjectPlayerInfoSubsystem* PlayerInfoSubsystem =
+				GameInstance->GetSubsystem<UGProjectPlayerInfoSubsystem>())
+			{
+				ServerSetPlayerName(PlayerInfoSubsystem->GetPlayerName());
+			}
+		}
+	}
 
 	bShowMouseCursor = false;
 
@@ -543,5 +556,31 @@ void AGProjectPlayerController::ServerChangeSpectateTarget_Implementation(int32 
 	if (LivingCharacters.IsValidIndex(CurrentSpectateIndex))
 	{
 		SetViewTargetWithBlend(LivingCharacters[CurrentSpectateIndex], 0.3f);
+	}
+}
+
+
+void AGProjectPlayerController::ServerRequestReturnToLobby_Implementation()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->ServerTravel(TEXT("/Game/Level/LobbyMap?listen"));
+	}
+}
+
+void AGProjectPlayerController::ServerSetPlayerName_Implementation(const FString& InName)
+{
+	FString SanitizedName = InName;
+	SanitizedName.TrimStartAndEndInline();
+	SanitizedName = SanitizedName.Left(24);
+
+	if (SanitizedName.IsEmpty())
+	{
+		return;
+	}
+
+	if (AGProjectPlayerState* PS = GetPlayerState<AGProjectPlayerState>())
+	{
+		PS->SetPlayerName(SanitizedName);
 	}
 }

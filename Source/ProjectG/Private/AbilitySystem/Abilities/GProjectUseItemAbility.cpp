@@ -52,7 +52,9 @@ void UGProjectUseItemAbility::ActivateAbility(
         }
     }
 
-    if (!UseMontage)
+    UAnimMontage* ItemUseMontage = HeldItem->GetUseMontage();
+
+    if (!ItemUseMontage)
     {
         DoUse();
         EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -71,7 +73,7 @@ void UGProjectUseItemAbility::ActivateAbility(
     MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
         this,
         NAME_None,
-        UseMontage,
+        ItemUseMontage,
         2.5f);
     MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageFinished);

@@ -9,8 +9,11 @@
 #include "GProjectGameMode.generated.h"
 
 class ASpawnBase;
+class AController;
 class APlayerController;
+class AGProjectTeamPlayerStart;
 class AGProjectPlayerState;
+class AGProjectCageActor;
 
 enum class EGProjectTeam : uint8;
 enum class ERoundResult : uint8;
@@ -25,6 +28,8 @@ public:
 	AGProjectGameMode();
 
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	void NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState);
 	
@@ -34,6 +39,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void HandleSeamlessTravelPlayer(AController*& Controller) override;
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+	virtual bool ShouldSpawnAtStartSpot(AController* Player) override;
 
 	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
@@ -117,10 +124,14 @@ protected:
 private:
 	void AssignTeam(APlayerController* NewPlayer);
 
+	void OpenCagesForTeam(EGProjectTeam Team);
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle RoundTransitionTimerHandle;
 	FTimerHandle RoundCountdownTimerHandle;
 	FTimerHandle RoundResultTimerHandle;
 
 	int CurrentRoundCountdownValue = 0;
+
+	TMap<TWeakObjectPtr<AController>, TWeakObjectPtr<AGProjectTeamPlayerStart>> AssignedTeamPlayerStarts;
 };

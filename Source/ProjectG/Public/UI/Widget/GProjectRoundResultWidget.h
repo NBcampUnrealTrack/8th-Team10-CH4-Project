@@ -8,6 +8,7 @@
 #include "GProjectRoundResultWidget.generated.h"
 
 class UTextBlock;
+class UWidgetAnimation;
 
 UCLASS()
 class PROJECTG_API UGProjectRoundResultWidget : public UUserWidget
@@ -34,8 +35,15 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> ScoreNoticeText;
 
+
+
+	UPROPERTY(Transient, meta = (BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> PanelMoveAnimation;
+
 private:
 	FText MakeResultText(ERoundResult Result) const;
 
 	FText MakeReasonText(ERoundEndReason Reason) const;
+
 };
+

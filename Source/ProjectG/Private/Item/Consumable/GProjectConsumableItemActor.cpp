@@ -78,31 +78,46 @@ bool AGProjectConsumableItemActor::Use_Implementation(AGProjectCharacter* Charac
 		return false;
 	}
 
-	UseEffect = ResolvedUseEffect;
-	UseSound = ResolvedUseSound;
-
 	MulticastPlayUseFeedback(
-		Character->GetActorLocation(),
+		ResolvedUseEffect,
+		ResolvedUseSound,
+		Character->GetActorLocation() + FVector(0.0f, 0.0f, 50.0f),
 		Character->GetActorRotation());
 
 	return true;
 }
 
-void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(const FVector& Location, const FRotator& Rotation)
+UAnimMontage* AGProjectConsumableItemActor::GetUseMontage() const
 {
-	if (UseEffect)
+	if (UseMontage)
+	{
+		return UseMontage;
+	}
+
+	const UGProjectConsumableDefinition* ConsumableDefinition = GetConsumableDefinition();
+	return ConsumableDefinition ? ConsumableDefinition->UseMontage : nullptr;
+}
+
+void AGProjectConsumableItemActor::MulticastPlayUseFeedback_Implementation(
+	UNiagaraSystem* InUseEffect,
+	USoundBase* InUseSound,
+	FVector Location,
+	FRotator Rotation)
+{
+	if (InUseEffect)
 	{
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(
 			GetWorld(),
-			UseEffect,
-			Location + FVector(0.0f, 0.0f, 50.0f),
+			InUseEffect,
+			Location,
 			Rotation);
 	}
-	if (UseSound)
+
+	if (InUseSound)
 	{
 		UGameplayStatics::PlaySoundAtLocation(
 			this,
-			UseSound,
+			InUseSound,
 			Location);
 	}
 }

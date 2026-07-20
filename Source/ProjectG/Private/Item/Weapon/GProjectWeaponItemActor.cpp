@@ -47,6 +47,7 @@ void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character, FNa
 	}
 
 	ItemMesh->SetRelativeRotation(WeaponDefinition->AttachRotationOffset);
+	ItemMesh->SetRelativeLocation(WeaponDefinition->AttachLocationOffset);
 
 	Character->SetActiveComboData(
 		WeaponDefinition->GroundComboData,
@@ -61,6 +62,11 @@ void AGProjectWeaponItemActor::HandleEquipped(AGProjectCharacter* Character, FNa
 
 void AGProjectWeaponItemActor::HandleUnequipped(AGProjectCharacter* Character)
 {
+	Super::HandleUnequipped(Character);
+}
+
+void AGProjectWeaponItemActor::DetachFromHolder(AGProjectCharacter* Character)
+{
 	if (Character)
 	{
 		Character->ResetActiveComboData();
@@ -68,7 +74,7 @@ void AGProjectWeaponItemActor::HandleUnequipped(AGProjectCharacter* Character)
 		Character->SetCombatStyle(EGProjectCombatStyle::Unarmed);
 	}
 
-	Super::HandleUnequipped(Character);
+	Super::DetachFromHolder(Character);
 	ApplyItemMesh();
 }
 

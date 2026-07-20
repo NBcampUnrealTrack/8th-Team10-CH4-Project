@@ -18,6 +18,7 @@ public:
 	virtual bool UsesWeaponSocket() const override;
 	virtual void HandleEquipped(AGProjectCharacter* Character, FName HoldSocketName) override;
 	virtual void HandleUnequipped(AGProjectCharacter* Character) override;
+	virtual void DetachFromHolder(AGProjectCharacter* Character) override;
 
 private:
 	const UGProjectWeaponDefinition* GetWeaponDefinition() const;

@@ -4,6 +4,49 @@
 #include "UI/Widget/GProjectRoundResultWidget.h"
 
 #include "Components/TextBlock.h"
+#include "Animation/WidgetAnimation.h"
+#include "Components/TextBlock.h"
+#include "UObject/UnrealType.h"
+
+namespace
+{
+UWidgetAnimation* FindWidgetAnimationByName(const UUserWidget* Widget, const FName AnimationName)
+{
+	if (!Widget)
+	{
+		return nullptr;
+	}
+
+	if (const FObjectPropertyBase* AnimationProperty =
+		FindFProperty<FObjectPropertyBase>(Widget->GetClass(), AnimationName))
+	{
+		return Cast<UWidgetAnimation>(
+			AnimationProperty->GetObjectPropertyValue_InContainer(Widget)
+		);
+	}
+
+	for (TFieldIterator<FObjectPropertyBase> PropertyIt(Widget->GetClass()); PropertyIt; ++PropertyIt)
+	{
+		if (!PropertyIt->PropertyClass ||
+			!PropertyIt->PropertyClass->IsChildOf(UWidgetAnimation::StaticClass()))
+		{
+			continue;
+		}
+
+		UWidgetAnimation* Animation = Cast<UWidgetAnimation>(
+			PropertyIt->GetObjectPropertyValue_InContainer(Widget)
+		);
+
+		if (Animation && Animation->GetFName() == AnimationName)
+		{
+			return Animation;
+		}
+	}
+
+	return nullptr;
+}
+}
+
 
 void UGProjectRoundResultWidget::NativeConstruct()
 {
@@ -54,6 +97,29 @@ void UGProjectRoundResultWidget::ShowRoundResult(const FGProjectRoundResultData&
 	}
 
 	SetVisibility(ESlateVisibility::HitTestInvisible);
+<<<<<<< HEAD
+=======
+
+	StopAllAnimations();
+
+	if (PanelMoveAnimation)
+	{
+		PlayAnimation(
+			PanelMoveAnimation,
+			0.0f,
+			1,
+			EUMGSequencePlayMode::Forward,
+			1.0f
+		);
+	}
+
+	if (UWidgetAnimation* ImpactIntro =
+		FindWidgetAnimationByName(this, TEXT("RoundResultImpactIntro")))
+	{
+		StopAnimation(ImpactIntro);
+		PlayAnimation(ImpactIntro);
+	}
+>>>>>>> bb8226d7799cba2c953243ca52739f5dc319410c
 }
 
 void UGProjectRoundResultWidget::HideRoundResult()
@@ -93,3 +159,5 @@ FText UGProjectRoundResultWidget::MakeReasonText(const ERoundEndReason Reason) c
 		return FText::GetEmpty();
 	}
 }
+
+
