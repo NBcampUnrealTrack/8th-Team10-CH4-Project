@@ -5,8 +5,10 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAbilitySystemLibrary.h"
+#include "Actor/Gimmick/DestroyWall.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "CollisionQueryParams.h"
 #include "Curves/CurveFloat.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
@@ -53,6 +55,25 @@ void ASpikeTrap::BeginPlay()
 		SpikeTimeline.SetTimelineFinishedFunc(FinishedDelegate);
 	}
 
+	FloorSinkStartLocation = GetActorLocation();
+
+	if (FloorSinkCurve)
+	{
+		FHitResult HitResult;
+		const FVector TraceStart = GetActorLocation() + FVector(0.0f, 0.0f, 50.0f);
+		const FVector TraceEnd = GetActorLocation() - FVector(0.0f, 0.0f, 300.0f);
+		FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(SpikeTrapFloorDetection), false, this);
+
+		if (GetWorld()->LineTraceSingleByChannel(HitResult, TraceStart, TraceEnd, ECC_Visibility, QueryParams))
+		{
+			if (ADestroyWall* Wall = Cast<ADestroyWall>(HitResult.GetActor()))
+			{
+				UnderlyingDestroyWall = Wall;
+				UnderlyingWallInitialLocation = Wall->GetActorLocation();
+			}
+		}
+	}
+
 	if (HasAuthority())
 	{
 		TriggerBox->OnComponentBeginOverlap.AddDynamic(this, &ASpikeTrap::OnTriggerBoxBeginOverlap);
@@ -66,6 +87,23 @@ void ASpikeTrap::Tick(float DeltaTime)
 	if (SpikeTimeline.IsPlaying())
 	{
 		SpikeTimeline.TickTimeline(DeltaTime);
+	}
+
+	if (UnderlyingDestroyWall.IsValid())
+	{
+		if (UnderlyingDestroyWall->IsHidden())
+		{
+			HandleFloorSinkFinished();
+			UnderlyingDestroyWall.Reset();
+		}
+		else
+		{
+			const float WallZOffset = UnderlyingDestroyWall->GetActorLocation().Z - UnderlyingWallInitialLocation.Z;
+			if (!FMath::IsNearlyZero(WallZOffset))
+			{
+				SetActorLocation(FloorSinkStartLocation + FVector(0.0f, 0.0f, WallZOffset));
+			}
+		}
 	}
 }
 
@@ -203,4 +241,11 @@ void ASpikeTrap::ClearCooldown()
 void ASpikeTrap::PlaySpikeSound()
 {
 	UGameplayStatics::PlaySoundAtLocation(this, SpikeSound, SpikeMeshComponent->GetComponentLocation(), SpikeSoundVolume);
+}
+
+void ASpikeTrap::HandleFloorSinkFinished()
+{
+	SetActorTickEnabled(false);
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
 }
