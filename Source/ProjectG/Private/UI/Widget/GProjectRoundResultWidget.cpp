@@ -3,6 +3,7 @@
 
 #include "UI/Widget/GProjectRoundResultWidget.h"
 
+#include "Components/TextBlock.h"
 #include "Animation/WidgetAnimation.h"
 #include "Components/TextBlock.h"
 #include "UObject/UnrealType.h"
@@ -45,6 +46,7 @@ UWidgetAnimation* FindWidgetAnimationByName(const UUserWidget* Widget, const FNa
 	return nullptr;
 }
 }
+
 
 void UGProjectRoundResultWidget::NativeConstruct()
 {
@@ -154,3 +156,5 @@ FText UGProjectRoundResultWidget::MakeReasonText(const ERoundEndReason Reason) c
 		return FText::GetEmpty();
 	}
 }
+
+
