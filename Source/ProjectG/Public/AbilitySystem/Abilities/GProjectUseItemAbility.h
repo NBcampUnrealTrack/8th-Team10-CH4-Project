@@ -39,6 +39,9 @@ private:
     void OnMontageFinished();
 
     UFUNCTION()
+    void OnMontageInterrupted();
+
+    UFUNCTION()
     void OnUseEvent(FGameplayEventData Payload);
 
     void DoUse();

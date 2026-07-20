@@ -52,6 +52,7 @@ public:
 
 	void ApplyPlayerColor(int32 ColorIndex);
 
+
 	UFUNCTION(BlueprintCallable, Category = "Round")
 	void ResetForNewRound(const FTransform& SpawnTransform);
 
@@ -87,6 +88,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Transform")
 	bool IsTransformed() const { return ActiveTransform != nullptr; }
+
+	UFUNCTION(BlueprintPure, Category = "Transform")
+	UGProjectTransform* GetActiveTransform() const { return ActiveTransform; }
 
 	UFUNCTION(BlueprintCallable, Category = "Death")
 	virtual void HandleDeath();

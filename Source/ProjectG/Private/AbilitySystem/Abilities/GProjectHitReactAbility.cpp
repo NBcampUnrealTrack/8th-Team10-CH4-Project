@@ -4,6 +4,7 @@
 
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Character/GProjectCharacter.h"
+#include "Character/GProjectTransform.h"
 #include "GameFramework/Actor.h"
 #include "GProjectGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
@@ -38,7 +39,9 @@ void UGProjectHitReactAbility::ActivateAbility(
 	const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	if (AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo()))
+	AGProjectCharacter* Character = Cast<AGProjectCharacter>(GetAvatarActorFromActorInfo());
+
+	if (Character)
 	{
 		Character->PlayHitFlash();
 	}
@@ -54,7 +57,20 @@ void UGProjectHitReactAbility::ActivateAbility(
 		}
 	}
 
-	if (!HitReactMontage)
+	UAnimMontage* MontageToPlay = HitReactMontage;
+
+	if (Character)
+	{
+		if (const UGProjectTransform* Transform = Character->GetActiveTransform())
+		{
+			if (UAnimMontage* TransformHit = Transform->HitReactMontage)
+			{
+				MontageToPlay = TransformHit;
+			}
+		}
+	}
+
+	if (!MontageToPlay)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -63,7 +79,7 @@ void UGProjectHitReactAbility::ActivateAbility(
 	MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
-		HitReactMontage,
+		MontageToPlay,
 		1.0f,
 		DetermineHitSection(TriggerEventData));
 	MontageTask->OnCompleted.AddDynamic(this, &ThisClass::FinishHitReact);
