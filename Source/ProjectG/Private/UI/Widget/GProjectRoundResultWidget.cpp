@@ -97,8 +97,6 @@ void UGProjectRoundResultWidget::ShowRoundResult(const FGProjectRoundResultData&
 	}
 
 	SetVisibility(ESlateVisibility::HitTestInvisible);
-<<<<<<< HEAD
-=======
 
 	StopAllAnimations();
 
@@ -119,7 +117,6 @@ void UGProjectRoundResultWidget::ShowRoundResult(const FGProjectRoundResultData&
 		StopAnimation(ImpactIntro);
 		PlayAnimation(ImpactIntro);
 	}
->>>>>>> bb8226d7799cba2c953243ca52739f5dc319410c
 }
 
 void UGProjectRoundResultWidget::HideRoundResult()
