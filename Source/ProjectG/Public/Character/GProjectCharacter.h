@@ -105,6 +105,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Feedback|Hit")
 	void PlayHitFlash();
 
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastPlayLobbyMontage(bool bPlay);
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override; // 추가: 에디터 뷰포트 미리보기 마커 위치 갱신용
 	virtual void BeginPlay() override;
@@ -192,6 +195,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
 	float HitFlashAmount = 1.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Lobby|Animation")
+	TObjectPtr<UAnimMontage> LobbyMontage;
 
 private:
 	void InitAbilityActorInfo();

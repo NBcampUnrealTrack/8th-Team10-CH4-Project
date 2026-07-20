@@ -522,7 +522,7 @@ bool UGProjectSessionSubsystem::GetSessionPlayerCounts(
 	}
 
 	const int32 OpenConnections = Result.Session.NumOpenPublicConnections;
-	const int32 CurrentPlayers = MaxPlayers - OpenConnections;
+	const int32 CurrentPlayers = FMath::Max(1, MaxPlayers - OpenConnections);
 
 	OutCurrentPlayers = CurrentPlayers;
 	OutMaxPlayers = MaxPlayers;
