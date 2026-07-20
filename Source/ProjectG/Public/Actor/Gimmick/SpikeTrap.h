@@ -13,6 +13,7 @@ class UBoxComponent;
 class UAbilitySystemComponent;
 class UGameplayEffect;
 class USoundBase;
+class ADestroyWall;
 
 UCLASS()
 class PROJECTG_API ASpikeTrap : public AActor, public IAbilitySystemInterface
@@ -82,7 +83,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
 	UCurveFloat* SpikeCurve;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* FloorSinkCurve;
+
 	FTimeline SpikeTimeline;
+	FVector FloorSinkStartLocation;
+
+	TWeakObjectPtr<ADestroyWall> UnderlyingDestroyWall;
+	FVector UnderlyingWallInitialLocation;
 
 	UPROPERTY(ReplicatedUsing = OnRep_SpikeExtended)
 	bool bSpikeExtended = false;
@@ -125,4 +133,6 @@ private:
 
 	// 지연된 스파이크 사운드 재생
 	void PlaySpikeSound();
+
+	void HandleFloorSinkFinished();
 };
