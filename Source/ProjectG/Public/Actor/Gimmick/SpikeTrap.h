@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/TimelineComponent.h"
+#include "AbilitySystemInterface.h"
 #include "SpikeTrap.generated.h"
 
 class UCurveFloat;
@@ -12,9 +13,10 @@ class UBoxComponent;
 class UAbilitySystemComponent;
 class UGameplayEffect;
 class USoundBase;
+class ADestroyWall;
 
 UCLASS()
-class PROJECTG_API ASpikeTrap : public AActor
+class PROJECTG_API ASpikeTrap : public AActor, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -23,6 +25,8 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return nullptr; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -79,7 +83,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
 	UCurveFloat* SpikeCurve;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Timeline", meta = (AllowPrivateAccess = "true"))
+	UCurveFloat* FloorSinkCurve;
+
 	FTimeline SpikeTimeline;
+	FVector FloorSinkStartLocation;
+
+	TWeakObjectPtr<ADestroyWall> UnderlyingDestroyWall;
+	FVector UnderlyingWallInitialLocation;
 
 	UPROPERTY(ReplicatedUsing = OnRep_SpikeExtended)
 	bool bSpikeExtended = false;
@@ -122,4 +133,6 @@ private:
 
 	// 지연된 스파이크 사운드 재생
 	void PlaySpikeSound();
+
+	void HandleFloorSinkFinished();
 };
