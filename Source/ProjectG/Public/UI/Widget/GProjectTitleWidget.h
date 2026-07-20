@@ -7,6 +7,7 @@
 #include "GProjectTitleWidget.generated.h"
 
 class UButton;
+class UTextBlock;
 class UTexture2D;
 
 /** Lightweight title screen that owns no references to gameplay-world objects. */
@@ -27,9 +28,6 @@ protected:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 private:
-	UFUNCTION()
-	void HandleStartClicked();
-
 	UFUNCTION()
 	void HandleExitClicked();
 
@@ -79,7 +77,7 @@ private:
 	FLinearColor ExitButtonColor;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UButton> StartButton;
+	TObjectPtr<UTextBlock> StartPromptText;
 
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> ExitButton;
