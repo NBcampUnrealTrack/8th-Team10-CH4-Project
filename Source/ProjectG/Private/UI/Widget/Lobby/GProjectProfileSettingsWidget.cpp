@@ -32,7 +32,6 @@ void UGProjectProfileSettingsWidget::OnSaveProfileClicked()
 				if (UGProjectPlayerInfoSubsystem* InfoSubsystem = GI->GetSubsystem<UGProjectPlayerInfoSubsystem>())
 				{
 					InfoSubsystem->SetPlayerName(InputName);
-					InfoSubsystem->SetPlayerName(InputName);
 				}
 			}
 		}

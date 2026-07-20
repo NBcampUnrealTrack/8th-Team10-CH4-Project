@@ -7,6 +7,8 @@
 #include "GProjectMatchHeaderWidget.generated.h"
 
 class UTextBlock;
+class UBorder;
+class UImage;
 
 UCLASS()
 class PROJECTG_API UGProjectMatchHeaderWidget
@@ -23,6 +25,8 @@ public:
 	void SetRemainTime(int32 RemainTime);
 
 protected:
+	virtual void NativePreConstruct() override;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> RedScoreText;
 
@@ -31,4 +35,16 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TimerText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> RedLabelText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> BlueLabelText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> HeaderBackplate;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> HeaderTopLine;
 };

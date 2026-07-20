@@ -17,6 +17,7 @@ class PROJECTG_API UGProjectSessionRowWidget : public UUserWidget
 	GENERATED_BODY()
 	
 public:
+	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 
 	void SetupSessionRow(int32 InSessionIndex, const FString& InRoomName, int32 CurrentPlayers, int32 MaxPlayers);

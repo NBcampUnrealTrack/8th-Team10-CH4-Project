@@ -48,6 +48,23 @@ void AGProjectLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 	//CheckAutoStart();
 }
 
+void AGProjectLobbyGameMode::HandleSeamlessTravelPlayer(AController*& Controller)
+{
+	Super::HandleSeamlessTravelPlayer(Controller);
+
+	if (AGProjectPlayerState* PS = Controller->GetPlayerState<AGProjectPlayerState>())
+	{
+		if (Controller->GetNetConnection() == nullptr)
+		{
+			PS->SetPlayerLobbyStatus(EGProjectPlayerLobbyStatus::Master);
+		}
+	}
+
+	RefreshLobbyStateAndUI();
+
+	//CheckAutoStart();
+}
+
 void AGProjectLobbyGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
@@ -272,16 +289,25 @@ void AGProjectLobbyGameMode::RefreshAllSlots()
 		}
 	}
 
+	int32 ClientSlotCounter = 1;
+
 	for (int32 i = 0; i < GameState->PlayerArray.Num(); ++i)
 	{
 		if (AGProjectPlayerState* PS = Cast<AGProjectPlayerState>(GameState->PlayerArray[i]))
 		{
-			if (PS->GetSlotIndex() == INDEX_NONE)
+			int32 TargetIndex = 0;
+
+			if (PS->GetPlayerLobbyStatus() == EGProjectPlayerLobbyStatus::Master)
 			{
-				PS->SetSlotIndex(i);
+				TargetIndex = 0;
+			}
+			else
+			{
+				TargetIndex = ClientSlotCounter;
+				ClientSlotCounter++;
 			}
 
-			int32 TargetIndex = PS->GetSlotIndex();
+			PS->SetSlotIndex(TargetIndex);
 
 			if (LobbySlots.IsValidIndex(TargetIndex) && LobbySlots[TargetIndex])
 			{

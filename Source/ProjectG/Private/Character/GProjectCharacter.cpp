@@ -973,3 +973,26 @@ void AGProjectCharacter::OnTransformedTagChanged(const FGameplayTag CallbackTag,
 
 	EndTransform();
 }
+
+void AGProjectCharacter::MulticastPlayLobbyMontage_Implementation(bool bPlay)
+{
+	if (!LobbyMontage)
+	{
+		return;
+	}
+	UAnimInstance* AnimInst = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr;
+	if (!AnimInst)
+	{
+		return;
+	}
+	if (bPlay)
+	{
+		PlayAnimMontage(LobbyMontage);
+	}
+	else
+	{
+		FAlphaBlendArgs BlendOutArgs = LobbyMontage->GetBlendOutArgs();
+
+		AnimInst->Montage_StopWithBlendOut(BlendOutArgs, LobbyMontage);
+	}
+}
