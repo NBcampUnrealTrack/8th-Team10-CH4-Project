@@ -2,6 +2,7 @@
 
 #include "Game/GProjectGameMode.h"
 
+#include "Actor/GProjectTeamPlayerStart.h"
 #include "Character/GProjectCharacter.h"
 #include "Game/GProjectGameState.h"
 #include "Player/GProjectPlayerController.h"
@@ -56,6 +57,83 @@ void AGProjectGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 
 	StartMatch();
+}
+
+void AGProjectGameMode::Logout(AController* Exiting)
+{
+	AssignedTeamPlayerStarts.Remove(Exiting);
+
+	Super::Logout(Exiting);
+}
+
+AActor* AGProjectGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	if (!Player)
+	{
+		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	const AGProjectPlayerState* PlayerState = Player->GetPlayerState<AGProjectPlayerState>();
+	if (!PlayerState || PlayerState->GetTeam() == EGProjectTeam::None)
+	{
+		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	if (const TWeakObjectPtr<AGProjectTeamPlayerStart>* ExistingAssignment = AssignedTeamPlayerStarts.Find(Player))
+	{
+		AGProjectTeamPlayerStart* ExistingStart = ExistingAssignment->Get();
+		if (IsValid(ExistingStart) && ExistingStart->GetStartTeam() == PlayerState->GetTeam())
+		{
+			return ExistingStart;
+		}
+
+		AssignedTeamPlayerStarts.Remove(Player);
+	}
+
+	TSet<AGProjectTeamPlayerStart*> UsedStarts;
+	for (auto It = AssignedTeamPlayerStarts.CreateIterator(); It; ++It)
+	{
+		AController* AssignedController = It.Key().Get();
+		AGProjectTeamPlayerStart* AssignedStart = It.Value().Get();
+		if (!IsValid(AssignedController) || !IsValid(AssignedStart))
+		{
+			It.RemoveCurrent();
+			continue;
+		}
+
+		UsedStarts.Add(AssignedStart);
+	}
+
+	TArray<AGProjectTeamPlayerStart*> Candidates;
+	for (TActorIterator<AGProjectTeamPlayerStart> It(GetWorld()); It; ++It)
+	{
+		AGProjectTeamPlayerStart* TeamStart = *It;
+		if (IsValid(TeamStart)
+			&& TeamStart->GetStartTeam() == PlayerState->GetTeam()
+			&& !UsedStarts.Contains(TeamStart))
+		{
+			Candidates.Add(TeamStart);
+		}
+	}
+
+	Candidates.Sort([](const AGProjectTeamPlayerStart& Left, const AGProjectTeamPlayerStart& Right)
+	{
+		if (Left.GetSlotIndex() != Right.GetSlotIndex())
+		{
+			return Left.GetSlotIndex() < Right.GetSlotIndex();
+		}
+
+		return Left.GetFName().LexicalLess(Right.GetFName());
+	});
+
+	if (Candidates.IsEmpty())
+	{
+		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	AGProjectTeamPlayerStart* ChosenStart = Candidates[0];
+	AssignedTeamPlayerStarts.Add(Player, ChosenStart);
+	return ChosenStart;
 }
 
 void AGProjectGameMode::NotifyPlayerDied(AGProjectPlayerState* DeadPlayerState)
@@ -245,6 +323,26 @@ void AGProjectGameMode::HandleSeamlessTravelPlayer(AController*& Controller)
 	}
 
 	StartMatch();
+}
+
+void AGProjectGameMode::HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer)
+{
+	AssignTeam(NewPlayer);
+
+	Super::HandleStartingNewPlayer_Implementation(NewPlayer);
+}
+
+bool AGProjectGameMode::ShouldSpawnAtStartSpot(AController* Player)
+{
+	const AGProjectPlayerState* PlayerState = Player ? Player->GetPlayerState<AGProjectPlayerState>() : nullptr;
+	if (PlayerState && PlayerState->GetTeam() != EGProjectTeam::None)
+	{
+		// Login chooses a provisional start before PostLogin assigns the team.
+		// Force team-assigned players back through ChoosePlayerStart instead.
+		return false;
+	}
+
+	return Super::ShouldSpawnAtStartSpot(Player);
 }
 
 void AGProjectGameMode::HandleMatchHasStarted()

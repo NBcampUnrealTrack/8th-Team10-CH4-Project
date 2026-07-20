@@ -7,9 +7,11 @@
 #include "GameFramework/Character.h"
 #include "Item/Weapon/GProjectCombatStyle.h"
 #include "GameplayTagContainer.h"
+#include "AbilitySystem/GProjectCombatFeedbackTypes.h"
 #include "Character/GProjectCharacterVariant.h"
 #include "GProjectCharacter.generated.h"
 
+class UCameraShakeBase;
 class UAbilitySystemComponent;
 class UAnimMontage;
 class UCameraComponent;
@@ -105,6 +107,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Feedback|Hit")
 	void PlayHitFlash();
 
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastPlayDamageCameraShake(EGProjectCameraShakeLevel CameraShakeLevel);
+
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastPlayLobbyMontage(bool bPlay);
 
@@ -196,6 +201,24 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|Hit", meta = (ClampMin = "0.0"))
 	float HitFlashAmount = 1.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake")
+	TSubclassOf<UCameraShakeBase> LowDamageCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake")
+	TSubclassOf<UCameraShakeBase> MiddleDamageCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake")
+	TSubclassOf<UCameraShakeBase> HighDamageCameraShakeClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake", meta = (ClampMin = "0.0"))
+	float LowDamageCameraShakeScale = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake", meta = (ClampMin = "0.0"))
+	float MiddleDamageCameraShakeScale = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Feedback|CameraShake", meta = (ClampMin = "0.0"))
+	float HighDamageCameraShakeScale = 1.0f;
+
 	UPROPERTY(EditAnywhere, Category = "Lobby|Animation")
 	TObjectPtr<UAnimMontage> LobbyMontage;
 
@@ -207,6 +230,8 @@ private:
 	void ApplySPRegenEffect();
 	void SetHitFlashAmount(float Amount);
 	void ResetHitFlash();
+	TSubclassOf<UCameraShakeBase> GetDamageCameraShakeClass(EGProjectCameraShakeLevel CameraShakeLevel) const;
+	float GetDamageCameraShakeScale(EGProjectCameraShakeLevel CameraShakeLevel) const;
 	void StartDeathDissolve();
 	void UpdateDeathDissolve(float DeltaSeconds);
 	void FinishDeathDissolve();

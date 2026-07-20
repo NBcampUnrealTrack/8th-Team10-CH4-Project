@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystem/GProjectCombatFeedbackTypes.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "GameplayEffectTypes.h"
 #include "GProjectAbilitySystemLibrary.generated.h"
@@ -42,6 +43,9 @@ struct FGProjectDamageEffectParams
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Hit Reaction", meta = (ClampMin = "0.0"))
 	float KnockdownGroundTime = 0.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Feedback")
+	EGProjectCameraShakeLevel CameraShakeLevel = EGProjectCameraShakeLevel::None;
+
 	bool CausesKnockdown() const
 	{
 		return KnockdownGroundTime > 0.0f;
@@ -72,6 +76,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "ProjectG|AbilitySystem")
 	static void SetKnockbackDirection(FGProjectDamageEffectParams& DamageEffectParams, FVector KnockbackDirection, float Magnitude = 0.0f);
+
+	UFUNCTION(BlueprintCallable, Category = "ProjectG|Feedback")
+	static void PlayCameraShakeFeedback(const FGProjectDamageEffectParams& DamageEffectParams);
 
 	UFUNCTION(BlueprintPure, Category = "ProjectG|Combat")
 	static bool IsActorInFrontArc(const AActor* Defender, const AActor* Attacker, float ArcAngleDegrees);

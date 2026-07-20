@@ -37,4 +37,5 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UGProjectOverlayWidgetController> OverlayWidgetController;
+
 };

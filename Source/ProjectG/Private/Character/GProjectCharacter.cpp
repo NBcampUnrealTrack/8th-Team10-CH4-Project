@@ -7,11 +7,14 @@
 #include "AbilitySystem/Combo/GProjectComboData.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Camera/CameraShakeBase.h"
 #include "Camera/CameraComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/MeshComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameplayEffect.h"
 #include "GProjectGameplayTags.h"
@@ -489,6 +492,30 @@ void AGProjectCharacter::MulticastPlayHitFlash_Implementation()
 		false);
 }
 
+void AGProjectCharacter::MulticastPlayDamageCameraShake_Implementation(EGProjectCameraShakeLevel CameraShakeLevel)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (!PlayerController || !PlayerController->PlayerCameraManager)
+	{
+		return;
+	}
+
+	const TSubclassOf<UCameraShakeBase> CameraShakeClass = GetDamageCameraShakeClass(CameraShakeLevel);
+	if (!CameraShakeClass)
+	{
+		return;
+	}
+
+	PlayerController->PlayerCameraManager->StartCameraShake(
+		CameraShakeClass,
+		GetDamageCameraShakeScale(CameraShakeLevel));
+}
+
 void AGProjectCharacter::StartDeathDissolve()
 {
 	if (HasAuthority())
@@ -690,6 +717,38 @@ void AGProjectCharacter::SetHitFlashAmount(float Amount)
 void AGProjectCharacter::ResetHitFlash()
 {
 	SetHitFlashAmount(0.0f);
+}
+
+TSubclassOf<UCameraShakeBase> AGProjectCharacter::GetDamageCameraShakeClass(EGProjectCameraShakeLevel CameraShakeLevel) const
+{
+	switch (CameraShakeLevel)
+	{
+	case EGProjectCameraShakeLevel::Low:
+		return LowDamageCameraShakeClass;
+	case EGProjectCameraShakeLevel::Middle:
+		return MiddleDamageCameraShakeClass;
+	case EGProjectCameraShakeLevel::High:
+		return HighDamageCameraShakeClass;
+	case EGProjectCameraShakeLevel::None:
+	default:
+		return nullptr;
+	}
+}
+
+float AGProjectCharacter::GetDamageCameraShakeScale(EGProjectCameraShakeLevel CameraShakeLevel) const
+{
+	switch (CameraShakeLevel)
+	{
+	case EGProjectCameraShakeLevel::Low:
+		return LowDamageCameraShakeScale;
+	case EGProjectCameraShakeLevel::Middle:
+		return MiddleDamageCameraShakeScale;
+	case EGProjectCameraShakeLevel::High:
+		return HighDamageCameraShakeScale;
+	case EGProjectCameraShakeLevel::None:
+	default:
+		return 0.0f;
+	}
 }
 
 void AGProjectCharacter::RefreshMovementStateTags()

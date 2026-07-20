@@ -112,10 +112,9 @@ void UGProjectTitleWidget::NativeOnInitialized()
 		SubtitleSlot->SetSize(FVector2D(600.0f, 45.0f));
 	}
 
-	StartButton = WidgetTree->ConstructWidget<UButton>(UButton::StaticClass(), TEXT("StartButton"));
-	StartButton->SetBackgroundColor(StartButtonColor);
-	StartButton->AddChild(MakeText(WidgetTree, TEXT("StartText"), StartButtonText.ToString(), 24, FLinearColor::White));
-	UCanvasPanelSlot* StartSlot = Root->AddChildToCanvas(StartButton);
+	StartPromptText = MakeText(WidgetTree, TEXT("StartPromptText"), StartButtonText.ToString(), 24, FLinearColor::White);
+	StartPromptText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	UCanvasPanelSlot* StartSlot = Root->AddChildToCanvas(StartPromptText);
 	StartSlot->SetZOrder(4);
 	StartSlot->SetAnchors(FAnchors(0.5f, StartButtonVerticalPosition));
 	StartSlot->SetAlignment(FVector2D(0.5f, 0.5f));
@@ -139,11 +138,6 @@ void UGProjectTitleWidget::NativeConstruct()
 	ElapsedSeconds = 0.0f;
 	SetRenderOpacity(0.0f);
 
-	if (StartButton)
-	{
-		StartButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleStartClicked);
-		StartButton->OnClicked.AddDynamic(this, &ThisClass::HandleStartClicked);
-	}
 	if (ExitButton)
 	{
 		ExitButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleExitClicked);
@@ -156,10 +150,6 @@ void UGProjectTitleWidget::NativeDestruct()
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(MenuTravelTimer);
-	}
-	if (StartButton)
-	{
-		StartButton->OnClicked.RemoveDynamic(this, &ThisClass::HandleStartClicked);
 	}
 	if (ExitButton)
 	{
@@ -181,9 +171,10 @@ void UGProjectTitleWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
 	else
 	{
 		SetRenderOpacity(FMath::Min(1.0f, ElapsedSeconds * 1.5f));
-		if (StartButton)
+		if (StartPromptText)
 		{
-			StartButton->SetRenderOpacity(0.65f + FMath::Sin(ElapsedSeconds * 3.0f) * 0.25f);
+			const float PromptOpacity = (FMath::Sin(ElapsedSeconds * 3.0f) + 1.0f) * 0.5f;
+			StartPromptText->SetRenderOpacity(PromptOpacity);
 		}
 	}
 }
@@ -202,11 +193,6 @@ FReply UGProjectTitleWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry
 {
 	RequestStart();
 	return FReply::Handled();
-}
-
-void UGProjectTitleWidget::HandleStartClicked()
-{
-	RequestStart();
 }
 
 void UGProjectTitleWidget::HandleExitClicked()
