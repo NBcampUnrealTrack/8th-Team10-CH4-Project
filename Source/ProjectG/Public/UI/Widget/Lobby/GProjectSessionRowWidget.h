@@ -20,7 +20,7 @@ public:
 	virtual void NativePreConstruct() override;
 	virtual void NativeConstruct() override;
 
-	void SetupSessionRow(int32 InSessionIndex, const FString& InRoomName, int32 CurrentPlayers, int32 MaxPlayers);
+	void SetupSessionRow(int32 InSessionIndex, const FString& InRoomName, const FString& InMapName);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnSessionRowClicked OnSessionRowClicked;
@@ -30,7 +30,7 @@ private:
 	TObjectPtr<UTextBlock> RoomNameText;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> PlayerCountText;
+	TObjectPtr<UTextBlock> MapNameText;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> JoinButton;

@@ -13,7 +13,12 @@
  */
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnCreateSessionComplete, bool, bWasSuccessful);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGProjectOnFindSessionsComplete, const TArray<FString>&, SessionNames, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+	FGProjectOnFindSessionsComplete,
+	const TArray<FString>&, SessionNames,
+	const TArray<FString>&, MapNames,
+	bool, bWasSuccessful
+);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnJoinSessionComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnLoginComplete, bool, bWasSuccessful);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGProjectOnDestroySessionComplete, bool, bWasSuccessful);
@@ -26,7 +31,7 @@ class PROJECTG_API UGProjectSessionSubsystem : public UGameInstanceSubsystem
 public:
 	void CreateGameSession(
 		int32 MaxPublicConnections,
-		FName SessionNameSetting,
+		const FString& BattleMapName,
 		const FString& RoomName,
 		const FString& BattleMapPath
 	);
@@ -39,8 +44,6 @@ public:
 	void LoginWithEOS();
 
 	virtual void Deinitialize() override;
-
-	bool GetSessionPlayerCounts(int32 SessionIndex, int32& OutCurrentPlayers, int32& OutMaxPlayers) const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Session")
 	FGProjectOnCreateSessionComplete OnCreateSessionCompleteEvent;
