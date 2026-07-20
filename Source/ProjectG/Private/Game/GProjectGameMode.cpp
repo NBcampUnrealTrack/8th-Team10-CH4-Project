@@ -846,6 +846,14 @@ void AGProjectGameMode::ResetPlayersForNextRound()
 		Characters.Add(Character);
 	}
 
+	for (TActorIterator<AGProjectCageActor> It(GetWorld()); It; ++It)
+	{
+		if (AGProjectCageActor* CageActor = *It)
+		{
+			CageActor->ResetCageForNewRound();
+		}
+	}
+
 	for (AGProjectCharacter* Character : Characters)
 	{
 		if (!Character)

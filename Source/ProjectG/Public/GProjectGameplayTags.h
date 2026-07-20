@@ -44,6 +44,7 @@ namespace GProjectGameplayTags
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Combat_ParryWindow);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Targeting_LockOn);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Interaction_Pickup);
+	UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Interaction_UseItem);
 
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_Attack);
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Ability_Combat_ThrowWeapon);

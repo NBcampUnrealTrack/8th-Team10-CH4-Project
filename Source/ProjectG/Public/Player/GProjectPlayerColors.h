@@ -8,10 +8,10 @@ namespace GProjectPlayerColors
 	{
 		static const FLinearColor Colors[] =
 		{
-			FLinearColor(1.0f, 1.0f, 0.0f),
-			FLinearColor(1.0f, 1.0f, 1.0f),
-			FLinearColor(0.8f, 0.0f, 0.5f),
-			FLinearColor(0.0f, 1.0f, 1.0f)
+			FLinearColor(1.0f, 0.0f, 0.0f),
+			FLinearColor(0.0f, 1.0f, 0.0f),
+			FLinearColor(0.0f, 0.0f, 1.0f),
+			FLinearColor(1.0f, 1.0f, 1.0f)
 		};
 
 		if (ColorIndex < 0 || ColorIndex >= UE_ARRAY_COUNT(Colors))
