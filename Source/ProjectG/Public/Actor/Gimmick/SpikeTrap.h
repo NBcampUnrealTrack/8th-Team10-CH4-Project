@@ -68,6 +68,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick|Damage")
 	TSubclassOf<UGameplayEffect> SpikeDamageEffectClass;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick|Damage", meta = (ClampMin = "0.0"))
+	float HitstunTime = 0.5f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gimmick|Damage")
+	TSubclassOf<UGameplayEffect> HitstunGameplayEffectClass;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gimmick|Sound")
 	USoundBase* SpikeSound;
 
