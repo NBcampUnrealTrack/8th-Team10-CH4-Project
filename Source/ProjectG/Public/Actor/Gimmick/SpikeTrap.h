@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/TimelineComponent.h"
+#include "AbilitySystemInterface.h"
 #include "SpikeTrap.generated.h"
 
 class UCurveFloat;
@@ -14,7 +15,7 @@ class UGameplayEffect;
 class USoundBase;
 
 UCLASS()
-class PROJECTG_API ASpikeTrap : public AActor
+class PROJECTG_API ASpikeTrap : public AActor, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -23,6 +24,8 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override { return nullptr; }
 
 protected:
 	virtual void BeginPlay() override;
