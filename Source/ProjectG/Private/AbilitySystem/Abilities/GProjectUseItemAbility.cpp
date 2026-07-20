@@ -19,6 +19,7 @@ UGProjectUseItemAbility::UGProjectUseItemAbility()
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Hitstun);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Combat_Knockdown);
     ActivationBlockedTags.AddTag(GProjectGameplayTags::State_Movement_Airborne);
+    ActivationOwnedTags.AddTag(GProjectGameplayTags::State_Interaction_UseItem);
 }
 
 void UGProjectUseItemAbility::ActivateAbility(

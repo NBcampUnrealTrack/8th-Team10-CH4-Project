@@ -41,6 +41,7 @@ namespace GProjectGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(State_Combat_ParryWindow, "State.Combat.ParryWindow");
 	UE_DEFINE_GAMEPLAY_TAG(State_Targeting_LockOn, "State.Targeting.LockOn");
 	UE_DEFINE_GAMEPLAY_TAG(State_Interaction_Pickup, "State.Interaction.Pickup");
+	UE_DEFINE_GAMEPLAY_TAG(State_Interaction_UseItem, "State.Interaction.UseItem");
 
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_Attack, "Ability.Combat.Attack");
 	UE_DEFINE_GAMEPLAY_TAG(Ability_Combat_ThrowWeapon, "Ability.Combat.ThrowWeapon");
