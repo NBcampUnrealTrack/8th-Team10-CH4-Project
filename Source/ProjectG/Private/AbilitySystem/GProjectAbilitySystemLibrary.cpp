@@ -5,6 +5,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/GProjectAttributeSet.h"
+#include "Character/GProjectCharacter.h"
 #include "GProjectGameplayTags.h"
 #include "CollisionQueryParams.h"
 #include "Engine/Engine.h"
@@ -44,6 +45,7 @@ FGameplayEffectContextHandle UGProjectAbilitySystemLibrary::ApplyDamageEffect(
 
 	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GProjectGameplayTags::Data_Combat_Damage, DamageEffectParams.BaseDamage);
 	DamageEffectParams.TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	PlayCameraShakeFeedback(DamageEffectParams);
 
 	return EffectContextHandle;
 }
@@ -180,6 +182,31 @@ void UGProjectAbilitySystemLibrary::SetKnockbackDirection(FGProjectDamageEffectP
 	const float ResistanceMultiplier = 100.0f / (100.0f + KnockbackResistance);
 	const float FinalMagnitude = FMath::Max(BaseMagnitude, 0.0f) * KnockbackPower * ResistanceMultiplier;
 	DamageEffectParams.KnockbackForce = KnockbackDirection * FinalMagnitude;
+}
+
+void UGProjectAbilitySystemLibrary::PlayCameraShakeFeedback(const FGProjectDamageEffectParams& DamageEffectParams)
+{
+	if (DamageEffectParams.CameraShakeLevel == EGProjectCameraShakeLevel::None)
+	{
+		return;
+	}
+
+	AGProjectCharacter* SourceCharacter = DamageEffectParams.SourceAbilitySystemComponent
+		? Cast<AGProjectCharacter>(DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor())
+		: nullptr;
+	AGProjectCharacter* TargetCharacter = DamageEffectParams.TargetAbilitySystemComponent
+		? Cast<AGProjectCharacter>(DamageEffectParams.TargetAbilitySystemComponent->GetAvatarActor())
+		: nullptr;
+
+	if (SourceCharacter)
+	{
+		SourceCharacter->MulticastPlayDamageCameraShake(DamageEffectParams.CameraShakeLevel);
+	}
+
+	if (TargetCharacter && TargetCharacter != SourceCharacter)
+	{
+		TargetCharacter->MulticastPlayDamageCameraShake(DamageEffectParams.CameraShakeLevel);
+	}
 }
 
 bool UGProjectAbilitySystemLibrary::IsActorInFrontArc(
