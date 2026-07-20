@@ -8,6 +8,7 @@ class UAnimInstance;
 class UGProjectComboData;
 class USkeletalMesh;
 class UAnimMontage;
+class USoundBase;
 
 UCLASS()
 class PROJECTG_API UGProjectTransform : public UDataAsset
@@ -48,6 +49,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Death")
 	TObjectPtr<UAnimMontage> DeathMontage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform")
+	TObjectPtr<UAnimMontage> HitReactMontage;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Combat")
 	TObjectPtr<UGProjectComboData> GroundComboData;
 
@@ -56,5 +60,8 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform|Combat")
 	TObjectPtr<UGProjectComboData> DashComboData;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Transform")
+	TObjectPtr<USoundBase> TransformSound;
 };
 //

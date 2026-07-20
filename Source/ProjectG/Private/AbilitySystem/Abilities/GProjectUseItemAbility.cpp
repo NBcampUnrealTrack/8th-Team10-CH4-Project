@@ -77,8 +77,8 @@ void UGProjectUseItemAbility::ActivateAbility(
         ItemUseMontage,
         2.5f);
     MontageTask->OnCompleted.AddDynamic(this, &ThisClass::OnMontageFinished);
-    MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageFinished);
-    MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageFinished);
+    MontageTask->OnInterrupted.AddDynamic(this, &ThisClass::OnMontageInterrupted);
+    MontageTask->OnCancelled.AddDynamic(this, &ThisClass::OnMontageInterrupted);
     MontageTask->OnBlendOut.AddDynamic(this, &ThisClass::OnMontageFinished);
     MontageTask->ReadyForActivation();
 }
@@ -109,6 +109,11 @@ void UGProjectUseItemAbility::OnMontageFinished()
     }
 
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGProjectUseItemAbility::OnMontageInterrupted()
+{
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
 void UGProjectUseItemAbility::DoUse()

@@ -29,6 +29,7 @@
 #include "UI/Widget/GProjectFloatingText.h" // 추가
 #include "Components/BillboardComponent.h" // 추가
 #include "Player/GProjectPlayerColors.h"
+#include "Kismet/GameplayStatics.h"
 
 AGProjectCharacter::AGProjectCharacter()
 {
@@ -979,6 +980,11 @@ void AGProjectCharacter::ApplyTransformVisual()
 	}
 
 	SetCombatStyle(EGProjectCombatStyle::Unarmed);
+
+	if (ActiveTransform->TransformSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, ActiveTransform->TransformSound, GetActorLocation());
+	}
 }
 
 void AGProjectCharacter::ClearTransformVisual()
